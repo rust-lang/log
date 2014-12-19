@@ -63,7 +63,7 @@ macro_rules! log(
             format_args!(|args| { ::log::log(lvl, &LOC, args) }, $($arg)+)
         }
     })
-)
+);
 
 /// A convenience macro for logging at the error log level.
 ///
@@ -89,7 +89,7 @@ macro_rules! log(
 #[macro_export]
 macro_rules! error(
     ($($arg:tt)*) => (log!(::log::ERROR, $($arg)*))
-)
+);
 
 /// A convenience macro for logging at the warning log level.
 ///
@@ -114,7 +114,7 @@ macro_rules! error(
 #[macro_export]
 macro_rules! warn(
     ($($arg:tt)*) => (log!(::log::WARN, $($arg)*))
-)
+);
 
 /// A convenience macro for logging at the info log level.
 ///
@@ -139,7 +139,7 @@ macro_rules! warn(
 #[macro_export]
 macro_rules! info(
     ($($arg:tt)*) => (log!(::log::INFO, $($arg)*))
-)
+);
 
 /// A convenience macro for logging at the debug log level. This macro can also
 /// be omitted at compile time by passing `--cfg ndebug` to the compiler. If
@@ -165,7 +165,7 @@ macro_rules! info(
 #[macro_export]
 macro_rules! debug(
     ($($arg:tt)*) => (if cfg!(not(ndebug)) { log!(::log::DEBUG, $($arg)*) })
-)
+);
 
 /// A macro to test whether a log level is enabled for the current module.
 ///
@@ -204,4 +204,4 @@ macro_rules! log_enabled(
         lvl <= ::log::log_level() &&
         ::log::mod_enabled(lvl, module_path!())
     })
-)
+);
