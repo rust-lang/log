@@ -157,16 +157,12 @@
 //! they're turned off (just a load and an integer comparison). This also means that
 //! if logging is disabled, none of the components of the log will be executed.
 
-#![crate_name = "log"]
-#![experimental]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
-       html_root_url = "http://doc.rust-lang.org/nightly/",
-       html_playground_url = "http://play.rust-lang.org/")]
+       html_root_url = "http://doc.rust-lang.org/log/")]
 #![feature(macro_rules)]
 #![deny(missing_docs)]
+#![cfg_attr(test, deny(warnings))]
 
 extern crate regex;
 
@@ -372,7 +368,7 @@ pub fn mod_enabled(level: u32, module: &str) -> bool {
 
 fn enabled(level: u32,
            module: &str,
-           iter: slice::Items<directive::LogDirective>)
+           iter: slice::Iter<directive::LogDirective>)
            -> bool {
     // Search for the longest match, the vector is assumed to be pre-sorted.
     for directive in iter.rev() {
