@@ -273,7 +273,7 @@ impl Drop for DefaultLogger {
 /// It is not recommended to call this function directly, rather it should be
 /// invoked through the logging family of macros.
 #[doc(hidden)]
-pub fn log(level: u32, loc: &'static LogLocation, args: &fmt::Arguments) {
+pub fn log(level: u32, loc: &'static LogLocation, args: fmt::Arguments) {
     // Test the literal string from args against the current filter, if there
     // is one.
     match unsafe { FILTER.as_ref() } {
@@ -326,7 +326,7 @@ pub struct LogRecord<'a> {
     pub level: LogLevel,
 
     /// The arguments from the log line.
-    pub args: &'a fmt::Arguments<'a>,
+    pub args: fmt::Arguments<'a>,
 
     /// The file of where the LogRecord originated.
     pub file: &'a str,

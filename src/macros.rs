@@ -60,7 +60,7 @@ macro_rules! log {
         };
         let lvl = $lvl;
         if log_enabled!(lvl) {
-            format_args!(|args| { ::log::log(lvl, &LOC, args) }, $($arg)+)
+            ::log::log(lvl, &LOC, format_args!($($arg)+));
         }
     })
 }
