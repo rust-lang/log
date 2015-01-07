@@ -13,8 +13,7 @@
 //! ## Example
 //!
 //! ```
-//! #![feature(phase)]
-//! #[phase(plugin, link)] extern crate log;
+//! #[macro_use] extern crate log;
 //!
 //! fn main() {
 //!     debug!("this is a debug {}", "message");
@@ -160,7 +159,6 @@
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/log/")]
-#![feature(macro_rules)]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
@@ -180,6 +178,7 @@ use regex::Regex;
 
 use directive::LOG_LEVEL_NAMES;
 
+#[macro_use]
 pub mod macros;
 mod directive;
 
