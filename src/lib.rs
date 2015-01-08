@@ -226,12 +226,12 @@ struct DefaultLogger {
 }
 
 /// Wraps the log level with fmt implementations.
-#[derive(PartialEq, PartialOrd)]
+#[derive(PartialEq, PartialOrd, Show)]
 pub struct LogLevel(pub u32);
 
 impl Copy for LogLevel {}
 
-impl fmt::Show for LogLevel {
+impl fmt::String for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let LogLevel(level) = *self;
         match LOG_LEVEL_NAMES.get(level as uint - 1) {
