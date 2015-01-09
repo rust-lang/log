@@ -161,6 +161,7 @@
        html_root_url = "http://doc.rust-lang.org/log/")]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
+#![allow(unstable)]
 
 extern crate regex;
 
@@ -234,7 +235,7 @@ impl Copy for LogLevel {}
 impl fmt::String for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let LogLevel(level) = *self;
-        match LOG_LEVEL_NAMES.get(level as uint - 1) {
+        match LOG_LEVEL_NAMES.get(level as usize - 1) {
             Some(name) => name.fmt(fmt),
             None => level.fmt(fmt)
         }
@@ -286,7 +287,7 @@ pub fn log(level: u32, loc: &'static LogLocation, args: fmt::Arguments) {
     let mut logger = LOCAL_LOGGER.with(|s| {
         s.borrow_mut().take()
     }).unwrap_or_else(|| {
-        box DefaultLogger { handle: io::stderr() } as Box<Logger + Send>
+        Box::new(DefaultLogger { handle: io::stderr() }) as Box<Logger + Send>
     });
     logger.log(&LogRecord {
         level: LogLevel(level),
@@ -331,14 +332,14 @@ pub struct LogRecord<'a> {
     pub file: &'a str,
 
     /// The line number of where the LogRecord originated.
-    pub line: uint,
+    pub line: usize,
 }
 
 #[doc(hidden)]
 pub struct LogLocation {
     pub module_path: &'static str,
     pub file: &'static str,
-    pub line: uint,
+    pub line: usize,
 }
 
 impl Copy for LogLocation {}
@@ -409,12 +410,12 @@ fn init() {
 
         assert!(FILTER.is_null());
         match filter {
-            Some(f) => FILTER = mem::transmute(box f),
+            Some(f) => FILTER = mem::transmute(Box::new(f)),
             None => {}
         }
 
         assert!(DIRECTIVES.is_null());
-        DIRECTIVES = mem::transmute(box directives);
+        DIRECTIVES = mem::transmute(Box::new(directives));
 
         // Schedule the cleanup for the globals for when the runtime exits.
         rt::at_exit(|| {
