@@ -232,7 +232,7 @@ pub struct LogLevel(pub u32);
 
 impl Copy for LogLevel {}
 
-impl fmt::String for LogLevel {
+impl fmt::Display for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let LogLevel(level) = *self;
         match LOG_LEVEL_NAMES.get(level as usize - 1) {
