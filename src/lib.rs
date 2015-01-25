@@ -1,506 +1,632 @@
-// Copyright 2014 The Rust Project Developers. See the COPYRIGHT
-// file at the top-level directory of this distribution and at
-// http://rust-lang.org/COPYRIGHT.
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
-//! Utilities for program-wide and customizable logging
+//! A lightweight logging facade.
 //!
-//! ## Example
+//! A logging facade provides a single logging API that abstracts over the
+//! actual logging implementation. Libraries can use the logging API provided
+//! by this crate, and the consumer of those libraries can choose the logging
+//! framework that is most suitable for its use case.
 //!
-//! ```
-//! #[macro_use] extern crate log;
+//! If no logging implementation is selected, the facade falls back to a "noop"
+//! implementation that ignores all log messages. The overhead in this case
+//! is very small - just an integer load, comparison and jump.
 //!
-//! fn main() {
-//!     debug!("this is a debug {}", "message");
-//!     error!("this is printed by default");
+//! # Use
 //!
-//!     if log_enabled!(log::INFO) {
-//!         let x = 3i * 4i; // expensive computation
-//!         info!("the answer was: {}", x);
+//! ## In libraries
+//!
+//! Libraries should link only to the `log` crate, and use the provided
+//! macros to log whatever information will be useful to downstream consumers.
+//!
+//! ### Examples
+//!
+//! ```rust
+//! # #![allow(unstable)]
+//! #[macro_use]
+//! extern crate log;
+//!
+//! # pub struct Yak(String);
+//! # impl Yak { fn shave(&self, _: u32) {} }
+//! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
+//! pub fn shave_the_yak(yak: &Yak) {
+//!     trace!("Commencing yak shaving");
+//!
+//!     loop {
+//!         match find_a_razor() {
+//!             Ok(razor) => {
+//!                 info!("Razor located: {}", razor);
+//!                 yak.shave(razor);
+//!                 break;
+//!             }
+//!             Err(err) => {
+//!                 warn!("Unable to locate a razor: {}, retrying", err);
+//!             }
+//!         }
 //!     }
 //! }
+//! # fn main() {}
 //! ```
 //!
-//! Assumes the binary is `main`:
+//! ## In executables
 //!
-//! ```{.bash}
-//! $ RUST_LOG=error ./main
-//! ERROR:main: this is printed by default
-//! ```
+//! Executables should chose a logging framework and initialize it early in the
+//! runtime of the program. Logging frameworks will typically include a
+//! function to do this. Any log messages generated before the framework is
+//! initialized will be ignored.
 //!
-//! ```{.bash}
-//! $ RUST_LOG=info ./main
-//! ERROR:main: this is printed by default
-//! INFO:main: the answer was: 12
-//! ```
+//! The executable itself may use the `log` crate to log as well.
 //!
-//! ```{.bash}
-//! $ RUST_LOG=debug ./main
-//! DEBUG:main: this is a debug message
-//! ERROR:main: this is printed by default
-//! INFO:main: the answer was: 12
-//! ```
+//! ### Warning
 //!
-//! You can also set the log level on a per module basis:
+//! The logging system may only be initialized once.
 //!
-//! ```{.bash}
-//! $ RUST_LOG=main=info ./main
-//! ERROR:main: this is printed by default
-//! INFO:main: the answer was: 12
-//! ```
-//!
-//! And enable all logging:
-//!
-//! ```{.bash}
-//! $ RUST_LOG=main ./main
-//! DEBUG:main: this is a debug message
-//! ERROR:main: this is printed by default
-//! INFO:main: the answer was: 12
-//! ```
-//!
-//!
-//! ## Logging Macros
-//!
-//! There are five macros that the logging subsystem uses:
-//!
-//! * `log!(level, ...)` - the generic logging macro, takes a level as a u32 and any
-//!                        related `format!` arguments
-//! * `debug!(...)` - a macro hard-wired to the log level of `DEBUG`
-//! * `info!(...)` - a macro hard-wired to the log level of `INFO`
-//! * `warn!(...)` - a macro hard-wired to the log level of `WARN`
-//! * `error!(...)` - a macro hard-wired to the log level of `ERROR`
-//!
-//! All of these macros use the same style of syntax as the `format!` syntax
-//! extension. Details about the syntax can be found in the documentation of
-//! `std::fmt` along with the Rust tutorial/manual.
-//!
-//! If you want to check at runtime if a given logging level is enabled (e.g. if the
-//! information you would want to log is expensive to produce), you can use the
-//! following macro:
-//!
-//! * `log_enabled!(level)` - returns true if logging of the given level is enabled
-//!
-//! ## Enabling logging
-//!
-//! Log levels are controlled on a per-module basis, and by default all logging is
-//! disabled except for `error!` (a log level of 1). Logging is controlled via the
-//! `RUST_LOG` environment variable. The value of this environment variable is a
-//! comma-separated list of logging directives. A logging directive is of the form:
-//!
-//! ```text
-//! path::to::module=log_level
-//! ```
-//!
-//! The path to the module is rooted in the name of the crate it was compiled for,
-//! so if your program is contained in a file `hello.rs`, for example, to turn on
-//! logging for this file you would use a value of `RUST_LOG=hello`.
-//! Furthermore, this path is a prefix-search, so all modules nested in the
-//! specified module will also have logging enabled.
-//!
-//! The actual `log_level` is optional to specify. If omitted, all logging will be
-//! enabled. If specified, the it must be either a numeric in the range of 1-255, or
-//! it must be one of the strings `debug`, `error`, `info`, or `warn`. If a numeric
-//! is specified, then all logging less than or equal to that numeral is enabled.
-//! For example, if logging level 3 is active, error, warn, and info logs will be
-//! printed, but debug will be omitted.
-//!
-//! As the log level for a module is optional, the module to enable logging for is
-//! also optional. If only a `log_level` is provided, then the global log level for
-//! all modules is set to this value.
-//!
-//! Some examples of valid values of `RUST_LOG` are:
-//!
-//! * `hello` turns on all logging for the 'hello' module
-//! * `info` turns on all info logging
-//! * `hello=debug` turns on debug logging for 'hello'
-//! * `hello=3` turns on info logging for 'hello'
-//! * `hello,std::option` turns on hello, and std's option logging
-//! * `error,hello=warn` turn on global error logging and also warn for hello
-//!
-//! ## Filtering results
-//!
-//! A RUST_LOG directive may include a regex filter. The syntax is to append `/`
-//! followed by a regex. Each message is checked against the regex, and is only
-//! logged if it matches. Note that the matching is done after formatting the log
-//! string but before adding any logging meta-data. There is a single filter for all
-//! modules.
-//!
-//! Some examples:
-//!
-//! * `hello/foo` turns on all logging for the 'hello' module where the log message
-//! includes 'foo'.
-//! * `info/f.o` turns on all info logging where the log message includes 'foo',
-//! 'f1o', 'fao', etc.
-//! * `hello=debug/foo*foo` turns on debug logging for 'hello' where the log
-//! message includes 'foofoo' or 'fofoo' or 'fooooooofoo', etc.
-//! * `error,hello=warn/[0-9] scopes` turn on global error logging and also warn for
-//!  hello. In both cases the log message must include a single digit number
-//!  followed by 'scopes'
-//!
-//! ## Performance and Side Effects
-//!
-//! Each of these macros will expand to code similar to:
+//! ### Examples
 //!
 //! ```rust,ignore
-//! if log_level <= my_module_log_level() {
-//!     ::log::log(log_level, format!(...));
+//! #[macro_use]
+//! extern crate log;
+//! extern crate my_logger;
+//!
+//! fn main() {
+//!     my_logger::init();
+//!
+//!     info!("starting up");
+//!
+//!     // ...
 //! }
 //! ```
 //!
-//! What this means is that each of these macros are very cheap at runtime if
-//! they're turned off (just a load and an integer comparison). This also means that
-//! if logging is disabled, none of the components of the log will be executed.
-
+//! # Logger implementations
+//!
+//! Loggers implement the `Log` trait. Here's a very basic example that simply
+//! logs all messages at the `Error`, `Warn` or `Info` levels to stdout:
+//!
+//! ```rust
+//! extern crate log;
+//!
+//! use log::{LogRecord, LogLevel};
+//!
+//! struct SimpleLogger;
+//!
+//! impl log::Log for SimpleLogger {
+//!     fn enabled(&self, level: LogLevel, _module: &str) -> bool {
+//!         level <= LogLevel::Info
+//!     }
+//!
+//!     fn log(&self, record: &LogRecord) {
+//!         if self.enabled(record.level, record.location.module_path) {
+//!             println!("{} - {}", record.level, record.args);
+//!         }
+//!     }
+//! }
+//!
+//! # fn main() {}
+//! ```
+//!
+//! Loggers are installed by calling the `set_logger` function. It takes a
+//! closure which is provided a `MaxLogLevel` token and returns a `Log` trait
+//! object. The `MaxLogLevel` token controls the global maximum log level. The
+//! logging facade uses this as an optimization to improve performance of log
+//! messages at levels that are disabled. In the case of our example logger,
+//! we'll want to set the maximum log level to `Info`, since we ignore any
+//! `Debug` or `Trace` level log messages. A logging framework should provide a
+//! function that wraps a call to `set_logger`, handling initialization of the
+//! logger:
+//!
+//! ```rust
+//! # extern crate log;
+//! # use log::{LogLevel, LogLevelFilter, SetLoggerError};
+//! # struct SimpleLogger;
+//! # impl log::Log for SimpleLogger {
+//! #   fn enabled(&self, _: LogLevel, _: &str) -> bool { false }
+//! #   fn log(&self, _: &log::LogRecord) {}
+//! # }
+//! # fn main() {}
+//! pub fn init() -> Result<(), SetLoggerError> {
+//!     log::set_logger(|max_log_level| {
+//!         max_log_level.set(LogLevelFilter::Info);
+//!         Box::new(SimpleLogger)
+//!     })
+//! }
+//! ```
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/log/")]
-#![deny(missing_docs)]
-#![cfg_attr(test, deny(warnings))]
+#![warn(missing_docs)]
 #![allow(unstable)]
 
-extern crate regex;
-
-use std::cell::RefCell;
+use std::ascii::AsciiExt;
+use std::cmp;
 use std::fmt;
-use std::io::LineBufferedWriter;
-use std::io;
 use std::mem;
-use std::os;
+use std::ops::Deref;
 use std::rt;
-use std::slice;
-use std::sync::{Once, ONCE_INIT};
+use std::str::FromStr;
+use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+mod macros;
 
-use regex::Regex;
+// The setup here is a bit weird to make at_exit work.
+//
+// There are four different states that we care about: the logger's
+// uninitialized, the logger's initializing (set_logger's been called but
+// LOGGER hasn't actually been set yet), the logger's active, or the logger's
+// shutting down inside of at_exit.
+//
+// The LOGGER static is normally a Box<Box<Log>> with some special possible
+// values as well. The uninitialized and initializing states are represented by
+// the values 0 and 1 respectively. The shutting down state is also represented
+// by 1. Any other value is a valid pointer to the logger.
+//
+// The at_exit routine needs to make sure that no threads are actively logging
+// when it deallocates the logger. The number of actively logging threads is
+// tracked in the REFCOUNT static. The routine first sets LOGGER back to 1.
+// All logging calls past that point will immediatly return without accessing
+// the logger. At that point, the at_exit routine just waits for the refcount
+// to reach 0 before deallocating the logger. Note that the refcount does not
+// necessarily monotonically decrease at this point, as new log calls still
+// increment and decrement it, but the interval in between is small enough that
+// the wait is really just for the active log calls to finish.
+static LOGGER: AtomicUsize = ATOMIC_USIZE_INIT;
+static REFCOUNT: AtomicUsize = ATOMIC_USIZE_INIT;
 
-use directive::LOG_LEVEL_NAMES;
+const UNINITIALIZED: usize = 0;
+const INITIALIZING: usize = 1;
 
-#[macro_use]
-pub mod macros;
-mod directive;
+static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-/// Maximum logging level of a module that can be specified. Common logging
-/// levels are found in the DEBUG/INFO/WARN/ERROR constants.
-pub const MAX_LOG_LEVEL: u32 = 255;
+static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
-/// The default logging level of a crate if no other is specified.
-const DEFAULT_LOG_LEVEL: u32 = 1;
-
-/// An unsafe constant that is the maximum logging level of any module
-/// specified. This is the first line of defense to determining whether a
-/// logging statement should be run.
-static mut LOG_LEVEL: u32 = MAX_LOG_LEVEL;
-
-static mut DIRECTIVES: *const Vec<directive::LogDirective> =
-    0 as *const Vec<directive::LogDirective>;
-
-/// Optional regex filter.
-static mut FILTER: *const Regex = 0 as *const _;
-
-/// Debug log level
-pub const DEBUG: u32 = 4;
-/// Info log level
-pub const INFO: u32 = 3;
-/// Warn log level
-pub const WARN: u32 = 2;
-/// Error log level
-pub const ERROR: u32 = 1;
-
-thread_local!(static LOCAL_LOGGER: RefCell<Option<Box<Logger + Send>>> = {
-    RefCell::new(None)
-});
-
-/// A trait used to represent an interface to a task-local logger. Each task
-/// can have its own custom logger which can respond to logging messages
-/// however it likes.
-pub trait Logger {
-    /// Logs a single message described by the `record`.
-    fn log(&mut self, record: &LogRecord);
+/// An enum representing the available verbosity levels of the logging framework
+///
+/// A `LogLevel` may be compared directly to a `LogLevelFilter`.
+#[repr(usize)]
+#[derive(Copy, Eq, Debug)]
+pub enum LogLevel {
+    /// The "error" level.
+    ///
+    /// Designates very serious errors.
+    Error,
+    /// The "warn" level.
+    ///
+    /// Designates hazardous situations.
+    Warn,
+    /// The "info" level.
+    ///
+    /// Designates useful information.
+    Info,
+    /// The "debug" level.
+    ///
+    /// Designates lower priority information.
+    Debug,
+    /// The "trace" level.
+    ///
+    /// Designates very low priority, often extremely verbose, information.
+    Trace,
 }
 
-struct DefaultLogger {
-    handle: LineBufferedWriter<io::stdio::StdWriter>,
+impl Clone for LogLevel {
+    #[inline]
+    fn clone(&self) -> LogLevel {
+        *self
+    }
 }
 
-/// Wraps the log level with fmt implementations.
-#[derive(PartialEq, PartialOrd, Show)]
-pub struct LogLevel(pub u32);
+impl PartialEq for LogLevel {
+    #[inline]
+    fn eq(&self, other: &LogLevel) -> bool {
+        *self as usize == *other as usize
+    }
+}
 
-impl Copy for LogLevel {}
+impl PartialEq<LogLevelFilter> for LogLevel {
+    #[inline]
+    fn eq(&self, other: &LogLevelFilter) -> bool {
+        (*self as usize) + 1 == *other as usize
+    }
+}
+
+impl PartialOrd for LogLevel {
+    #[inline]
+    fn partial_cmp(&self, other: &LogLevel) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<LogLevelFilter> for LogLevel {
+    #[inline]
+    fn partial_cmp(&self, other: &LogLevelFilter) -> Option<cmp::Ordering> {
+        Some(((*self as usize) + 1).cmp(&(*other as usize)))
+    }
+}
+
+impl Ord for LogLevel {
+    #[inline]
+    fn cmp(&self, other: &LogLevel) -> cmp::Ordering {
+        (*self as usize).cmp(&(*other as usize))
+    }
+}
+
+impl FromStr for LogLevel {
+    fn from_str(level: &str) -> Option<LogLevel> {
+        LOG_LEVEL_NAMES.iter()
+            .position(|&name| name.eq_ignore_ascii_case(level))
+            .into_iter()
+            .filter(|&idx| idx != 0)
+            .map(|idx| unsafe { mem::transmute(idx - 1) })
+            .next()
+    }
+}
 
 impl fmt::Display for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let LogLevel(level) = *self;
-        match LOG_LEVEL_NAMES.get(level as usize - 1) {
-            Some(name) => name.fmt(fmt),
-            None => level.fmt(fmt)
-        }
+        write!(fmt, "{}", LOG_LEVEL_NAMES[(*self as usize) + 1])
     }
 }
 
-impl Logger for DefaultLogger {
-    fn log(&mut self, record: &LogRecord) {
-        match writeln!(&mut self.handle,
-                       "{}:{}: {}",
-                       record.level,
-                       record.module_path,
-                       record.args) {
-            Err(e) => panic!("failed to log: {}", e),
-            Ok(()) => {}
-        }
+impl LogLevel {
+    /// Returns the most verbose logging level.
+    #[inline]
+    pub fn max() -> LogLevel {
+        LogLevel::Trace
+    }
+
+    /// Converts the `LogLevel` to the equivalent `LogLevelFilter`.
+    #[inline]
+    pub fn to_log_level_filter(&self) -> LogLevelFilter {
+        unsafe { mem::transmute((*self as usize) + 1) }
     }
 }
 
-impl Drop for DefaultLogger {
-    fn drop(&mut self) {
-        // FIXME(#12628): is panicking the right thing to do?
-        match self.handle.flush() {
-            Err(e) => panic!("failed to flush a logger: {}", e),
-            Ok(()) => {}
-        }
-    }
-}
-
-/// This function is called directly by the compiler when using the logging
-/// macros. This function does not take into account whether the log level
-/// specified is active or not, it will always log something if this method is
-/// called.
+/// An enum representing the available verbosity level filters of the logging
+/// framework.
 ///
-/// It is not recommended to call this function directly, rather it should be
-/// invoked through the logging family of macros.
-#[doc(hidden)]
-pub fn log(level: u32, loc: &'static LogLocation, args: fmt::Arguments) {
-    // Test the literal string from args against the current filter, if there
-    // is one.
-    match unsafe { FILTER.as_ref() } {
-        Some(filter) if !filter.is_match(args.to_string().as_slice()) => return,
-        _ => {}
+/// A `LogLevelFilter` may be compared directly to a `LogLevel`.
+#[repr(usize)]
+#[derive(Copy, Eq, Debug)]
+pub enum LogLevelFilter {
+    /// A level lower than all log levels.
+    Off,
+    /// Corresponds to the `Error` log level.
+    Error,
+    /// Corresponds to the `Warn` log level.
+    Warn,
+    /// Corresponds to the `Trace` log level.
+    Info,
+    /// Corresponds to the `Debug` log level.
+    Debug,
+    /// Corresponds to the `Trace` log level.
+    Trace,
+}
+
+// Deriving generates terrible impls of these traits
+
+impl Clone for LogLevelFilter {
+    #[inline]
+    fn clone(&self) -> LogLevelFilter {
+        *self
+    }
+}
+
+impl PartialEq for LogLevelFilter {
+    #[inline]
+    fn eq(&self, other: &LogLevelFilter) -> bool {
+        *self as usize == *other as usize
+    }
+}
+
+impl PartialEq<LogLevel> for LogLevelFilter {
+    #[inline]
+    fn eq(&self, other: &LogLevel) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialOrd for LogLevelFilter {
+    #[inline]
+    fn partial_cmp(&self, other: &LogLevelFilter) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<LogLevel> for LogLevelFilter {
+    #[inline]
+    fn partial_cmp(&self, other: &LogLevel) -> Option<cmp::Ordering> {
+        other.partial_cmp(self).map(|x| x.reverse())
+    }
+}
+
+impl Ord for LogLevelFilter {
+    #[inline]
+    fn cmp(&self, other: &LogLevelFilter) -> cmp::Ordering {
+        (*self as usize).cmp(&(*other as usize))
+    }
+}
+
+impl FromStr for LogLevelFilter {
+    fn from_str(level: &str) -> Option<LogLevelFilter> {
+        LOG_LEVEL_NAMES.iter()
+            .position(|&name| name.eq_ignore_ascii_case(level))
+            .map(|p| unsafe { mem::transmute(p) })
+    }
+}
+
+impl fmt::Display for LogLevelFilter {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
+    }
+}
+
+impl LogLevelFilter {
+    /// Returns the most verbose logging level filter.
+    #[inline]
+    pub fn max() -> LogLevelFilter {
+        LogLevelFilter::Trace
     }
 
-    // Completely remove the local logger from TLS in case anyone attempts to
-    // frob the slot while we're doing the logging. This will destroy any logger
-    // set during logging.
-    let mut logger = LOCAL_LOGGER.with(|s| {
-        s.borrow_mut().take()
-    }).unwrap_or_else(|| {
-        Box::new(DefaultLogger { handle: io::stderr() }) as Box<Logger + Send>
-    });
-    logger.log(&LogRecord {
-        level: LogLevel(level),
-        args: args,
-        file: loc.file,
-        module_path: loc.module_path,
-        line: loc.line,
-    });
-    set_logger(logger);
+    /// Converts `self` to the equivalent `LogLevel`.
+    ///
+    /// Returns `None` if `self` is `LogLevel::Off`.
+    #[inline]
+    pub fn to_log_level(&self) -> Option<LogLevel> {
+        match *self {
+            LogLevelFilter::Off => None,
+            v => unsafe { Some(mem::transmute((v as usize) - 1)) }
+        }
+    }
 }
 
-/// Getter for the global log level. This is a function so that it can be called
-/// safely
-#[doc(hidden)]
-#[inline(always)]
-pub fn log_level() -> u32 { unsafe { LOG_LEVEL } }
-
-/// Replaces the task-local logger with the specified logger, returning the old
-/// logger.
-pub fn set_logger(logger: Box<Logger + Send>) -> Option<Box<Logger + Send>> {
-    let mut l = Some(logger);
-    LOCAL_LOGGER.with(|slot| {
-        mem::replace(&mut *slot.borrow_mut(), l.take())
-    })
-}
-
-/// A LogRecord is created by the logging macros, and passed as the only
-/// argument to Loggers.
-#[derive(Show)]
+/// The "payload" of a log message.
 pub struct LogRecord<'a> {
-
-    /// The module path of where the LogRecord originated.
-    pub module_path: &'a str,
-
-    /// The LogLevel of this record.
-    pub level: LogLevel,
-
-    /// The arguments from the log line.
+    /// The message body.
     pub args: fmt::Arguments<'a>,
-
-    /// The file of where the LogRecord originated.
-    pub file: &'a str,
-
-    /// The line number of where the LogRecord originated.
-    pub line: usize,
+    /// The location of the log directive.
+    pub location: &'static LogLocation,
+    /// The verbosity level of the message.
+    pub level: LogLevel,
 }
 
-#[doc(hidden)]
+/// A trait encapsulating the operations required of a logger
+pub trait Log: Sync+Send {
+    /// Determines if a log message sent at the specified level from the
+    /// specified module would be logged.
+    ///
+    /// This is used by the `log_enabled!` macro to allow callers to avoid
+    /// expensive computation of log message arguments if the message would be
+    /// discarded anyway.
+    fn enabled(&self, level: LogLevel, module: &str) -> bool;
+
+    /// Logs the `LogRecord`.
+    ///
+    /// Note that `enabled` is *not* necessarily called before this method.
+    /// Implementations of `log` should perform all necessary filtering
+    /// internally.
+    fn log(&self, record: &LogRecord);
+}
+
+/// The location of a log message.
+#[derive(Copy, Clone, Debug)]
 pub struct LogLocation {
+    /// The module path of the message.
     pub module_path: &'static str,
+    /// The source file containing the message.
     pub file: &'static str,
+    /// The line containing the message.
     pub line: usize,
 }
 
-impl Copy for LogLocation {}
-
-/// Tests whether a given module's name is enabled for a particular level of
-/// logging. This is the second layer of defense about determining whether a
-/// module's log statement should be emitted or not.
-#[doc(hidden)]
-pub fn mod_enabled(level: u32, module: &str) -> bool {
-    static INIT: Once = ONCE_INIT;
-    INIT.call_once(init);
-
-    // It's possible for many threads are in this function, only one of them
-    // will perform the global initialization, but all of them will need to check
-    // again to whether they should really be here or not. Hence, despite this
-    // check being expanded manually in the logging macro, this function checks
-    // the log level again.
-    if level > unsafe { LOG_LEVEL } { return false }
-
-    // This assertion should never get tripped unless we're in an at_exit
-    // handler after logging has been torn down and a logging attempt was made.
-    assert!(unsafe { !DIRECTIVES.is_null() });
-
-    enabled(level, module, unsafe { (*DIRECTIVES).iter() })
-}
-
-fn enabled(level: u32,
-           module: &str,
-           iter: slice::Iter<directive::LogDirective>)
-           -> bool {
-    // Search for the longest match, the vector is assumed to be pre-sorted.
-    for directive in iter.rev() {
-        match directive.name {
-            Some(ref name) if !module.starts_with(name.as_slice()) => {},
-            Some(..) | None => {
-                return level <= directive.level
-            }
-        }
-    }
-    level <= DEFAULT_LOG_LEVEL
-}
-
-/// Initialize logging for the current process.
+/// A token providing read and write access to the global maximum log level
+/// filter.
 ///
-/// This is not threadsafe at all, so initialization is performed through a
-/// `Once` primitive (and this function is called from that primitive).
-fn init() {
-    let (mut directives, filter) = match os::getenv("RUST_LOG") {
-        Some(spec) => directive::parse_logging_spec(spec.as_slice()),
-        None => (Vec::new(), None),
-    };
+/// The maximum log level is used as an optimization to avoid evaluating log
+/// messages that will be ignored by the logger. Any message with a level
+/// higher than the maximum log level filter will be ignored. A logger should
+/// make sure to keep the maximum log level filter in sync with its current
+/// configuration.
+#[allow(missing_copy_implementations)]
+pub struct MaxLogLevelFilter(());
 
-    // Sort the provided directives by length of their name, this allows a
-    // little more efficient lookup at runtime.
-    directives.sort_by(|a, b| {
-        let alen = a.name.as_ref().map(|a| a.len()).unwrap_or(0);
-        let blen = b.name.as_ref().map(|b| b.len()).unwrap_or(0);
-        alen.cmp(&blen)
+impl fmt::Debug for MaxLogLevelFilter {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "MaxLogLevelFilter")
+    }
+}
+
+impl MaxLogLevelFilter {
+    /// Gets the current maximum log level filter.
+    pub fn get(&self) -> LogLevelFilter {
+        max_log_level()
+    }
+
+    /// Sets the maximum log level.
+    pub fn set(&self, level: LogLevelFilter) {
+        MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed)
+    }
+}
+
+/// Returns the current maximum log level.
+///
+/// The `log!`, `error!`, `warn!`, `info!`, `debug!`, and `trace!` macros check
+/// this value and discard any message logged at a higher level. The maximum
+/// log level is set by the `MaxLogLevel` token passed to loggers.
+#[inline(always)]
+pub fn max_log_level() -> LogLevelFilter {
+    unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
+}
+
+/// Sets the global logger.
+///
+/// The `make_logger` closure is passed a `MaxLogLevel` object, which the
+/// logger should use to keep the global maximum log level in sync with the
+/// highest log level that the logger will not ignore.
+///
+/// This function may only be called once in the lifetime of a program. Any log
+/// events that occur before the call to `set_logger` completes will be
+/// ignored.
+///
+/// This function does not typically need to be called manually. Logger
+/// implementations should provide an initialization method that calls
+/// `set_logger` internally.
+pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
+        where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
+    if LOGGER.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::Relaxed) != UNINITIALIZED {
+        return Err(SetLoggerError);
+    }
+
+    let logger = Box::new(make_logger(MaxLogLevelFilter(())));
+    let logger = unsafe { mem::transmute::<Box<Box<Log>>, usize>(logger) };
+    LOGGER.store(logger, Ordering::Release);
+    rt::at_exit(|| {
+        // Set to INITIALIZING to prevent re-initialization after
+        let logger = LOGGER.swap(INITIALIZING, Ordering::Acquire);
+
+        while REFCOUNT.load(Ordering::Relaxed) != 0 {
+            // FIXME add a sleep here when it doesn't involve timers
+        }
+
+        unsafe { mem::transmute::<usize, Box<Box<Log>>>(logger); }
     });
 
-    let max_level = {
-        let max = directives.iter().max_by(|d| d.level);
-        max.map(|d| d.level).unwrap_or(DEFAULT_LOG_LEVEL)
-    };
+    Ok(())
+}
 
-    unsafe {
-        LOG_LEVEL = max_level;
+/// The type returned by `set_logger` if `set_logger` has already been called.
+#[allow(missing_copy_implementations)]
+#[derive(Debug)]
+pub struct SetLoggerError;
 
-        assert!(FILTER.is_null());
-        match filter {
-            Some(f) => FILTER = mem::transmute(Box::new(f)),
-            None => {}
-        }
+impl fmt::Display for SetLoggerError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Attempted to set a logger after the logging system was already initialized")
+    }
+}
 
-        assert!(DIRECTIVES.is_null());
-        DIRECTIVES = mem::transmute(Box::new(directives));
+struct LoggerGuard(usize);
 
-        // Schedule the cleanup for the globals for when the runtime exits.
-        rt::at_exit(|| {
-            assert!(!DIRECTIVES.is_null());
-            let _directives: Box<Vec<directive::LogDirective>> =
-                mem::transmute(DIRECTIVES);
-            DIRECTIVES = 0 as *const Vec<directive::LogDirective>;
+impl Drop for LoggerGuard {
+    fn drop(&mut self) {
+        REFCOUNT.fetch_sub(1, Ordering::Relaxed);
+    }
+}
 
-            if !FILTER.is_null() {
-                let _filter: Box<Regex> = mem::transmute(FILTER);
-                FILTER = 0 as *const _;
-            }
-        });
+impl Deref for LoggerGuard {
+    type Target = Box<Log>;
+
+    fn deref(&self) -> &Box<Log> {
+        unsafe { mem::transmute(self.0) }
+    }
+}
+
+fn logger() -> Option<LoggerGuard> {
+    REFCOUNT.fetch_add(1, Ordering::Relaxed);
+    let logger = LOGGER.load(Ordering::Acquire);
+    if logger == UNINITIALIZED || logger == INITIALIZING {
+        REFCOUNT.fetch_sub(1, Ordering::Relaxed);
+        None
+    } else {
+        Some(LoggerGuard(logger))
+    }
+}
+
+/// Determines if the current logger will ignore a log message at the specified
+/// level from the specified module.
+///
+/// This should not typically be called directly. The `log_enabled!` macro
+/// should be used instead.
+pub fn enabled(level: LogLevel, module: &str) -> bool {
+    if let Some(logger) = logger() {
+        logger.enabled(level, module)
+    } else {
+        false
+    }
+}
+
+/// Logs a message.
+///
+/// This should not typically be called directly. The `log!`, `error!`,
+/// `warn!`, `info!`, `debug!`, and `trace!` macros should be used instead.
+pub fn log(level: LogLevel, loc: &'static LogLocation, args: fmt::Arguments) {
+    if let Some(logger) = logger() {
+        logger.log(&LogRecord {
+            args: args,
+            location: loc,
+            level: level,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::enabled;
-    use directive::LogDirective;
+     use super::{LogLevel, LogLevelFilter};
 
-    #[test]
-    fn match_full_path() {
-        let dirs = [
-            LogDirective {
-                name: Some("crate2".to_string()),
-                level: 3
-            },
-            LogDirective {
-                name: Some("crate1::mod1".to_string()),
-                level: 2
-            }
-        ];
-        assert!(enabled(2, "crate1::mod1", dirs.iter()));
-        assert!(!enabled(3, "crate1::mod1", dirs.iter()));
-        assert!(enabled(3, "crate2", dirs.iter()));
-        assert!(!enabled(4, "crate2", dirs.iter()));
-    }
+     #[test]
+     fn test_loglevelfilter_from_str() {
+         let tests = [
+             ("off", Some(LogLevelFilter::Off)),
+             ("error", Some(LogLevelFilter::Error)),
+             ("warn", Some(LogLevelFilter::Warn)),
+             ("info", Some(LogLevelFilter::Info)),
+             ("debug", Some(LogLevelFilter::Debug)),
+             ("trace", Some(LogLevelFilter::Trace)),
+             ("OFF", Some(LogLevelFilter::Off)),
+             ("ERROR", Some(LogLevelFilter::Error)),
+             ("WARN", Some(LogLevelFilter::Warn)),
+             ("INFO", Some(LogLevelFilter::Info)),
+             ("DEBUG", Some(LogLevelFilter::Debug)),
+             ("TRACE", Some(LogLevelFilter::Trace)),
+         ];
+         for &(s, ref expected) in tests.iter() {
+             assert_eq!(expected, &s.parse());
+         }
+     }
 
-    #[test]
-    fn no_match() {
-        let dirs = [
-            LogDirective { name: Some("crate2".to_string()), level: 3 },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: 2 }
-        ];
-        assert!(!enabled(2, "crate3", dirs.iter()));
-    }
+     #[test]
+     fn test_loglevel_from_str() {
+         let tests = [
+             ("OFF", None),
+             ("error", Some(LogLevel::Error)),
+             ("warn", Some(LogLevel::Warn)),
+             ("info", Some(LogLevel::Info)),
+             ("debug", Some(LogLevel::Debug)),
+             ("trace", Some(LogLevel::Trace)),
+             ("ERROR", Some(LogLevel::Error)),
+             ("WARN", Some(LogLevel::Warn)),
+             ("INFO", Some(LogLevel::Info)),
+             ("DEBUG", Some(LogLevel::Debug)),
+             ("TRACE", Some(LogLevel::Trace)),
+         ];
+         for &(s, ref expected) in tests.iter() {
+             assert_eq!(expected, &s.parse());
+         }
+     }
 
-    #[test]
-    fn match_beginning() {
-        let dirs = [
-            LogDirective { name: Some("crate2".to_string()), level: 3 },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: 2 }
-        ];
-        assert!(enabled(3, "crate2::mod1", dirs.iter()));
-    }
+     #[test]
+     fn test_loglevel_show() {
+         assert_eq!("INFO", LogLevel::Info.to_string());
+         assert_eq!("ERROR", LogLevel::Error.to_string());
+     }
 
-    #[test]
-    fn match_beginning_longest_match() {
-        let dirs = [
-            LogDirective { name: Some("crate2".to_string()), level: 3 },
-            LogDirective { name: Some("crate2::mod".to_string()), level: 4 },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: 2 }
-        ];
-        assert!(enabled(4, "crate2::mod1", dirs.iter()));
-        assert!(!enabled(4, "crate2", dirs.iter()));
-    }
+     #[test]
+     fn test_cross_cmp() {
+         assert!(LogLevel::Debug > LogLevelFilter::Error);
+         assert!(LogLevelFilter::Warn < LogLevel::Trace);
+         assert!(LogLevelFilter::Off < LogLevel::Error);
+     }
 
-    #[test]
-    fn match_default() {
-        let dirs = [
-            LogDirective { name: None, level: 3 },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: 2 }
-        ];
-        assert!(enabled(2, "crate1::mod1", dirs.iter()));
-        assert!(enabled(3, "crate2::mod2", dirs.iter()));
-    }
+     #[test]
+     fn test_cross_eq() {
+         assert!(LogLevel::Error == LogLevelFilter::Error);
+         assert!(LogLevelFilter::Off != LogLevel::Error);
+         assert!(LogLevel::Trace == LogLevelFilter::Trace);
+     }
 
-    #[test]
-    fn zero_level() {
-        let dirs = [
-            LogDirective { name: None, level: 3 },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: 0 }
-        ];
-        assert!(!enabled(1, "crate1::mod1", dirs.iter()));
-        assert!(enabled(3, "crate2::mod2", dirs.iter()));
-    }
+     #[test]
+     fn test_to_log_level() {
+         assert_eq!(Some(LogLevel::Error), LogLevelFilter::Error.to_log_level());
+         assert_eq!(None, LogLevelFilter::Off.to_log_level());
+         assert_eq!(Some(LogLevel::Debug), LogLevelFilter::Debug.to_log_level());
+     }
+
+     #[test]
+     fn test_to_log_level_filter() {
+         assert_eq!(LogLevelFilter::Error, LogLevel::Error.to_log_level_filter());
+         assert_eq!(LogLevelFilter::Trace, LogLevel::Trace.to_log_level_filter());
+     }
 }

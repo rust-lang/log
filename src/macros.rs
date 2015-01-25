@@ -1,199 +1,151 @@
-// Copyright 2014 The Rust Project Developers. See the COPYRIGHT
-// file at the top-level directory of this distribution and at
-// http://rust-lang.org/COPYRIGHT.
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
-//! Logging macros
-
-/// The standard logging macro
+/// The standard logging macro.
 ///
-/// This macro will generically log over a provided level (of type u32) with a
-/// format!-based argument list. See documentation in `std::fmt` for details on
-/// how to use the syntax.
-///
-/// # Example
-///
-/// ```
-/// #[macro_use] extern crate log;
-///
-/// fn main() {
-///     log!(log::WARN, "this is a warning {}", "message");
-///     log!(log::DEBUG, "this is a debug message");
-///     log!(6, "this is a custom logging level: {level}", level=6u);
-/// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=warn ./main
-/// WARN:main: this is a warning message
-/// ```
-///
-/// ```{.bash}
-/// $ RUST_LOG=debug ./main
-/// DEBUG:main: this is a debug message
-/// WARN:main: this is a warning message
-/// ```
-///
-/// ```{.bash}
-/// $ RUST_LOG=6 ./main
-/// DEBUG:main: this is a debug message
-/// WARN:main: this is a warning message
-/// 6:main: this is a custom logging level: 6
-/// ```
+/// This macro will generically log with the specified `LogLevel` and `format!`
+/// based argument list.
 #[macro_export]
 macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => ({
-        static LOC: ::log::LogLocation = ::log::LogLocation {
+        static LOC: $crate::LogLocation = $crate::LogLocation {
             line: line!(),
             file: file!(),
             module_path: module_path!(),
         };
         let lvl = $lvl;
-        if log_enabled!(lvl) {
-            ::log::log(lvl, &LOC, format_args!($($arg)+));
+        if lvl <= $crate::max_log_level() {
+            $crate::log(lvl, &LOC, format_args!($($arg)+))
         }
     })
 }
 
-/// A convenience macro for logging at the error log level.
+/// Logs a message at the error level.
 ///
-/// # Example
-///
-/// ```
-/// #[macro_use] extern crate log;
-///
-/// fn main() {
-///     let error = 3u;
-///     error!("the build has failed with error code: {}", error);
-/// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=error ./main
-/// ERROR:main: the build has failed with error code: 3
-/// ```
-///
+/// Logging through this macro is disabled if the `log_level = "off"` cfg is
+/// present.
 #[macro_export]
 macro_rules! error {
-    ($($arg:tt)*) => (log!(::log::ERROR, $($arg)*))
+    ($($arg:tt)*) => (
+        match () {
+            #[cfg(not(any(log_level = "off")))]
+            () => log!($crate::LogLevel::Error, $($arg)*),
+            #[cfg(any(log_level = "off"))]
+            () => {}
+        }
+    )
 }
 
-/// A convenience macro for logging at the warning log level.
+/// Logs a message at the warn level.
 ///
-/// # Example
-///
-/// ```
-/// #[macro_use] extern crate log;
-///
-/// fn main() {
-///     let code = 3u;
-///     warn!("you may like to know that a process exited with: {}", code);
-/// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=warn ./main
-/// WARN:main: you may like to know that a process exited with: 3
-/// ```
+/// Logging through this macro is disabled if any of the following cfgs are
+/// present: `log_level = "off"` or `log_level = "error"`.
 #[macro_export]
 macro_rules! warn {
-    ($($arg:tt)*) => (log!(::log::WARN, $($arg)*))
+    ($($arg:tt)*) => (
+        match () {
+            #[cfg(not(any(log_level = "off",
+                          log_level = "error")))]
+            () => log!($crate::LogLevel::Warn, $($arg)*),
+            #[cfg(any(log_level = "off",
+                      log_level = "error"))]
+            () => {}
+        }
+    )
 }
 
-/// A convenience macro for logging at the info log level.
+/// Logs a message at the info level.
 ///
-/// # Example
-///
-/// ```
-/// #[macro_use] extern crate log;
-///
-/// fn main() {
-///     let ret = 3i;
-///     info!("this function is about to return: {}", ret);
-/// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=info ./main
-/// INFO:main: this function is about to return: 3
-/// ```
+/// Logging through this macro is disabled if any of the following cfgs are
+/// present: `log_level = "off"`, `log_level = "error"`, or
+/// `log_level = "warn"`.
 #[macro_export]
 macro_rules! info {
-    ($($arg:tt)*) => (log!(::log::INFO, $($arg)*))
+    ($($arg:tt)*) => (
+        match () {
+            #[cfg(not(any(log_level = "off",
+                          log_level = "error",
+                          log_level = "warn")))]
+            () => log!($crate::LogLevel::Info, $($arg)*),
+            #[cfg(any(log_level = "off",
+                      log_level = "error",
+                      log_level = "warn"))]
+            () => {}
+        }
+    )
 }
 
-/// A convenience macro for logging at the debug log level. This macro can also
-/// be omitted at compile time by passing `--cfg ndebug` to the compiler. If
-/// this option is not passed, then debug statements will be compiled.
+/// Logs a message at the debug level.
 ///
-/// # Example
-///
-/// ```
-/// #[macro_use] extern crate log;
-///
-/// fn main() {
-///     debug!("x = {x}, y = {y}", x=10i, y=20i);
-/// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=debug ./main
-/// DEBUG:main: x = 10, y = 20
-/// ```
+/// Logging through this macro is disabled if any of the following cfgs are
+/// present: `log_level = "off"`, `log_level = "error"`, `log_level = "warn"`,
+/// or `log_level = "info"`.
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)*) => (if cfg!(not(ndebug)) { log!(::log::DEBUG, $($arg)*) })
+    ($($arg:tt)*) => (
+        match () {
+            #[cfg(not(any(log_level = "off",
+                          log_level = "error",
+                          log_level = "warn",
+                          log_level = "info")))]
+            () => log!($crate::LogLevel::Debug, $($arg)*),
+            #[cfg(any(log_level = "off",
+                      log_level = "error",
+                      log_level = "warn",
+                      log_level = "info"))]
+            () => {}
+
+        }
+    )
 }
 
-/// A macro to test whether a log level is enabled for the current module.
+/// Logs a message at the trace level.
 ///
-/// # Example
+/// Logging through this macro is disabled if any of the following cfgs are
+/// present: `log_level = "off"`, `log_level = "error"`, `log_level = "warn"`,
+/// `log_level = "info"`, or `log_level = "debug"`.
+#[macro_export]
+macro_rules! trace {
+    ($($arg:tt)*) => (
+        match () {
+            #[cfg(not(any(log_level = "off",
+                          log_level = "error",
+                          log_level = "warn",
+                          log_level = "info",
+                          log_level = "debug")))]
+            () => log!($crate::LogLevel::Trace, $($arg)*),
+            #[cfg(any(log_level = "off",
+                      log_level = "error",
+                      log_level = "warn",
+                      log_level = "info",
+                      log_level = "debug"))]
+            () => {}
+        }
+    )
+}
+
+/// Determines if a message logged at the specified level in that module will
+/// be logged.
 ///
-/// ```
-/// #[macro_use] extern crate log;
+/// This can be used to avoid expensive computation of log message arguments if
+/// the message would be ignored anyway.
 ///
-/// struct Point { x: int, y: int }
-/// fn some_expensive_computation() -> Point { Point { x: 1, y: 2 } }
+/// # Examples
 ///
-/// fn main() {
-///     if log_enabled!(log::DEBUG) {
-///         let x = some_expensive_computation();
-///         debug!("x.x = {}, x.y = {}", x.x, x.y);
-///     }
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// use log::LogLevel::Debug;
+///
+/// # fn foo() {
+/// if log_enabled!(Debug) {
+///     debug!("expensive debug data: {}", expensive_call());
 /// }
-/// ```
-///
-/// Assumes the binary is `main`:
-///
-/// ```{.bash}
-/// $ RUST_LOG=error ./main
-/// ```
-///
-/// ```{.bash}
-/// $ RUST_LOG=debug ./main
-/// DEBUG:main: x.x = 1, x.y = 2
+/// # }
+/// # fn expensive_call() -> u32 { 0 }
+/// # fn main() {}
 /// ```
 #[macro_export]
 macro_rules! log_enabled {
     ($lvl:expr) => ({
         let lvl = $lvl;
-        (lvl != ::log::DEBUG || cfg!(not(ndebug))) &&
-        lvl <= ::log::log_level() &&
-        ::log::mod_enabled(lvl, module_path!())
+        lvl <= $crate::max_log_level() && $crate::enabled(lvl, module_path!())
     })
 }

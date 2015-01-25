@@ -9,8 +9,5 @@ repository = "https://github.com/rust-lang/log"
 documentation = "http://doc.rust-lang.org/log"
 homepage = "https://github.com/rust-lang/log"
 description = """
-Logging macros and infrastructure for Rust
+A lightweight logging facade for Rust
 """
-
-[dependencies]
-regex = "0.1"
