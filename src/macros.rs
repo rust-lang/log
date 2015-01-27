@@ -24,11 +24,8 @@ macro_rules! log {
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => (
-        match () {
-            #[cfg(not(any(log_level = "off")))]
-            () => log!($crate::LogLevel::Error, $($arg)*),
-            #[cfg(any(log_level = "off"))]
-            () => {}
+        if !cfg!(any(log_level = "off")) {
+            log!($crate::LogLevel::Error, $($arg)*);
         }
     )
 }
@@ -40,13 +37,9 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     ($($arg:tt)*) => (
-        match () {
-            #[cfg(not(any(log_level = "off",
-                          log_level = "error")))]
-            () => log!($crate::LogLevel::Warn, $($arg)*),
-            #[cfg(any(log_level = "off",
-                      log_level = "error"))]
-            () => {}
+        if !cfg!(any(log_level = "off",
+                     log_level = "error")) {
+            log!($crate::LogLevel::Warn, $($arg)*);
         }
     )
 }
@@ -59,15 +52,10 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => (
-        match () {
-            #[cfg(not(any(log_level = "off",
-                          log_level = "error",
-                          log_level = "warn")))]
-            () => log!($crate::LogLevel::Info, $($arg)*),
-            #[cfg(any(log_level = "off",
-                      log_level = "error",
-                      log_level = "warn"))]
-            () => {}
+        if !cfg!(any(log_level = "off",
+                     log_level = "error",
+                     log_level = "warn")) {
+            log!($crate::LogLevel::Info, $($arg)*);
         }
     )
 }
@@ -80,18 +68,11 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => (
-        match () {
-            #[cfg(not(any(log_level = "off",
-                          log_level = "error",
-                          log_level = "warn",
-                          log_level = "info")))]
-            () => log!($crate::LogLevel::Debug, $($arg)*),
-            #[cfg(any(log_level = "off",
-                      log_level = "error",
-                      log_level = "warn",
-                      log_level = "info"))]
-            () => {}
-
+        if !cfg!(any(log_level = "off",
+                     log_level = "error",
+                     log_level = "warn",
+                     log_level = "info")) {
+            log!($crate::LogLevel::Debug, $($arg)*);
         }
     )
 }
@@ -104,19 +85,12 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($($arg:tt)*) => (
-        match () {
-            #[cfg(not(any(log_level = "off",
-                          log_level = "error",
-                          log_level = "warn",
-                          log_level = "info",
-                          log_level = "debug")))]
-            () => log!($crate::LogLevel::Trace, $($arg)*),
-            #[cfg(any(log_level = "off",
-                      log_level = "error",
-                      log_level = "warn",
-                      log_level = "info",
-                      log_level = "debug"))]
-            () => {}
+        if !cfg!(any(log_level = "off",
+                     log_level = "error",
+                     log_level = "warn",
+                     log_level = "info",
+                     log_level = "debug")) {
+            log!($crate::LogLevel::Debug, $($arg)*);
         }
     )
 }
@@ -146,6 +120,12 @@ macro_rules! trace {
 macro_rules! log_enabled {
     ($lvl:expr) => ({
         let lvl = $lvl;
-        lvl <= $crate::max_log_level() && $crate::enabled(lvl, module_path!())
+        !cfg!(log_level = "off") &&
+            (lvl <= $crate::LogLevel::Error || !cfg!(log_level = "error")) &&
+            (lvl <= $crate::LogLevel::Warn || !cfg!(log_level = "warn")) &&
+            (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
+            (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
+            lvl <= $crate::max_log_level() &&
+            $crate::enabled(lvl, module_path!())
     })
 }

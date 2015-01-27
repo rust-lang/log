@@ -92,8 +92,8 @@
 //!     }
 //!
 //!     fn log(&self, record: &LogRecord) {
-//!         if self.enabled(record.level, record.location.module_path) {
-//!             println!("{} - {}", record.level, record.args);
+//!         if self.enabled(record.level(), record.location().module_path) {
+//!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
 //! }
@@ -183,7 +183,7 @@ pub enum LogLevel {
     /// The "error" level.
     ///
     /// Designates very serious errors.
-    Error,
+    Error = 1, // This way these line up with the discriminants for LogLevelFilter below
     /// The "warn" level.
     ///
     /// Designates hazardous situations.
@@ -219,7 +219,7 @@ impl PartialEq for LogLevel {
 impl PartialEq<LogLevelFilter> for LogLevel {
     #[inline]
     fn eq(&self, other: &LogLevelFilter) -> bool {
-        (*self as usize) + 1 == *other as usize
+        *self as usize == *other as usize
     }
 }
 
@@ -233,7 +233,7 @@ impl PartialOrd for LogLevel {
 impl PartialOrd<LogLevelFilter> for LogLevel {
     #[inline]
     fn partial_cmp(&self, other: &LogLevelFilter) -> Option<cmp::Ordering> {
-        Some(((*self as usize) + 1).cmp(&(*other as usize)))
+        Some((*self as usize).cmp(&(*other as usize)))
     }
 }
 
@@ -250,18 +250,29 @@ impl FromStr for LogLevel {
             .position(|&name| name.eq_ignore_ascii_case(level))
             .into_iter()
             .filter(|&idx| idx != 0)
-            .map(|idx| unsafe { mem::transmute(idx - 1) })
+            .map(|idx| LogLevel::from_usize(idx).unwrap())
             .next()
     }
 }
 
 impl fmt::Display for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", LOG_LEVEL_NAMES[(*self as usize) + 1])
+        write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
     }
 }
 
 impl LogLevel {
+    fn from_usize(u: usize) -> Option<LogLevel> {
+        match u {
+            1 => Some(LogLevel::Error),
+            2 => Some(LogLevel::Warn),
+            3 => Some(LogLevel::Info),
+            4 => Some(LogLevel::Debug),
+            5 => Some(LogLevel::Trace),
+            _ => None
+        }
+    }
+
     /// Returns the most verbose logging level.
     #[inline]
     pub fn max() -> LogLevel {
@@ -271,7 +282,7 @@ impl LogLevel {
     /// Converts the `LogLevel` to the equivalent `LogLevelFilter`.
     #[inline]
     pub fn to_log_level_filter(&self) -> LogLevelFilter {
-        unsafe { mem::transmute((*self as usize) + 1) }
+        LogLevelFilter::from_usize(*self as usize).unwrap()
     }
 }
 
@@ -344,7 +355,7 @@ impl FromStr for LogLevelFilter {
     fn from_str(level: &str) -> Option<LogLevelFilter> {
         LOG_LEVEL_NAMES.iter()
             .position(|&name| name.eq_ignore_ascii_case(level))
-            .map(|p| unsafe { mem::transmute(p) })
+            .map(|p| LogLevelFilter::from_usize(p).unwrap())
     }
 }
 
@@ -355,6 +366,17 @@ impl fmt::Display for LogLevelFilter {
 }
 
 impl LogLevelFilter {
+    fn from_usize(u: usize) -> Option<LogLevelFilter> {
+        match u {
+            0 => Some(LogLevelFilter::Off),
+            1 => Some(LogLevelFilter::Error),
+            2 => Some(LogLevelFilter::Warn),
+            3 => Some(LogLevelFilter::Info),
+            4 => Some(LogLevelFilter::Debug),
+            5 => Some(LogLevelFilter::Trace),
+            _ => None
+        }
+    }
     /// Returns the most verbose logging level filter.
     #[inline]
     pub fn max() -> LogLevelFilter {
@@ -366,21 +388,32 @@ impl LogLevelFilter {
     /// Returns `None` if `self` is `LogLevel::Off`.
     #[inline]
     pub fn to_log_level(&self) -> Option<LogLevel> {
-        match *self {
-            LogLevelFilter::Off => None,
-            v => unsafe { Some(mem::transmute((v as usize) - 1)) }
-        }
+        LogLevel::from_usize(*self as usize)
     }
 }
 
 /// The "payload" of a log message.
 pub struct LogRecord<'a> {
+    args: fmt::Arguments<'a>,
+    location: &'a LogLocation,
+    level: LogLevel,
+}
+
+impl<'a> LogRecord<'a> {
     /// The message body.
-    pub args: fmt::Arguments<'a>,
+    pub fn args(&self) -> &fmt::Arguments<'a> {
+        &self.args
+    }
+
     /// The location of the log directive.
-    pub location: &'static LogLocation,
+    pub fn location(&self) -> &LogLocation {
+        self.location
+    }
+
     /// The verbosity level of the message.
-    pub level: LogLevel,
+    pub fn level(&self) -> LogLevel {
+        self.level
+    }
 }
 
 /// A trait encapsulating the operations required of a logger
@@ -437,7 +470,7 @@ impl MaxLogLevelFilter {
 
     /// Sets the maximum log level.
     pub fn set(&self, level: LogLevelFilter) {
-        MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed)
+        MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
     }
 }
 
@@ -466,18 +499,18 @@ pub fn max_log_level() -> LogLevelFilter {
 /// `set_logger` internally.
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
-    if LOGGER.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::Relaxed) != UNINITIALIZED {
-        return Err(SetLoggerError);
+    if LOGGER.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
+        return Err(SetLoggerError(()));
     }
 
     let logger = Box::new(make_logger(MaxLogLevelFilter(())));
     let logger = unsafe { mem::transmute::<Box<Box<Log>>, usize>(logger) };
-    LOGGER.store(logger, Ordering::Release);
+    LOGGER.store(logger, Ordering::SeqCst);
     rt::at_exit(|| {
         // Set to INITIALIZING to prevent re-initialization after
-        let logger = LOGGER.swap(INITIALIZING, Ordering::Acquire);
+        let logger = LOGGER.swap(INITIALIZING, Ordering::SeqCst);
 
-        while REFCOUNT.load(Ordering::Relaxed) != 0 {
+        while REFCOUNT.load(Ordering::SeqCst) != 0 {
             // FIXME add a sleep here when it doesn't involve timers
         }
 
@@ -490,11 +523,11 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// The type returned by `set_logger` if `set_logger` has already been called.
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
-pub struct SetLoggerError;
+pub struct SetLoggerError(());
 
 impl fmt::Display for SetLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Attempted to set a logger after the logging system was already initialized")
+        write!(fmt, "attempted to set a logger after the logging system was already initialized")
     }
 }
 
@@ -502,7 +535,7 @@ struct LoggerGuard(usize);
 
 impl Drop for LoggerGuard {
     fn drop(&mut self) {
-        REFCOUNT.fetch_sub(1, Ordering::Relaxed);
+        REFCOUNT.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
@@ -515,10 +548,10 @@ impl Deref for LoggerGuard {
 }
 
 fn logger() -> Option<LoggerGuard> {
-    REFCOUNT.fetch_add(1, Ordering::Relaxed);
-    let logger = LOGGER.load(Ordering::Acquire);
+    REFCOUNT.fetch_add(1, Ordering::SeqCst);
+    let logger = LOGGER.load(Ordering::SeqCst);
     if logger == UNINITIALIZED || logger == INITIALIZING {
-        REFCOUNT.fetch_sub(1, Ordering::Relaxed);
+        REFCOUNT.fetch_sub(1, Ordering::SeqCst);
         None
     } else {
         Some(LoggerGuard(logger))
@@ -542,7 +575,7 @@ pub fn enabled(level: LogLevel, module: &str) -> bool {
 ///
 /// This should not typically be called directly. The `log!`, `error!`,
 /// `warn!`, `info!`, `debug!`, and `trace!` macros should be used instead.
-pub fn log(level: LogLevel, loc: &'static LogLocation, args: fmt::Arguments) {
+pub fn log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
         logger.log(&LogRecord {
             args: args,
@@ -571,6 +604,7 @@ mod tests {
              ("INFO", Some(LogLevelFilter::Info)),
              ("DEBUG", Some(LogLevelFilter::Debug)),
              ("TRACE", Some(LogLevelFilter::Trace)),
+             ("asdf", None),
          ];
          for &(s, ref expected) in tests.iter() {
              assert_eq!(expected, &s.parse());
@@ -591,6 +625,7 @@ mod tests {
              ("INFO", Some(LogLevel::Info)),
              ("DEBUG", Some(LogLevel::Debug)),
              ("TRACE", Some(LogLevel::Trace)),
+             ("asdf", None),
          ];
          for &(s, ref expected) in tests.iter() {
              assert_eq!(expected, &s.parse());
@@ -601,6 +636,12 @@ mod tests {
      fn test_loglevel_show() {
          assert_eq!("INFO", LogLevel::Info.to_string());
          assert_eq!("ERROR", LogLevel::Error.to_string());
+     }
+
+     #[test]
+     fn test_loglevelfilter_show() {
+         assert_eq!("OFF", LogLevelFilter::Off.to_string());
+         assert_eq!("ERROR", LogLevelFilter::Error.to_string());
      }
 
      #[test]
