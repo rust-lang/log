@@ -1,0 +1,11 @@
+[package]
+name = "env_logger"
+version = "0.0.1"
+authors = ["The Rust Project Developers"]
+
+[dependencies.log]
+version = "0.1"
+path = ".."
+
+[dependencies]
+regex = "0.1"
