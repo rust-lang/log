@@ -7,6 +7,7 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
+
 //! A logger configured via an environment variable.
 //!
 //! ## Example
@@ -71,28 +72,29 @@
 //!
 //! ## Enabling logging
 //!
-//! Log levels are controlled on a per-module basis, and by default all logging is
-//! disabled except for `error!`. Logging is controlled via the `RUST_LOG`
+//! Log levels are controlled on a per-module basis, and by default all logging
+//! is disabled except for `error!`. Logging is controlled via the `RUST_LOG`
 //! environment variable. The value of this environment variable is a
-//! comma-separated list of logging directives. A logging directive is of the form:
+//! comma-separated list of logging directives. A logging directive is of the
+//! form:
 //!
 //! ```text
 //! path::to::module=log_level
 //! ```
 //!
-//! The path to the module is rooted in the name of the crate it was compiled for,
-//! so if your program is contained in a file `hello.rs`, for example, to turn on
-//! logging for this file you would use a value of `RUST_LOG=hello`.
+//! The path to the module is rooted in the name of the crate it was compiled
+//! for, so if your program is contained in a file `hello.rs`, for example, to
+//! turn on logging for this file you would use a value of `RUST_LOG=hello`.
 //! Furthermore, this path is a prefix-search, so all modules nested in the
 //! specified module will also have logging enabled.
 //!
-//! The actual `log_level` is optional to specify. If omitted, all logging will be
-//! enabled. If specified, it must be one of the strings `debug`, `error`, `info`,
-//! `warn`, or `trace`.
+//! The actual `log_level` is optional to specify. If omitted, all logging will
+//! be enabled. If specified, it must be one of the strings `debug`, `error`,
+//! `info`, `warn`, or `trace`.
 //!
-//! As the log level for a module is optional, the module to enable logging for is
-//! also optional. If only a `log_level` is provided, then the global log level for
-//! all modules is set to this value.
+//! As the log level for a module is optional, the module to enable logging for
+//! is also optional. If only a `log_level` is provided, then the global log
+//! level for all modules is set to this value.
 //!
 //! Some examples of valid values of `RUST_LOG` are:
 //!
@@ -106,25 +108,27 @@
 //!
 //! A RUST_LOG directive may include a regex filter. The syntax is to append `/`
 //! followed by a regex. Each message is checked against the regex, and is only
-//! logged if it matches. Note that the matching is done after formatting the log
-//! string but before adding any logging meta-data. There is a single filter for all
-//! modules.
+//! logged if it matches. Note that the matching is done after formatting the
+//! log string but before adding any logging meta-data. There is a single filter
+//! for all modules.
 //!
 //! Some examples:
 //!
-//! * `hello/foo` turns on all logging for the 'hello' module where the log message
-//! includes 'foo'.
+//! * `hello/foo` turns on all logging for the 'hello' module where the log
+//!   message includes 'foo'.
 //! * `info/f.o` turns on all info logging where the log message includes 'foo',
-//! 'f1o', 'fao', etc.
+//!   'f1o', 'fao', etc.
 //! * `hello=debug/foo*foo` turns on debug logging for 'hello' where the log
-//! message includes 'foofoo' or 'fofoo' or 'fooooooofoo', etc.
-//! * `error,hello=warn/[0-9] scopes` turn on global error logging and also warn for
-//!  hello. In both cases the log message must include a single digit number
-//!  followed by 'scopes'.
+//!   message includes 'foofoo' or 'fofoo' or 'fooooooofoo', etc.
+//! * `error,hello=warn/[0-9] scopes` turn on global error logging and also
+//!   warn for hello. In both cases the log message must include a single digit
+//!   number followed by 'scopes'.
+
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
-       html_root_url = "http://doc.rust-lang.org/log/")]
+       html_root_url = "http://doc.rust-lang.org/env_logger/")]
 #![allow(unstable)]
+
 extern crate regex;
 extern crate log;
 

@@ -5,7 +5,8 @@ A Rust library providing a lightweight logging *facade*.
 
 [![Build Status](https://travis-ci.org/rust-lang/log.svg?branch=master)](https://travis-ci.org/rust-lang/log)
 
-[Documentation](http://doc.rust-lang.org/log)
+* [`log` documentation](http://doc.rust-lang.org/log)
+* [`env_logger` documentation](http://doc.rust-lang.org/log/env_logger)
 
 A logging facade provides a single logging API that abstracts over the actual
 logging implementation. Libraries can use the logging API provided by this

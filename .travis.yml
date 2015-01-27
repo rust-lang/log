@@ -3,13 +3,14 @@ sudo: false
 script:
   - cargo build --verbose
   - cargo test --verbose
-  - cargo doc
+  - cargo test --verbose --manifest-path env/Cargo.toml
+  - cargo doc --manifest-path env/Cargo.toml
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
-  echo '<meta http-equiv=refresh content=0;url=log/index.html>' > target/doc/index.html &&
+  echo '<meta http-equiv=refresh content=0;url=log/index.html>' > env/target/doc/index.html &&
   pip install ghp-import --user $USER &&
-  $HOME/.local/bin/ghp-import -n target/doc &&
+  $HOME/.local/bin/ghp-import -n env/target/doc &&
   git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
   global:
