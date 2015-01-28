@@ -133,8 +133,8 @@ extern crate regex;
 extern crate log;
 
 use regex::Regex;
-use std::io::{self, LineBufferedWriter};
-use std::io::stdio::StdWriter;
+use std::old_io::{self, LineBufferedWriter};
+use std::old_io::stdio::StdWriter;
 use std::sync::Mutex;
 use std::os;
 
@@ -213,7 +213,7 @@ pub fn init() -> Result<(), SetLoggerError> {
         Box::new(Logger {
             directives: directives,
             filter: filter,
-            out: Mutex::new(io::stderr()),
+            out: Mutex::new(old_io::stderr()),
         })
     })
 }
@@ -281,7 +281,7 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
+    use std::old_io;
     use std::sync::Mutex;
     use log::{Log, LogLevel, LogLevelFilter};
 
@@ -291,7 +291,7 @@ mod tests {
         Logger {
             directives: dirs,
             filter: None,
-            out: Mutex::new(io::stderr())
+            out: Mutex::new(old_io::stderr())
         }
     }
 
