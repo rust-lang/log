@@ -404,12 +404,22 @@ impl LogLevelFilter {
 
 /// The "payload" of a log message.
 pub struct LogRecord<'a> {
-    args: fmt::Arguments<'a>,
-    location: &'a LogLocation,
     level: LogLevel,
+    location: &'a LogLocation,
+    args: fmt::Arguments<'a>,
 }
 
 impl<'a> LogRecord<'a> {
+    /// Creates a new `LogRecord`.
+    pub fn new(level: LogLevel, location: &'a LogLocation, args: fmt::Arguments<'a>)
+               -> LogRecord<'a> {
+        LogRecord {
+            level: level,
+            location: location,
+            args: args,
+        }
+    }
+
     /// The message body.
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
@@ -587,11 +597,7 @@ pub fn enabled(level: LogLevel, module: &str) -> bool {
 /// `warn!`, `info!`, `debug!`, and `trace!` macros should be used instead.
 pub fn log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
-        logger.log(&LogRecord {
-            args: args,
-            location: loc,
-            level: level,
-        })
+        logger.log(&LogRecord::new(level, loc, args))
     }
 }
 
