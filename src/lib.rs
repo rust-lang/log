@@ -143,7 +143,6 @@
        html_root_url = "http://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
 #![feature(core, std_misc)]
-#![cfg_attr(test, feature(collections))]
 
 use std::ascii::AsciiExt;
 use std::cmp;
@@ -257,13 +256,15 @@ impl Ord for LogLevel {
 }
 
 impl FromStr for LogLevel {
-    fn from_str(level: &str) -> Option<LogLevel> {
+    type Err = ();
+    fn from_str(level: &str) -> Result<LogLevel, ()> {
         LOG_LEVEL_NAMES.iter()
             .position(|&name| name.eq_ignore_ascii_case(level))
             .into_iter()
             .filter(|&idx| idx != 0)
             .map(|idx| LogLevel::from_usize(idx).unwrap())
             .next()
+            .ok_or(())
     }
 }
 
@@ -364,10 +365,12 @@ impl Ord for LogLevelFilter {
 }
 
 impl FromStr for LogLevelFilter {
-    fn from_str(level: &str) -> Option<LogLevelFilter> {
+    type Err = ();
+    fn from_str(level: &str) -> Result<LogLevelFilter, ()> {
         LOG_LEVEL_NAMES.iter()
             .position(|&name| name.eq_ignore_ascii_case(level))
             .map(|p| LogLevelFilter::from_usize(p).unwrap())
+            .ok_or(())
     }
 }
 
@@ -610,19 +613,19 @@ mod tests {
      #[test]
      fn test_loglevelfilter_from_str() {
          let tests = [
-             ("off", Some(LogLevelFilter::Off)),
-             ("error", Some(LogLevelFilter::Error)),
-             ("warn", Some(LogLevelFilter::Warn)),
-             ("info", Some(LogLevelFilter::Info)),
-             ("debug", Some(LogLevelFilter::Debug)),
-             ("trace", Some(LogLevelFilter::Trace)),
-             ("OFF", Some(LogLevelFilter::Off)),
-             ("ERROR", Some(LogLevelFilter::Error)),
-             ("WARN", Some(LogLevelFilter::Warn)),
-             ("INFO", Some(LogLevelFilter::Info)),
-             ("DEBUG", Some(LogLevelFilter::Debug)),
-             ("TRACE", Some(LogLevelFilter::Trace)),
-             ("asdf", None),
+             ("off",   Ok(LogLevelFilter::Off)),
+             ("error", Ok(LogLevelFilter::Error)),
+             ("warn",  Ok(LogLevelFilter::Warn)),
+             ("info",  Ok(LogLevelFilter::Info)),
+             ("debug", Ok(LogLevelFilter::Debug)),
+             ("trace", Ok(LogLevelFilter::Trace)),
+             ("OFF",   Ok(LogLevelFilter::Off)),
+             ("ERROR", Ok(LogLevelFilter::Error)),
+             ("WARN",  Ok(LogLevelFilter::Warn)),
+             ("INFO",  Ok(LogLevelFilter::Info)),
+             ("DEBUG", Ok(LogLevelFilter::Debug)),
+             ("TRACE", Ok(LogLevelFilter::Trace)),
+             ("asdf",  Err(())),
          ];
          for &(s, ref expected) in tests.iter() {
              assert_eq!(expected, &s.parse());
@@ -632,18 +635,18 @@ mod tests {
      #[test]
      fn test_loglevel_from_str() {
          let tests = [
-             ("OFF", None),
-             ("error", Some(LogLevel::Error)),
-             ("warn", Some(LogLevel::Warn)),
-             ("info", Some(LogLevel::Info)),
-             ("debug", Some(LogLevel::Debug)),
-             ("trace", Some(LogLevel::Trace)),
-             ("ERROR", Some(LogLevel::Error)),
-             ("WARN", Some(LogLevel::Warn)),
-             ("INFO", Some(LogLevel::Info)),
-             ("DEBUG", Some(LogLevel::Debug)),
-             ("TRACE", Some(LogLevel::Trace)),
-             ("asdf", None),
+             ("OFF",   Err(())),
+             ("error", Ok(LogLevel::Error)),
+             ("warn",  Ok(LogLevel::Warn)),
+             ("info",  Ok(LogLevel::Info)),
+             ("debug", Ok(LogLevel::Debug)),
+             ("trace", Ok(LogLevel::Trace)),
+             ("ERROR", Ok(LogLevel::Error)),
+             ("WARN",  Ok(LogLevel::Warn)),
+             ("INFO",  Ok(LogLevel::Info)),
+             ("DEBUG", Ok(LogLevel::Debug)),
+             ("TRACE", Ok(LogLevel::Trace)),
+             ("asdf",  Err(())),
          ];
          for &(s, ref expected) in tests.iter() {
              assert_eq!(expected, &s.parse());
