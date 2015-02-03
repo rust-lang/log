@@ -127,7 +127,7 @@
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
-#![allow(unstable)]
+#![feature(core, os, io)]
 
 extern crate regex;
 extern crate log;
@@ -239,14 +239,14 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
                 // if the single argument is a log-level string or number,
                 // treat that as a global fallback
                 match part0.parse() {
-                    Some(num) => (num, None),
-                    None => (LogLevelFilter::max(), Some(part0)),
+                    Ok(num) => (num, None),
+                    Err(_) => (LogLevelFilter::max(), Some(part0)),
                 }
             }
             (Some(part0), Some(""), None) => (LogLevelFilter::max(), Some(part0)),
             (Some(part0), Some(part1), None) => {
                 match part1.parse() {
-                    Some(num) => (num, Some(part0)),
+                    Ok(num) => (num, Some(part0)),
                     _ => {
                         println!("warning: invalid logging spec '{}', \
                                  ignoring it", part1);
