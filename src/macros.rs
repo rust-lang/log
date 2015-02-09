@@ -88,7 +88,7 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Debug, $($arg)*);
+        log!($crate::LogLevel::Trace, $($arg)*);
     )
 }
 
