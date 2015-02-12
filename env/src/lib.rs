@@ -127,7 +127,7 @@
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
-#![feature(core, os, io)]
+#![feature(core, env, io)]
 
 extern crate regex;
 extern crate log;
@@ -136,7 +136,7 @@ use regex::Regex;
 use std::old_io::{self, LineBufferedWriter};
 use std::old_io::stdio::StdWriter;
 use std::sync::Mutex;
-use std::os;
+use std::env;
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError};
 
@@ -191,9 +191,9 @@ struct LogDirective {
 /// will return an error.
 pub fn init() -> Result<(), SetLoggerError> {
     log::set_logger(|max_level| {
-        let (mut directives, filter) = match os::getenv("RUST_LOG") {
-            Some(spec) => parse_logging_spec(spec.as_slice()),
-            None => (Vec::new(), None),
+        let (mut directives, filter) = match env::var("RUST_LOG") {
+            Ok(spec) => parse_logging_spec(spec.as_slice()),
+            Err(..) => (Vec::new(), None),
         };
 
         // Sort the provided directives by length of their name, this allows a
