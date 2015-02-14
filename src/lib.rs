@@ -169,7 +169,7 @@ mod macros;
 // The at_exit routine needs to make sure that no threads are actively logging
 // when it deallocates the logger. The number of actively logging threads is
 // tracked in the REFCOUNT static. The routine first sets LOGGER back to 1.
-// All logging calls past that point will immediatly return without accessing
+// All logging calls past that point will immediately return without accessing
 // the logger. At that point, the at_exit routine just waits for the refcount
 // to reach 0 before deallocating the logger. Note that the refcount does not
 // necessarily monotonically decrease at this point, as new log calls still
