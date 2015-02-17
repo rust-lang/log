@@ -146,6 +146,7 @@
 
 use std::ascii::AsciiExt;
 use std::cmp;
+use std::error;
 use std::fmt;
 use std::mem;
 use std::ops::Deref;
@@ -556,6 +557,10 @@ impl fmt::Display for SetLoggerError {
     }
 }
 
+impl error::Error for SetLoggerError {
+    fn description(&self) -> &str { "set_logger() called multiple times" }
+}
+
 struct LoggerGuard(usize);
 
 impl Drop for LoggerGuard {
@@ -608,7 +613,8 @@ pub fn log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
 
 #[cfg(test)]
 mod tests {
-     use super::{LogLevel, LogLevelFilter};
+     use std::error::Error;
+     use super::{LogLevel, LogLevelFilter, SetLoggerError};
 
      #[test]
      fn test_loglevelfilter_from_str() {
@@ -690,5 +696,11 @@ mod tests {
      fn test_to_log_level_filter() {
          assert_eq!(LogLevelFilter::Error, LogLevel::Error.to_log_level_filter());
          assert_eq!(LogLevelFilter::Trace, LogLevel::Trace.to_log_level_filter());
+     }
+
+     #[test]
+     fn test_error_trait() {
+         let e = SetLoggerError(());
+         assert_eq!(e.description(), "set_logger() called multiple times");
      }
 }
