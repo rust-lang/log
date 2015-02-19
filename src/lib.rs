@@ -572,7 +572,7 @@ impl Drop for LoggerGuard {
 impl Deref for LoggerGuard {
     type Target = Box<Log>;
 
-    fn deref(&self) -> &Box<Log> {
+    fn deref(&self) -> &Box<Log+'static> {
         unsafe { mem::transmute(self.0) }
     }
 }
