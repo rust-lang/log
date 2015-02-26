@@ -468,7 +468,7 @@ pub struct LogLocation {
     /// The source file containing the message.
     pub file: &'static str,
     /// The line containing the message.
-    pub line: usize,
+    pub line: u32,
 }
 
 /// A token providing read and write access to the global maximum log level
