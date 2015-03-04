@@ -256,16 +256,22 @@ impl Ord for LogLevel {
     }
 }
 
+fn ok_or<T, E>(t: Option<T>, e: E) -> Result<T, E> {
+    match t {
+        Some(t) => Ok(t),
+        None => Err(e),
+    }
+}
+
 impl FromStr for LogLevel {
     type Err = ();
     fn from_str(level: &str) -> Result<LogLevel, ()> {
-        LOG_LEVEL_NAMES.iter()
-            .position(|&name| name.eq_ignore_ascii_case(level))
-            .into_iter()
-            .filter(|&idx| idx != 0)
-            .map(|idx| LogLevel::from_usize(idx).unwrap())
-            .next()
-            .ok_or(())
+        ok_or(LOG_LEVEL_NAMES.iter()
+                    .position(|&name| name.eq_ignore_ascii_case(level))
+                    .into_iter()
+                    .filter(|&idx| idx != 0)
+                    .map(|idx| LogLevel::from_usize(idx).unwrap())
+                    .next(), ())
     }
 }
 
@@ -368,10 +374,9 @@ impl Ord for LogLevelFilter {
 impl FromStr for LogLevelFilter {
     type Err = ();
     fn from_str(level: &str) -> Result<LogLevelFilter, ()> {
-        LOG_LEVEL_NAMES.iter()
-            .position(|&name| name.eq_ignore_ascii_case(level))
-            .map(|p| LogLevelFilter::from_usize(p).unwrap())
-            .ok_or(())
+        ok_or(LOG_LEVEL_NAMES.iter()
+                    .position(|&name| name.eq_ignore_ascii_case(level))
+                    .map(|p| LogLevelFilter::from_usize(p).unwrap()), ())
     }
 }
 
