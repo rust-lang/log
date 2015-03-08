@@ -98,17 +98,17 @@
 //! ```rust
 //! extern crate log;
 //!
-//! use log::{LogRecord, LogLevel};
+//! use log::{LogRecord, LogLevel, LogMetadata};
 //!
 //! struct SimpleLogger;
 //!
 //! impl log::Log for SimpleLogger {
-//!     fn enabled(&self, level: LogLevel, _module: &str) -> bool {
-//!         level <= LogLevel::Info
+//!     fn enabled(&self, metadata: &LogMetadata) -> bool {
+//!         metadata.level() <= LogLevel::Info
 //!     }
 //!
 //!     fn log(&self, record: &LogRecord) {
-//!         if self.enabled(record.level(), record.target()) {
+//!         if self.enabled(record.metadata()) {
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
@@ -129,10 +129,10 @@
 //!
 //! ```rust
 //! # extern crate log;
-//! # use log::{LogLevel, LogLevelFilter, SetLoggerError};
+//! # use log::{LogLevel, LogLevelFilter, SetLoggerError, LogMetadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
-//! #   fn enabled(&self, _: LogLevel, _: &str) -> bool { false }
+//! #   fn enabled(&self, _: &LogMetadata) -> bool { false }
 //! #   fn log(&self, _: &log::LogRecord) {}
 //! # }
 //! # fn main() {}
@@ -421,8 +421,7 @@ impl LogLevelFilter {
 
 /// The "payload" of a log message.
 pub struct LogRecord<'a> {
-    level: LogLevel,
-    target: &'a str,
+    metadata: LogMetadata<'a>,
     location: &'a LogLocation,
     args: fmt::Arguments<'a>,
 }
@@ -433,11 +432,34 @@ impl<'a> LogRecord<'a> {
         &self.args
     }
 
+    /// Metadata about the log directive.
+    pub fn metadata(&self) -> &LogMetadata {
+        &self.metadata
+    }
+
     /// The location of the log directive.
     pub fn location(&self) -> &LogLocation {
         self.location
     }
 
+    /// The verbosity level of the message.
+    pub fn level(&self) -> LogLevel {
+        self.metadata.level()
+    }
+
+    /// The name of the target of the directive.
+    pub fn target(&self) -> &str {
+        self.metadata.target()
+    }
+}
+
+/// Metadata about a log message.
+pub struct LogMetadata<'a> {
+    level: LogLevel,
+    target: &'a str,
+}
+
+impl<'a> LogMetadata<'a> {
     /// The verbosity level of the message.
     pub fn level(&self) -> LogLevel {
         self.level
@@ -451,13 +473,13 @@ impl<'a> LogRecord<'a> {
 
 /// A trait encapsulating the operations required of a logger
 pub trait Log: Sync+Send {
-    /// Determines if a log message sent at the specified level to the
-    /// specified target would be logged.
+    /// Determines if a log message with the specified metadata would be
+    /// logged.
     ///
     /// This is used by the `log_enabled!` macro to allow callers to avoid
     /// expensive computation of log message arguments if the message would be
     /// discarded anyway.
-    fn enabled(&self, level: LogLevel, target: &str) -> bool;
+    fn enabled(&self, metadata: &LogMetadata) -> bool;
 
     /// Logs the `LogRecord`.
     ///
@@ -624,7 +646,7 @@ fn logger() -> Option<LoggerGuard> {
 #[doc(hidden)]
 pub fn __enabled(level: LogLevel, target: &str) -> bool {
     if let Some(logger) = logger() {
-        logger.enabled(level, target)
+        logger.enabled(&LogMetadata { level: level, target: target })
     } else {
         false
     }
@@ -636,7 +658,15 @@ pub fn __enabled(level: LogLevel, target: &str) -> bool {
 #[doc(hidden)]
 pub fn __log(level: LogLevel, target: &str, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
-        logger.log(&LogRecord { level: level, target: target, location: loc, args: args })
+        let record = LogRecord {
+            metadata: LogMetadata {
+                level: level,
+                target: target,
+            },
+            location: loc,
+            args: args
+        };
+        logger.log(&record)
     }
 }
 

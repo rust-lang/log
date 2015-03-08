@@ -138,7 +138,7 @@ use std::old_io::stdio::StdWriter;
 use std::sync::Mutex;
 use std::env;
 
-use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError};
+use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
 
 struct Logger {
     directives: Vec<LogDirective>,
@@ -146,12 +146,12 @@ struct Logger {
     out: Mutex<LineBufferedWriter<StdWriter>>,
 }
 
-impl Log for Logger {
-    fn enabled(&self, level: LogLevel, module: &str) -> bool {
+impl Logger {
+    fn enabled(&self, level: LogLevel, target: &str) -> bool {
         // Search for the longest match, the vector is assumed to be pre-sorted.
         for directive in self.directives.iter().rev() {
             match directive.name {
-                Some(ref name) if !module.starts_with(&**name) => {},
+                Some(ref name) if !target.starts_with(&**name) => {},
                 Some(..) | None => {
                     return level <= directive.level
                 }
@@ -159,9 +159,15 @@ impl Log for Logger {
         }
         false
     }
+}
+
+impl Log for Logger {
+    fn enabled(&self, metadata: &LogMetadata) -> bool {
+        self.enabled(metadata.level(), metadata.target())
+    }
 
     fn log(&self, record: &LogRecord) {
-        if !self.enabled(record.level(), record.location().module_path()) {
+        if !Log::enabled(self, record.metadata()) {
             return;
         }
 
