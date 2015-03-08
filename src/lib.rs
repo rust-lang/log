@@ -102,7 +102,7 @@
 //!     }
 //!
 //!     fn log(&self, record: &LogRecord) {
-//!         if self.enabled(record.level(), record.location().module_path) {
+//!         if self.enabled(record.level(), record.location().module_path()) {
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
@@ -466,14 +466,37 @@ pub trait Log: Sync+Send {
 }
 
 /// The location of a log message.
+///
+/// # Warning
+///
+/// The fields of this struct are public so that they may be initialized by the
+/// `log!` macro. They are subject to change at any time and should never be
+/// accessed directly.
 #[derive(Copy, Clone, Debug)]
 pub struct LogLocation {
+    #[doc(hidden)]
+    pub __module_path: &'static str,
+    #[doc(hidden)]
+    pub __file: &'static str,
+    #[doc(hidden)]
+    pub __line: u32,
+}
+
+impl LogLocation {
     /// The module path of the message.
-    pub module_path: &'static str,
+    pub fn module_path(&self) -> &str {
+        self.__module_path
+    }
+
     /// The source file containing the message.
-    pub file: &'static str,
+    pub fn file(&self) -> &str {
+        self.__file
+    }
+
     /// The line containing the message.
-    pub line: u32,
+    pub fn line(&self) -> u32 {
+        self.__line
+    }
 }
 
 /// A token providing read and write access to the global maximum log level

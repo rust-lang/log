@@ -18,9 +18,9 @@
 macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => ({
         static LOC: $crate::LogLocation = $crate::LogLocation {
-            line: line!(),
-            file: file!(),
-            module_path: module_path!(),
+            __line: line!(),
+            __file: file!(),
+            __module_path: module_path!(),
         };
         let lvl = $lvl;
         if !cfg!(log_level = "off") &&

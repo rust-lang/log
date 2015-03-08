@@ -161,7 +161,7 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &LogRecord) {
-        if !self.enabled(record.level(), record.location().module_path) {
+        if !self.enabled(record.level(), record.location().module_path()) {
             return;
         }
 
@@ -174,7 +174,7 @@ impl Log for Logger {
         let _ = writeln!(&mut *self.out.lock().unwrap(),
                          "{}:{}: {}",
                          record.level(),
-                         record.location().module_path,
+                         record.location().module_path(),
                          record.args());
     }
 }
