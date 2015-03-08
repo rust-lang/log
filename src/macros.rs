@@ -29,7 +29,7 @@ macro_rules! log {
                 (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
                 (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
                 lvl <= $crate::max_log_level() {
-            $crate::log(lvl, &LOC, format_args!($($arg)+))
+            $crate::__log(lvl, &LOC, format_args!($($arg)+))
         }
     })
 }
@@ -123,6 +123,6 @@ macro_rules! log_enabled {
             (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
             (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
             lvl <= $crate::max_log_level() &&
-            $crate::enabled(lvl, module_path!())
+            $crate::__enabled(lvl, module_path!())
     })
 }

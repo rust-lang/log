@@ -606,12 +606,11 @@ fn logger() -> Option<LoggerGuard> {
     }
 }
 
-/// Determines if the current logger will ignore a log message at the specified
-/// level from the specified module.
-///
-/// This should not typically be called directly. The `log_enabled!` macro
-/// should be used instead.
-pub fn enabled(level: LogLevel, module: &str) -> bool {
+// WARNING
+// This is not considered part of the crate's public API. It is subject to
+// change at any time.
+#[doc(hidden)]
+pub fn __enabled(level: LogLevel, module: &str) -> bool {
     if let Some(logger) = logger() {
         logger.enabled(level, module)
     } else {
@@ -619,11 +618,11 @@ pub fn enabled(level: LogLevel, module: &str) -> bool {
     }
 }
 
-/// Logs a message.
-///
-/// This should not typically be called directly. The `log!`, `error!`,
-/// `warn!`, `info!`, `debug!`, and `trace!` macros should be used instead.
-pub fn log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
+// WARNING
+// This is not considered part of the crate's public API. It is subject to
+// change at any time.
+#[doc(hidden)]
+pub fn __log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
         logger.log(&LogRecord { level: level, location: loc, args: args })
     }
