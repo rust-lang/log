@@ -19,6 +19,12 @@
 //! implementation that ignores all log messages. The overhead in this case
 //! is very small - just an integer load, comparison and jump.
 //!
+//! A log request consists of a target, a level, and a body. A target is a
+//! string which defaults to the module path of the location of the log
+//! request, though that default may be overridden. Logger implementations
+//! typically use the target to filter requests based on some user
+//! configuration.
+//!
 //! # Use
 //!
 //! ## In libraries
@@ -33,11 +39,11 @@
 //! #[macro_use]
 //! extern crate log;
 //!
-//! # pub struct Yak(String);
+//! # #[derive(Debug)] pub struct Yak(String);
 //! # impl Yak { fn shave(&self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
 //! pub fn shave_the_yak(yak: &Yak) {
-//!     trace!("Commencing yak shaving");
+//!     info!(target: "yak_events", "Commencing yak shaving for {:?}", yak);
 //!
 //!     loop {
 //!         match find_a_razor() {
@@ -102,7 +108,7 @@
 //!     }
 //!
 //!     fn log(&self, record: &LogRecord) {
-//!         if self.enabled(record.level(), record.location().module_path()) {
+//!         if self.enabled(record.level(), record.target()) {
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
@@ -416,6 +422,7 @@ impl LogLevelFilter {
 /// The "payload" of a log message.
 pub struct LogRecord<'a> {
     level: LogLevel,
+    target: &'a str,
     location: &'a LogLocation,
     args: fmt::Arguments<'a>,
 }
@@ -435,17 +442,22 @@ impl<'a> LogRecord<'a> {
     pub fn level(&self) -> LogLevel {
         self.level
     }
+
+    /// The name of the target of the directive.
+    pub fn target(&self) -> &str {
+        self.target
+    }
 }
 
 /// A trait encapsulating the operations required of a logger
 pub trait Log: Sync+Send {
-    /// Determines if a log message sent at the specified level from the
-    /// specified module would be logged.
+    /// Determines if a log message sent at the specified level to the
+    /// specified target would be logged.
     ///
     /// This is used by the `log_enabled!` macro to allow callers to avoid
     /// expensive computation of log message arguments if the message would be
     /// discarded anyway.
-    fn enabled(&self, level: LogLevel, module: &str) -> bool;
+    fn enabled(&self, level: LogLevel, target: &str) -> bool;
 
     /// Logs the `LogRecord`.
     ///
@@ -610,9 +622,9 @@ fn logger() -> Option<LoggerGuard> {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __enabled(level: LogLevel, module: &str) -> bool {
+pub fn __enabled(level: LogLevel, target: &str) -> bool {
     if let Some(logger) = logger() {
-        logger.enabled(level, module)
+        logger.enabled(level, target)
     } else {
         false
     }
@@ -622,9 +634,9 @@ pub fn __enabled(level: LogLevel, module: &str) -> bool {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
+pub fn __log(level: LogLevel, target: &str, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
-        logger.log(&LogRecord { level: level, location: loc, args: args })
+        logger.log(&LogRecord { level: level, target: target, location: loc, args: args })
     }
 }
 
