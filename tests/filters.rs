@@ -1,7 +1,7 @@
 #[macro_use] extern crate log;
 
 use std::sync::{Arc, Mutex};
-use log::{LogLevel, set_logger, LogLevelFilter, Log, LogRecord};
+use log::{LogLevel, set_logger, LogLevelFilter, Log, LogRecord, LogMetadata};
 use log::MaxLogLevelFilter;
 
 struct State {
@@ -10,7 +10,7 @@ struct State {
 }
 
 impl Log for Arc<State> {
-    fn enabled(&self, _level: LogLevel, _module: &str) -> bool {
+    fn enabled(&self, _: &LogMetadata) -> bool {
         true
     }
 

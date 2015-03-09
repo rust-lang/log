@@ -19,6 +19,12 @@
 //! implementation that ignores all log messages. The overhead in this case
 //! is very small - just an integer load, comparison and jump.
 //!
+//! A log request consists of a target, a level, and a body. A target is a
+//! string which defaults to the module path of the location of the log
+//! request, though that default may be overridden. Logger implementations
+//! typically use the target to filter requests based on some user
+//! configuration.
+//!
 //! # Use
 //!
 //! ## In libraries
@@ -33,11 +39,11 @@
 //! #[macro_use]
 //! extern crate log;
 //!
-//! # pub struct Yak(String);
+//! # #[derive(Debug)] pub struct Yak(String);
 //! # impl Yak { fn shave(&self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
 //! pub fn shave_the_yak(yak: &Yak) {
-//!     trace!("Commencing yak shaving");
+//!     info!(target: "yak_events", "Commencing yak shaving for {:?}", yak);
 //!
 //!     loop {
 //!         match find_a_razor() {
@@ -92,17 +98,17 @@
 //! ```rust
 //! extern crate log;
 //!
-//! use log::{LogRecord, LogLevel};
+//! use log::{LogRecord, LogLevel, LogMetadata};
 //!
 //! struct SimpleLogger;
 //!
 //! impl log::Log for SimpleLogger {
-//!     fn enabled(&self, level: LogLevel, _module: &str) -> bool {
-//!         level <= LogLevel::Info
+//!     fn enabled(&self, metadata: &LogMetadata) -> bool {
+//!         metadata.level() <= LogLevel::Info
 //!     }
 //!
 //!     fn log(&self, record: &LogRecord) {
-//!         if self.enabled(record.level(), record.location().module_path) {
+//!         if self.enabled(record.metadata()) {
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
@@ -123,10 +129,10 @@
 //!
 //! ```rust
 //! # extern crate log;
-//! # use log::{LogLevel, LogLevelFilter, SetLoggerError};
+//! # use log::{LogLevel, LogLevelFilter, SetLoggerError, LogMetadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
-//! #   fn enabled(&self, _: LogLevel, _: &str) -> bool { false }
+//! #   fn enabled(&self, _: &LogMetadata) -> bool { false }
 //! #   fn log(&self, _: &log::LogRecord) {}
 //! # }
 //! # fn main() {}
@@ -415,25 +421,20 @@ impl LogLevelFilter {
 
 /// The "payload" of a log message.
 pub struct LogRecord<'a> {
-    level: LogLevel,
+    metadata: LogMetadata<'a>,
     location: &'a LogLocation,
     args: fmt::Arguments<'a>,
 }
 
 impl<'a> LogRecord<'a> {
-    /// Creates a new `LogRecord`.
-    pub fn new(level: LogLevel, location: &'a LogLocation, args: fmt::Arguments<'a>)
-               -> LogRecord<'a> {
-        LogRecord {
-            level: level,
-            location: location,
-            args: args,
-        }
-    }
-
     /// The message body.
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
+    }
+
+    /// Metadata about the log directive.
+    pub fn metadata(&self) -> &LogMetadata {
+        &self.metadata
     }
 
     /// The location of the log directive.
@@ -443,19 +444,42 @@ impl<'a> LogRecord<'a> {
 
     /// The verbosity level of the message.
     pub fn level(&self) -> LogLevel {
+        self.metadata.level()
+    }
+
+    /// The name of the target of the directive.
+    pub fn target(&self) -> &str {
+        self.metadata.target()
+    }
+}
+
+/// Metadata about a log message.
+pub struct LogMetadata<'a> {
+    level: LogLevel,
+    target: &'a str,
+}
+
+impl<'a> LogMetadata<'a> {
+    /// The verbosity level of the message.
+    pub fn level(&self) -> LogLevel {
         self.level
+    }
+
+    /// The name of the target of the directive.
+    pub fn target(&self) -> &str {
+        self.target
     }
 }
 
 /// A trait encapsulating the operations required of a logger
 pub trait Log: Sync+Send {
-    /// Determines if a log message sent at the specified level from the
-    /// specified module would be logged.
+    /// Determines if a log message with the specified metadata would be
+    /// logged.
     ///
     /// This is used by the `log_enabled!` macro to allow callers to avoid
     /// expensive computation of log message arguments if the message would be
     /// discarded anyway.
-    fn enabled(&self, level: LogLevel, module: &str) -> bool;
+    fn enabled(&self, metadata: &LogMetadata) -> bool;
 
     /// Logs the `LogRecord`.
     ///
@@ -466,14 +490,37 @@ pub trait Log: Sync+Send {
 }
 
 /// The location of a log message.
+///
+/// # Warning
+///
+/// The fields of this struct are public so that they may be initialized by the
+/// `log!` macro. They are subject to change at any time and should never be
+/// accessed directly.
 #[derive(Copy, Clone, Debug)]
 pub struct LogLocation {
+    #[doc(hidden)]
+    pub __module_path: &'static str,
+    #[doc(hidden)]
+    pub __file: &'static str,
+    #[doc(hidden)]
+    pub __line: u32,
+}
+
+impl LogLocation {
     /// The module path of the message.
-    pub module_path: &'static str,
+    pub fn module_path(&self) -> &str {
+        self.__module_path
+    }
+
     /// The source file containing the message.
-    pub file: &'static str,
+    pub fn file(&self) -> &str {
+        self.__file
+    }
+
     /// The line containing the message.
-    pub line: u32,
+    pub fn line(&self) -> u32 {
+        self.__line
+    }
 }
 
 /// A token providing read and write access to the global maximum log level
@@ -593,26 +640,33 @@ fn logger() -> Option<LoggerGuard> {
     }
 }
 
-/// Determines if the current logger will ignore a log message at the specified
-/// level from the specified module.
-///
-/// This should not typically be called directly. The `log_enabled!` macro
-/// should be used instead.
-pub fn enabled(level: LogLevel, module: &str) -> bool {
+// WARNING
+// This is not considered part of the crate's public API. It is subject to
+// change at any time.
+#[doc(hidden)]
+pub fn __enabled(level: LogLevel, target: &str) -> bool {
     if let Some(logger) = logger() {
-        logger.enabled(level, module)
+        logger.enabled(&LogMetadata { level: level, target: target })
     } else {
         false
     }
 }
 
-/// Logs a message.
-///
-/// This should not typically be called directly. The `log!`, `error!`,
-/// `warn!`, `info!`, `debug!`, and `trace!` macros should be used instead.
-pub fn log(level: LogLevel, loc: &LogLocation, args: fmt::Arguments) {
+// WARNING
+// This is not considered part of the crate's public API. It is subject to
+// change at any time.
+#[doc(hidden)]
+pub fn __log(level: LogLevel, target: &str, loc: &LogLocation, args: fmt::Arguments) {
     if let Some(logger) = logger() {
-        logger.log(&LogRecord::new(level, loc, args))
+        let record = LogRecord {
+            metadata: LogMetadata {
+                level: level,
+                target: target,
+            },
+            location: loc,
+            args: args
+        };
+        logger.log(&record)
     }
 }
 
