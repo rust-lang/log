@@ -283,7 +283,7 @@ impl FromStr for LogLevel {
 
 impl fmt::Display for LogLevel {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
+        fmt.pad(LOG_LEVEL_NAMES[*self as usize])
     }
 }
 
