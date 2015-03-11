@@ -73,10 +73,10 @@
 //! ## Enabling logging
 //!
 //! Log levels are controlled on a per-module basis, and by default all logging
-//! is disabled except for `error!`. Logging is controlled via the `RUST_LOG`
-//! environment variable. The value of this environment variable is a
-//! comma-separated list of logging directives. A logging directive is of the
-//! form:
+//! is disabled except for `error!`. Logging is controlled either via the
+//! `RUST_LOG` environment variable, or an arbitrary environment variable.
+//! The value of this environment variable is a comma-separated list of logging
+//! directives. A logging directive is of the form:
 //!
 //! ```text
 //! path::to::module=log_level
@@ -127,12 +127,13 @@
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
-#![feature(core, env, old_io)]
+#![feature(core, env, old_io, std_misc)]
 
 extern crate regex;
 extern crate log;
 
 use regex::Regex;
+use std::ffi::AsOsStr;
 use std::old_io::{self, LineBufferedWriter};
 use std::old_io::stdio::StdWriter;
 use std::sync::Mutex;
@@ -190,14 +191,27 @@ struct LogDirective {
     level: LogLevelFilter,
 }
 
-/// Initializes the global logger with an env logger.
+/// Initializes the global logger with an env logger controlled via the
+/// `RUST_LOG` environment variable.
 ///
 /// This should be called early in the execution of a Rust program, and the
 /// global logger may only be initialized once. Future initialization attempts
 /// will return an error.
 pub fn init() -> Result<(), SetLoggerError> {
+    init_using("RUST_LOG")
+}
+
+/// Initializes the global logger with an env logger controlled via an
+/// environment variable as specified by the caller.
+///
+/// This should be called early in the execution of a Rust program, and the
+/// global logger may only be initialized once. Future initialization attempts
+/// will return an error.
+pub fn init_using<K: ?Sized>(key: &K) -> Result<(), SetLoggerError>
+where K: AsOsStr
+{
     log::set_logger(|max_level| {
-        let (mut directives, filter) = match env::var("RUST_LOG") {
+        let (mut directives, filter) = match env::var(key) {
             Ok(spec) => parse_logging_spec(spec.as_slice()),
             Err(..) => (Vec::new(), None),
         };
