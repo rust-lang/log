@@ -127,14 +127,15 @@
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
-#![feature(core, env, old_io)]
+#![feature(io)]
+#![cfg_attr(test, deny(warnings))]
 
 extern crate regex;
 extern crate log;
 
 use regex::Regex;
-use std::old_io::{self, LineBufferedWriter};
-use std::old_io::stdio::StdWriter;
+use std::io::prelude::*;
+use std::io::{self, Stderr};
 use std::sync::Mutex;
 use std::env;
 
@@ -143,7 +144,7 @@ use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata}
 struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<Regex>,
-    out: Mutex<LineBufferedWriter<StdWriter>>,
+    out: Mutex<Stderr>,
 }
 
 impl Logger {
@@ -198,7 +199,7 @@ struct LogDirective {
 pub fn init() -> Result<(), SetLoggerError> {
     log::set_logger(|max_level| {
         let (mut directives, filter) = match env::var("RUST_LOG") {
-            Ok(spec) => parse_logging_spec(spec.as_slice()),
+            Ok(spec) => parse_logging_spec(&spec),
             Err(..) => (Vec::new(), None),
         };
 
@@ -211,15 +212,15 @@ pub fn init() -> Result<(), SetLoggerError> {
         });
 
         let level = {
-            let max = directives.iter().max_by(|d| d.level);
-            max.map(|d| d.level).unwrap_or(LogLevelFilter::max())
+            let max = directives.iter().map(|d| d.level).max();
+            max.unwrap_or(LogLevelFilter::max())
         };
         max_level.set(level);
 
         Box::new(Logger {
             directives: directives,
             filter: filter,
-            out: Mutex::new(old_io::stderr()),
+            out: Mutex::new(io::stderr()),
         })
     })
 }
@@ -287,7 +288,7 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 
 #[cfg(test)]
 mod tests {
-    use std::old_io;
+    use std::io;
     use std::sync::Mutex;
     use log::{Log, LogLevel, LogLevelFilter};
 
@@ -297,7 +298,7 @@ mod tests {
         Logger {
             directives: dirs,
             filter: None,
-            out: Mutex::new(old_io::stderr())
+            out: Mutex::new(io::stderr())
         }
     }
 
