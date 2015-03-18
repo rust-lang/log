@@ -148,7 +148,9 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
-#![feature(core, std_misc)]
+#![feature(core)]
+
+extern crate libc;
 
 use std::ascii::AsciiExt;
 use std::cmp;
@@ -156,7 +158,6 @@ use std::error;
 use std::fmt;
 use std::mem;
 use std::ops::Deref;
-use std::rt;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 mod macros;
@@ -190,7 +191,8 @@ const INITIALIZING: usize = 1;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
+                                             "DEBUG", "TRACE"];
 
 /// An enum representing the available verbosity levels of the logging framework
 ///
@@ -577,14 +579,21 @@ pub fn max_log_level() -> LogLevelFilter {
 /// `set_logger` internally.
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
-    if LOGGER.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
+    if LOGGER.compare_and_swap(UNINITIALIZED, INITIALIZING,
+                               Ordering::SeqCst) != UNINITIALIZED {
         return Err(SetLoggerError(()));
     }
 
     let logger = Box::new(make_logger(MaxLogLevelFilter(())));
     let logger = unsafe { mem::transmute::<Box<Box<Log>>, usize>(logger) };
     LOGGER.store(logger, Ordering::SeqCst);
-    rt::at_exit(|| {
+
+    unsafe {
+        assert_eq!(libc::atexit(shutdown), 0);
+    }
+    return Ok(());
+
+    extern fn shutdown() {
         // Set to INITIALIZING to prevent re-initialization after
         let logger = LOGGER.swap(INITIALIZING, Ordering::SeqCst);
 
@@ -593,9 +602,7 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
         }
 
         unsafe { mem::transmute::<usize, Box<Box<Log>>>(logger); }
-    });
-
-    Ok(())
+    }
 }
 
 /// The type returned by `set_logger` if `set_logger` has already been called.
@@ -605,7 +612,8 @@ pub struct SetLoggerError(());
 
 impl fmt::Display for SetLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to set a logger after the logging system was already initialized")
+        write!(fmt, "attempted to set a logger after the logging system \
+                     was already initialized")
     }
 }
 
@@ -656,7 +664,8 @@ pub fn __enabled(level: LogLevel, target: &str) -> bool {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __log(level: LogLevel, target: &str, loc: &LogLocation, args: fmt::Arguments) {
+pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
+             args: fmt::Arguments) {
     if let Some(logger) = logger() {
         let record = LogRecord {
             metadata: LogMetadata {

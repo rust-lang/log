@@ -15,3 +15,6 @@ A lightweight logging facade for Rust
 [[test]]
 name = "filters"
 harness = false
+
+[dependencies]
+libc = "0.1"
