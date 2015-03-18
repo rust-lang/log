@@ -412,7 +412,7 @@ impl LogLevelFilter {
 
     /// Converts `self` to the equivalent `LogLevel`.
     ///
-    /// Returns `None` if `self` is `LogLevel::Off`.
+    /// Returns `None` if `self` is `LogLevelFilter::Off`.
     #[inline]
     pub fn to_log_level(&self) -> Option<LogLevel> {
         LogLevel::from_usize(*self as usize)
