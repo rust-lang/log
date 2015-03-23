@@ -701,7 +701,7 @@ mod tests {
              ("TRACE", Ok(LogLevelFilter::Trace)),
              ("asdf",  Err(())),
          ];
-         for &(s, ref expected) in tests.iter() {
+         for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
          }
      }
@@ -722,7 +722,7 @@ mod tests {
              ("TRACE", Ok(LogLevel::Trace)),
              ("asdf",  Err(())),
          ];
-         for &(s, ref expected) in tests.iter() {
+         for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
          }
      }
