@@ -148,7 +148,6 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
-#![feature(core)]
 
 extern crate libc;
 
