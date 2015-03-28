@@ -22,7 +22,7 @@ log whatever information will be useful to downstream consumers:
 
 ```toml
 [dependencies]
-log = "0.2"
+log = "0.3"
 ```
 
 ```rust
@@ -61,8 +61,8 @@ functionality of the old revision of the `log` crate.
 
 ```toml
 [dependencies]
-log = "0.2"
-env_logger = "0.1"
+log = "0.3"
+env_logger = "0.3"
 ```
 
 ```rust
