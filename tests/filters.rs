@@ -9,13 +9,15 @@ struct State {
     filter: MaxLogLevelFilter,
 }
 
-impl Log for Arc<State> {
+struct Logger(Arc<State>);
+
+impl Log for Logger {
     fn enabled(&self, _: &LogMetadata) -> bool {
         true
     }
 
     fn log(&self, record: &LogRecord) {
-        *self.last_log.lock().unwrap() = Some(record.level());
+        *self.0.last_log.lock().unwrap() = Some(record.level());
     }
 }
 
@@ -27,7 +29,7 @@ fn main() {
             filter: max,
         });
         a = Some(me.clone());
-        Box::new(me)
+        Box::new(Logger(me))
     }).unwrap();
     let a = a.unwrap();
 
