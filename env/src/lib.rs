@@ -73,10 +73,9 @@
 //! ## Enabling logging
 //!
 //! Log levels are controlled on a per-module basis, and by default all logging
-//! is disabled except for `error!`. Logging is controlled via the `RUST_LOG`
-//! environment variable. The value of this environment variable is a
-//! comma-separated list of logging directives. A logging directive is of the
-//! form:
+//! is disabled. Logging is controlled via the `RUST_LOG` environment variable.
+//! The value of this environment variable is a comma-separated list of logging
+//! directives. A logging directive is of the form:
 //!
 //! ```text
 //! path::to::module=log_level
