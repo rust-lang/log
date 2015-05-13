@@ -133,8 +133,7 @@ extern crate log;
 
 use regex::Regex;
 use std::io::prelude::*;
-use std::io::{self, Stderr};
-use std::sync::Mutex;
+use std::io;
 use std::env;
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
@@ -142,7 +141,6 @@ use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata}
 struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<Regex>,
-    out: Mutex<Stderr>,
 }
 
 impl Logger {
@@ -176,7 +174,7 @@ impl Log for Logger {
             }
         }
 
-        let _ = writeln!(&mut *self.out.lock().unwrap(),
+        let _ = writeln!(&mut io::stderr(),
                          "{}:{}: {}",
                          record.level(),
                          record.location().module_path(),
@@ -218,7 +216,6 @@ pub fn init() -> Result<(), SetLoggerError> {
         Box::new(Logger {
             directives: directives,
             filter: filter,
-            out: Mutex::new(io::stderr()),
         })
     })
 }
@@ -286,8 +283,6 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
-    use std::sync::Mutex;
     use log::{Log, LogLevel, LogLevelFilter};
 
     use super::{Logger, LogDirective, parse_logging_spec};
@@ -296,7 +291,6 @@ mod tests {
         Logger {
             directives: dirs,
             filter: None,
-            out: Mutex::new(io::stderr())
         }
     }
 
