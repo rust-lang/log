@@ -211,7 +211,7 @@ pub fn init() -> Result<(), SetLoggerError> {
 
         let level = {
             let max = directives.iter().map(|d| d.level).max();
-            max.unwrap_or(LogLevelFilter::max())
+            max.unwrap_or(LogLevelFilter::Off)
         };
         max_level.set(level);
 
