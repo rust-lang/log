@@ -73,10 +73,9 @@
 //! ## Enabling logging
 //!
 //! Log levels are controlled on a per-module basis, and by default all logging
-//! is disabled except for `error!`. Logging is controlled via the `RUST_LOG`
-//! environment variable. The value of this environment variable is a
-//! comma-separated list of logging directives. A logging directive is of the
-//! form:
+//! is disabled. Logging is controlled via the `RUST_LOG` environment variable.
+//! The value of this environment variable is a comma-separated list of logging
+//! directives. A logging directive is of the form:
 //!
 //! ```text
 //! path::to::module=log_level
@@ -134,8 +133,7 @@ extern crate log;
 
 use regex::Regex;
 use std::io::prelude::*;
-use std::io::{self, Stderr};
-use std::sync::Mutex;
+use std::io;
 use std::env;
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
@@ -143,7 +141,6 @@ use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata}
 struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<Regex>,
-    out: Mutex<Stderr>,
 }
 
 impl Logger {
@@ -177,7 +174,7 @@ impl Log for Logger {
             }
         }
 
-        let _ = writeln!(&mut *self.out.lock().unwrap(),
+        let _ = writeln!(&mut io::stderr(),
                          "{}:{}: {}",
                          record.level(),
                          record.location().module_path(),
@@ -212,14 +209,13 @@ pub fn init() -> Result<(), SetLoggerError> {
 
         let level = {
             let max = directives.iter().map(|d| d.level).max();
-            max.unwrap_or(LogLevelFilter::max())
+            max.unwrap_or(LogLevelFilter::Off)
         };
         max_level.set(level);
 
         Box::new(Logger {
             directives: directives,
             filter: filter,
-            out: Mutex::new(io::stderr()),
         })
     })
 }
@@ -287,8 +283,6 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
-    use std::sync::Mutex;
     use log::{Log, LogLevel, LogLevelFilter};
 
     use super::{Logger, LogDirective, parse_logging_spec};
@@ -297,7 +291,6 @@ mod tests {
         Logger {
             directives: dirs,
             filter: None,
-            out: Mutex::new(io::stderr())
         }
     }
 
