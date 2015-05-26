@@ -17,7 +17,7 @@
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        static LOC: $crate::LogLocation = $crate::LogLocation {
+        static _LOC: $crate::LogLocation = $crate::LogLocation {
             __line: line!(),
             __file: file!(),
             __module_path: module_path!(),
@@ -29,7 +29,7 @@ macro_rules! log {
                 (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
                 (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
                 lvl <= $crate::max_log_level() {
-            $crate::__log(lvl, $target, &LOC, format_args!($($arg)+))
+            $crate::__log(lvl, $target, &_LOC, format_args!($($arg)+))
         }
     });
     ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
