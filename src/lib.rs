@@ -326,7 +326,7 @@ pub enum LogLevelFilter {
     Error,
     /// Corresponds to the `Warn` log level.
     Warn,
-    /// Corresponds to the `Trace` log level.
+    /// Corresponds to the `Info` log level.
     Info,
     /// Corresponds to the `Debug` log level.
     Debug,
