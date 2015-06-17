@@ -8,7 +8,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! A logger configured via an environment variable.
+//! A logger configured via an environment variable which writes to standard
+//! error.
 //!
 //! ## Example
 //!
