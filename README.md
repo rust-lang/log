@@ -50,7 +50,7 @@ pub fn shave_the_yak(yak: &Yak) {
 
 ## In executables
 
-Executables should chose a logger implementation and initialize it early in the
+Executables should choose a logger implementation and initialize it early in the
 runtime of the program. Logger implementations will typically include a
 function to do this. Any log messages generated before the logger is
 initialized will be ignored.
