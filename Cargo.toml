@@ -17,4 +17,4 @@ name = "filters"
 harness = false
 
 [dependencies]
-libc = "0.1"
+shutdown_hooks = "0.1.*"
