@@ -149,7 +149,9 @@
        html_root_url = "http://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
 
-extern crate libc;
+extern crate shutdown_hooks;
+
+use shutdown_hooks::add_shutdown_hook;
 
 use std::ascii::AsciiExt;
 use std::cmp;
@@ -587,9 +589,7 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     let logger = unsafe { mem::transmute::<Box<Box<Log>>, usize>(logger) };
     LOGGER.store(logger, Ordering::SeqCst);
 
-    unsafe {
-        assert_eq!(libc::atexit(shutdown), 0);
-    }
+    assert!(add_shutdown_hook(shutdown));
     return Ok(());
 
     extern fn shutdown() {
