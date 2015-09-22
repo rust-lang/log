@@ -3,7 +3,7 @@ log
 
 A Rust library providing a lightweight logging *facade*.
 
-[![Build Status](https://travis-ci.org/rust-lang/log.svg?branch=master)](https://travis-ci.org/rust-lang/log)
+[![Build Status](https://travis-ci.org/rust-lang-nursery/log.svg?branch=master)](https://travis-ci.org/rust-lang-nursery/log)
 [![Build status](https://ci.appveyor.com/api/projects/status/nopdjmmjt45xcrki?svg=true)](https://ci.appveyor.com/project/alexcrichton/log)
 
 * [`log` documentation](https://doc.rust-lang.org/log)
