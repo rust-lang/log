@@ -123,10 +123,12 @@ macro_rules! trace {
 ///
 /// # fn foo() {
 /// if log_enabled!(Debug) {
-///     debug!("expensive debug data: {}", expensive_call());
+///     let data = expensive_call();
+///     debug!("expensive debug data: {} {}", data.x, data.y);
 /// }
 /// # }
-/// # fn expensive_call() -> u32 { 0 }
+/// # struct Data { x: u32, y: u32 }
+/// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
 /// # fn main() {}
 /// ```
 #[macro_export]
