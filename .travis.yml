@@ -2,12 +2,15 @@ language: rust
 sudo: false
 rust:
   - 1.0.0
+  - stable
   - beta
   - nightly
 script:
   - cargo build --verbose
   - cargo test --verbose
   - cargo test --verbose --manifest-path env/Cargo.toml
+  - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
+  - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
   - cargo doc --manifest-path env/Cargo.toml
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&

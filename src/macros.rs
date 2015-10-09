@@ -12,8 +12,8 @@
 /// This macro will generically log with the specified `LogLevel` and `format!`
 /// based argument list.
 ///
-/// The `log_level` cfg can be used to statically disable logging at various
-/// levels.
+/// The `max_level_*` features can be used to statically disable logging at
+/// various levels.
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
@@ -23,12 +23,7 @@ macro_rules! log {
             __module_path: module_path!(),
         };
         let lvl = $lvl;
-        if !cfg!(log_level = "off") &&
-                (lvl <= $crate::LogLevel::Error || !cfg!(log_level = "error")) &&
-                (lvl <= $crate::LogLevel::Warn || !cfg!(log_level = "warn")) &&
-                (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
-                (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
-                lvl <= $crate::max_log_level() {
+        if lvl <= $crate::__static_max_level() && lvl <= $crate::max_log_level() {
             $crate::__log(lvl, $target, &_LOC, format_args!($($arg)+))
         }
     });
@@ -37,8 +32,7 @@ macro_rules! log {
 
 /// Logs a message at the error level.
 ///
-/// Logging at this level is disabled if the `log_level = "off"` cfg is
-/// present.
+/// Logging at this level is disabled if the `max_level_off` feature is present.
 #[macro_export]
 macro_rules! error {
     (target: $target:expr, $($arg:tt)*) => (
@@ -51,8 +45,12 @@ macro_rules! error {
 
 /// Logs a message at the warn level.
 ///
-/// Logging at this level is disabled if any of the following cfgs are present:
-/// `log_level = "off"` or `log_level = "error"`.
+/// Logging at this level is disabled if any of the following features are
+/// present: `max_level_off` or `max_level_error`.
+///
+/// When building in release mode (i.e., without the `debug_assertions` option),
+/// logging at this level is also disabled if any of the following features are
+/// present: `release_max_level_off` or `max_level_error`.
 #[macro_export]
 macro_rules! warn {
     (target: $target:expr, $($arg:tt)*) => (
@@ -65,9 +63,13 @@ macro_rules! warn {
 
 /// Logs a message at the info level.
 ///
-/// Logging at this level is disabled if any of the following cfgs are present:
-/// `log_level = "off"`, `log_level = "error"`, or
-/// `log_level = "warn"`.
+/// Logging at this level is disabled if any of the following features are
+/// present: `max_level_off`, `max_level_error`, or `max_level_warn`.
+///
+/// When building in release mode (i.e., without the `debug_assertions` option),
+/// logging at this level is also disabled if any of the following features are
+/// present: `release_max_level_off`, `release_max_level_error`, or
+/// `release_max_level_warn`.
 #[macro_export]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)*) => (
@@ -80,9 +82,14 @@ macro_rules! info {
 
 /// Logs a message at the debug level.
 ///
-/// Logging at this level is disabled if any of the following cfgs are present:
-/// `log_level = "off"`, `log_level = "error"`, `log_level = "warn"`,
-/// or `log_level = "info"`.
+/// Logging at this level is disabled if any of the following features are
+/// present: `max_level_off`, `max_level_error`, `max_level_warn`, or
+/// `max_level_info`.
+///
+/// When building in release mode (i.e., without the `debug_assertions` option),
+/// logging at this level is also disabled if any of the following features are
+/// present: `release_max_level_off`, `release_max_level_error`,
+/// `release_max_level_warn`, or `release_max_level_info`.
 #[macro_export]
 macro_rules! debug {
     (target: $target:expr, $($arg:tt)*) => (
@@ -95,9 +102,15 @@ macro_rules! debug {
 
 /// Logs a message at the trace level.
 ///
-/// Logging at this level is disabled if any of the following cfgs are present:
-/// `log_level = "off"`, `log_level = "error"`, `log_level = "warn"`,
-/// `log_level = "info"`, or `log_level = "debug"`.
+/// Logging at this level is disabled if any of the following features are
+/// present: `max_level_off`, `max_level_error`, `max_level_warn`,
+/// `max_level_info`, or `max_level_debug`.
+///
+/// When building in release mode (i.e., without the `debug_assertions` option),
+/// logging at this level is also disabled if any of the following features are
+/// present: `release_max_level_off`, `release_max_level_error`,
+/// `release_max_level_warn`, `release_max_level_info`, or
+/// `release_max_level_debug`.
 #[macro_export]
 macro_rules! trace {
     (target: $target:expr, $($arg:tt)*) => (
@@ -135,12 +148,7 @@ macro_rules! trace {
 macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => ({
         let lvl = $lvl;
-        !cfg!(log_level = "off") &&
-            (lvl <= $crate::LogLevel::Error || !cfg!(log_level = "error")) &&
-            (lvl <= $crate::LogLevel::Warn || !cfg!(log_level = "warn")) &&
-            (lvl <= $crate::LogLevel::Debug || !cfg!(log_level = "debug")) &&
-            (lvl <= $crate::LogLevel::Info || !cfg!(log_level = "info")) &&
-            lvl <= $crate::max_log_level() &&
+        lvl <= $crate::__static_max_level() && lvl <= $crate::max_log_level() &&
             $crate::__enabled(lvl, $target)
     });
     ($lvl:expr) => (log_enabled!(target: module_path!(), $lvl))

@@ -1,0 +1,11 @@
+[package]
+name = "optimized"
+version = "0.1.0"
+
+[[bin]]
+name = "max_level_features"
+path = "main.rs"
+
+[dependencies.log]
+path = "../.."
+features = ["max_level_debug", "release_max_level_info"]
