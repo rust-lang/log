@@ -75,7 +75,8 @@
 //!
 //! Log levels are controlled on a per-module basis, and by default all logging
 //! is disabled except for `error!`. Logging is controlled via the `RUST_LOG`
-//! environment variable. The value of this environment variable is a
+//! environment variable (this can be customized using `init_with_env_var` or
+//! `init_with_spec`). The value of this environment variable is a
 //! comma-separated list of logging directives. A logging directive is of the
 //! form:
 //!
@@ -189,16 +190,39 @@ struct LogDirective {
     level: LogLevelFilter,
 }
 
-/// Initializes the global logger with an env logger.
+/// Initializes the global logger, with a log spec from the RUST_LOG environment variable.
 ///
 /// This should be called early in the execution of a Rust program, and the
 /// global logger may only be initialized once. Future initialization attempts
 /// will return an error.
 pub fn init() -> Result<(), SetLoggerError> {
+    init_with_env_var("RUST_LOG")
+}
+
+/// Initializes the global logger, with a log spec from an environment variable.
+///
+/// This should be called early in the execution of a Rust program, and the
+/// global logger may only be initialized once. Future initialization attempts
+/// will return an error.
+pub fn init_with_env_var(env_var: &str) -> Result<(), SetLoggerError> {
+    init_internal(env::var(env_var).ok().as_ref().map(|s| &**s))
+}
+
+/// Initializes the global logger with a log spec.
+///
+/// This should be called early in the execution of a Rust program, and the
+/// global logger may only be initialized once. Future initialization attempts
+/// will return an error.
+pub fn init_with_spec(spec: &str) -> Result<(), SetLoggerError> {
+    init_internal(Some(spec))
+}
+
+/// Initializes the global logger with a log spec or a default.
+fn init_internal(spec: Option<&str>) -> Result<(), SetLoggerError> {
     log::set_logger(|max_level| {
-        let (mut directives, filter) = match env::var("RUST_LOG") {
-            Ok(spec) => parse_logging_spec(&spec),
-            Err(..) => (vec![LogDirective { name: None, level: LogLevelFilter::Error }], None),
+        let (mut directives, filter) = match spec {
+            Some(spec) => parse_logging_spec(&spec),
+            None => (vec![LogDirective { name: None, level: LogLevelFilter::Error }], None),
         };
 
         // Sort the provided directives by length of their name, this allows a
