@@ -563,40 +563,6 @@ pub fn max_log_level() -> LogLevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
 }
 
-#[inline(always)]
-#[doc(hidden)]
-pub fn __static_max_level() -> LogLevelFilter {
-    if !cfg!(debug_assertions) {
-        // This is a release build. Check `release_max_level_*` first.
-        if cfg!(feature = "release_max_level_off") {
-            return LogLevelFilter::Off
-        } else if cfg!(feature = "release_max_level_error") {
-            return LogLevelFilter::Error
-        } else if cfg!(feature = "release_max_level_warn") {
-            return LogLevelFilter::Warn
-        } else if cfg!(feature = "release_max_level_info") {
-            return LogLevelFilter::Info
-        } else if cfg!(feature = "release_max_level_debug") {
-            return LogLevelFilter::Debug
-        } else if cfg!(feature = "release_max_level_trace") {
-            return LogLevelFilter::Trace
-        }
-    }
-    if cfg!(feature = "max_level_off") {
-        LogLevelFilter::Off
-    } else if cfg!(feature = "max_level_error") {
-        LogLevelFilter::Error
-    } else if cfg!(feature = "max_level_warn") {
-        LogLevelFilter::Warn
-    } else if cfg!(feature = "max_level_info") {
-        LogLevelFilter::Info
-    } else if cfg!(feature = "max_level_debug") {
-        LogLevelFilter::Debug
-    } else {
-        LogLevelFilter::Trace
-    }
-}
-
 /// Sets the global logger.
 ///
 /// The `make_logger` closure is passed a `MaxLogLevel` object, which the
@@ -709,6 +675,43 @@ pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
             args: args
         };
         logger.log(&record)
+    }
+}
+
+// WARNING
+// This is not considered part of the crate's public API. It is subject to
+// change at any time.
+#[inline(always)]
+#[doc(hidden)]
+pub fn __static_max_level() -> LogLevelFilter {
+    if !cfg!(debug_assertions) {
+        // This is a release build. Check `release_max_level_*` first.
+        if cfg!(feature = "release_max_level_off") {
+            return LogLevelFilter::Off
+        } else if cfg!(feature = "release_max_level_error") {
+            return LogLevelFilter::Error
+        } else if cfg!(feature = "release_max_level_warn") {
+            return LogLevelFilter::Warn
+        } else if cfg!(feature = "release_max_level_info") {
+            return LogLevelFilter::Info
+        } else if cfg!(feature = "release_max_level_debug") {
+            return LogLevelFilter::Debug
+        } else if cfg!(feature = "release_max_level_trace") {
+            return LogLevelFilter::Trace
+        }
+    }
+    if cfg!(feature = "max_level_off") {
+        LogLevelFilter::Off
+    } else if cfg!(feature = "max_level_error") {
+        LogLevelFilter::Error
+    } else if cfg!(feature = "max_level_warn") {
+        LogLevelFilter::Warn
+    } else if cfg!(feature = "max_level_info") {
+        LogLevelFilter::Info
+    } else if cfg!(feature = "max_level_debug") {
+        LogLevelFilter::Debug
+    } else {
+        LogLevelFilter::Trace
     }
 }
 
