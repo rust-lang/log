@@ -143,9 +143,128 @@ use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata}
 struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<Regex>,
+    format: Box<Fn(&LogRecord) -> String + Sync + Send>,
+}
+
+/// LogBuilder acts as builder for initializing the Logger.
+/// It can be used to customize the log format, change the enviromental variable used
+/// to provide the logging directives and also set the default log level filter.
+///
+/// ## Example
+///
+/// ```
+/// #[macro_use]
+/// extern crate log;
+/// extern crate env_logger;
+///
+/// use std::env;
+/// use log::{LogRecord, LogLevelFilter};
+/// use env_logger::LogBuilder;
+///
+/// fn main() {
+///     let format = |record: &LogRecord| {
+///         format!("{} - {}",
+///             record.level(),
+///             record.args()
+///         )
+///     };
+///
+///     let mut builder = LogBuilder::new().format(format).filter(None, LogLevelFilter::Info);
+///
+///     if env::var("RUST_LOG").is_ok() {
+///        builder = builder.parse(&env::var("RUST_LOG").unwrap());
+///     }
+///
+///     builder.init().unwrap();
+///
+///     error!("error message");
+///     info!("info message");
+/// }
+/// ```
+pub struct LogBuilder {
+    directives: Vec<LogDirective>,
+    filter: Option<Regex>,
+    format: Box<Fn(&LogRecord) -> String + Sync + Send>,
+}
+
+impl LogBuilder {
+    /// Initializes the log builder with defaults
+    pub fn new() -> LogBuilder {
+        LogBuilder {
+            directives: Vec::new(),
+            filter: None,
+            format: Box::new(|record: &LogRecord|
+                format!("{}:{}: {}",
+                    record.level(), record.location().module_path(), record.args()
+                )
+            ),
+        }
+    }
+    /// Adds filters to the logger
+    pub fn filter(mut self, module: Option<&str>, level: LogLevelFilter) -> Self {
+        self.directives.push(LogDirective {name: module.map(|s| s.to_string()), level: level});
+        self
+    }
+    /// Sets the format function for formatting the log output
+    pub fn format<F: 'static>(mut self, format: F) -> Self
+        where F: Fn(&LogRecord) -> String + Sync + Send
+    {
+        self.format = Box::new(format);
+        self
+    }
+    /// Parses the directives string taken from the environment variable
+    pub fn parse(mut self, filters: &str) -> Self {
+        let (directives, filter) = parse_logging_spec(filters);
+
+        self.filter = filter;
+
+        for directive in directives {
+            self.directives.push(directive);
+        }
+        self
+    }
+    /// Initializes the global logger with an env logger.
+    ///
+    /// This should be called early in the execution of a Rust program, and the
+    /// global logger may only be initialized once. Future initialization attempts
+    /// will return an error.
+    pub fn init(mut self) -> Result<(), SetLoggerError> {
+
+        if self.directives.is_empty() {
+            // Adds the default filter if none exist
+            self.directives.push(LogDirective {name: None, level: LogLevelFilter::Error});
+        } else {
+            // Sort the directives by length of their name, this allows a
+            // little more efficient lookup at runtime.
+            self.directives.sort_by(|a, b| {
+                let alen = a.name.as_ref().map(|a| a.len()).unwrap_or(0);
+                let blen = b.name.as_ref().map(|b| b.len()).unwrap_or(0);
+                alen.cmp(&blen)
+            });
+        }
+
+        log::set_logger(|max_level| {
+            let level = {
+                let max = self.directives.iter().map(|d| d.level).max();
+                max.unwrap_or(LogLevelFilter::Off)
+            };
+            max_level.set(level);
+
+            Box::new(self.build())
+        })
+    }
+
+    fn build(self) -> Logger {
+        Logger{
+            directives: self.directives,
+            filter: self.filter,
+            format: self.format,
+        }
+    }
 }
 
 impl Logger {
+
     fn enabled(&self, level: LogLevel, target: &str) -> bool {
         // Search for the longest match, the vector is assumed to be pre-sorted.
         for directive in self.directives.iter().rev() {
@@ -176,11 +295,7 @@ impl Log for Logger {
             }
         }
 
-        let _ = writeln!(&mut io::stderr(),
-                         "{}:{}: {}",
-                         record.level(),
-                         record.location().module_path(),
-                         record.args());
+        let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
     }
 }
 
@@ -195,31 +310,13 @@ struct LogDirective {
 /// global logger may only be initialized once. Future initialization attempts
 /// will return an error.
 pub fn init() -> Result<(), SetLoggerError> {
-    log::set_logger(|max_level| {
-        let (mut directives, filter) = match env::var("RUST_LOG") {
-            Ok(spec) => parse_logging_spec(&spec),
-            Err(..) => (vec![LogDirective { name: None, level: LogLevelFilter::Error }], None),
-        };
+    let mut builder = LogBuilder::new();
 
-        // Sort the provided directives by length of their name, this allows a
-        // little more efficient lookup at runtime.
-        directives.sort_by(|a, b| {
-            let alen = a.name.as_ref().map(|a| a.len()).unwrap_or(0);
-            let blen = b.name.as_ref().map(|b| b.len()).unwrap_or(0);
-            alen.cmp(&blen)
-        });
+    if env::var("RUST_LOG").is_ok() {
+        builder = builder.parse(&env::var("RUST_LOG").unwrap());
+    }
 
-        let level = {
-            let max = directives.iter().map(|d| d.level).max();
-            max.unwrap_or(LogLevelFilter::Off)
-        };
-        max_level.set(level);
-
-        Box::new(Logger {
-            directives: directives,
-            filter: filter,
-        })
-    })
+    builder.init()
 }
 
 /// Parse a logging specification string (e.g: "crate1,crate2::mod3,crate3::x=error/foo")
@@ -287,13 +384,35 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 mod tests {
     use log::{Log, LogLevel, LogLevelFilter};
 
-    use super::{Logger, LogDirective, parse_logging_spec};
+    use super::{LogBuilder, Logger, LogDirective, parse_logging_spec};
 
     fn make_logger(dirs: Vec<LogDirective>) -> Logger {
-        Logger {
-            directives: dirs,
-            filter: None,
-        }
+        let mut logger = LogBuilder::new().build();
+        logger.directives = dirs;
+        logger
+    }
+
+    #[test]
+    fn filter_info() {
+        let logger = LogBuilder::new().filter(None, LogLevelFilter::Info).build();
+        assert!(logger.enabled(LogLevel::Info, "crate1"));
+        assert!(!logger.enabled(LogLevel::Debug, "crate1"));
+    }
+
+    #[test]
+    fn filter_beginning_longest_match() {
+        let mut builder = LogBuilder::new().filter(Some("crate2"), LogLevelFilter::Info);
+        builder = builder.filter(Some("crate2::mod"), LogLevelFilter::Debug);
+        let logger = builder.filter(Some("crate1::mod1"), LogLevelFilter::Warn).build();
+        assert!(logger.enabled(LogLevel::Debug, "crate2::mod1"));
+        assert!(!logger.enabled(LogLevel::Debug, "crate2"));
+    }
+
+    #[test]
+    fn parse_default() {
+        let logger = LogBuilder::new().parse("info,crate1::mod1=warn").build();
+        assert!(logger.enabled(LogLevel::Warn, "crate1::mod1"));
+        assert!(logger.enabled(LogLevel::Info, "crate2::mod2"));
     }
 
     #[test]
