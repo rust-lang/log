@@ -63,7 +63,7 @@
 //!
 //! ## In executables
 //!
-//! Executables should chose a logging framework and initialize it early in the
+//! Executables should choose a logging framework and initialize it early in the
 //! runtime of the program. Logging frameworks will typically include a
 //! function to do this. Any log messages generated before the framework is
 //! initialized will be ignored.
