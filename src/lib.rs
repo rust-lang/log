@@ -148,6 +148,7 @@
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
        html_root_url = "https://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
+#![cfg_attr(feature = "nightly", feature(panic_handler))]
 
 extern crate libc;
 
@@ -159,6 +160,7 @@ use std::mem;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+#[macro_use]
 mod macros;
 
 // The setup here is a bit weird to make at_exit work.
@@ -619,6 +621,49 @@ impl fmt::Display for SetLoggerError {
 impl error::Error for SetLoggerError {
     fn description(&self) -> &str { "set_logger() called multiple times" }
 }
+
+/// Registers a panic handler which logs at the error level.
+///
+/// The format is the same as the default panic handler. The reporting module is
+/// `log::panic`.
+///
+/// Requires the `nightly` feature.
+#[cfg(feature = "nightly")]
+pub fn log_panics() {
+    std::panic::set_handler(panic::log);
+}
+
+// inner module so that the reporting module is log::panic instead of log
+#[cfg(feature = "nightly")]
+mod panic {
+    use std::panic::PanicInfo;
+    use std::thread;
+
+    pub fn log(info: &PanicInfo) {
+        let thread = thread::current();
+        let thread = thread.name().unwrap_or("<unnamed>");
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            }
+        };
+
+        match info.location() {
+            Some(location) => {
+                error!("thread '{}' panicked at '{}': {}:{}",
+                       thread,
+                       msg,
+                       location.file(),
+                       location.line())
+            }
+            None => error!("thread '{}' panicked at '{}'", thread, msg),
+        }
+    }
+}
+
 
 struct LoggerGuard(usize);
 
