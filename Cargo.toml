@@ -16,22 +16,26 @@ A lightweight logging facade for Rust
 name = "filters"
 harness = false
 
+[dependencies.log_core]
+version = "0.3"
+path = "core"
+
 [dependencies]
 libc = "0.2"
 
 [features]
-max_level_off   = []
-max_level_error = []
-max_level_warn  = []
-max_level_info  = []
-max_level_debug = []
-max_level_trace = []
+max_level_off   = ["log_core/max_level_off"]
+max_level_error = ["log_core/max_level_error"]
+max_level_warn  = ["log_core/max_level_warn"]
+max_level_info  = ["log_core/max_level_info"]
+max_level_debug = ["log_core/max_level_debug"]
+max_level_trace = ["log_core/max_level_trace"]
 
-release_max_level_off   = []
-release_max_level_error = []
-release_max_level_warn  = []
-release_max_level_info  = []
-release_max_level_debug = []
-release_max_level_trace = []
+release_max_level_off   = ["log_core/release_max_level_off"]
+release_max_level_error = ["log_core/release_max_level_error"]
+release_max_level_warn  = ["log_core/release_max_level_warn"]
+release_max_level_info  = ["log_core/release_max_level_info"]
+release_max_level_debug = ["log_core/release_max_level_debug"]
+release_max_level_trace = ["log_core/release_max_level_trace"]
 
 nightly = []

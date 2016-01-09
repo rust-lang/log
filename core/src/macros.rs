@@ -131,7 +131,7 @@ macro_rules! trace {
 ///
 /// ```rust
 /// # #[macro_use]
-/// # extern crate log;
+/// # extern crate log_core as log;
 /// use log::LogLevel::Debug;
 ///
 /// # fn foo() {
