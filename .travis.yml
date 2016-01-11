@@ -1,7 +1,6 @@
 language: rust
 sudo: false
 rust:
-  - 1.0.0
   - stable
   - beta
   - nightly
@@ -9,10 +8,12 @@ script:
   - cargo build --verbose
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo build --verbose --features nightly)
   - cargo test --verbose
+  - cargo test --verbose --manifest-path core/Cargo.toml
   - cargo test --verbose --manifest-path env/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo doc --no-deps --features nightly)
+  - CARGO_TARGET_DIR=target cargo doc --no-deps --manifest-path core/Cargo.toml
   - CARGO_TARGET_DIR=target cargo doc --no-deps --manifest-path env/Cargo.toml
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
