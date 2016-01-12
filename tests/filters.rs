@@ -1,8 +1,18 @@
 #[macro_use] extern crate log;
 
 use std::sync::{Arc, Mutex};
-use log::{LogLevel, set_logger, LogLevelFilter, Log, LogRecord, LogMetadata};
+use log::{LogLevel, LogLevelFilter, Log, LogRecord, LogMetadata};
 use log::MaxLogLevelFilter;
+
+#[cfg(feature = "use_std")]
+use log::set_logger;
+#[cfg(not(feature = "use_std"))]
+fn set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
+    where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
+    unsafe {
+        log::set_logger_raw(|x| std::mem::transmute(make_logger(x)))
+    }
+}
 
 struct State {
     last_log: Mutex<Option<LogLevel>>,
