@@ -643,6 +643,8 @@ pub fn max_log_level() -> LogLevelFilter {
 /// This function does not typically need to be called manually. Logger
 /// implementations should provide an initialization method that calls
 /// `set_logger` internally.
+///
+/// Requires the `use_std` feature (enabled by default).
 #[cfg(feature = "use_std")]
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
