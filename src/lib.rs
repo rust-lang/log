@@ -789,7 +789,7 @@ impl error::Error for ShutdownLoggerError {
 /// The format is the same as the default panic handler. The reporting module is
 /// `log::panic`.
 ///
-/// Requires the `nightly` feature.
+/// Requires the `use_std` (enabled by default) and `nightly` features.
 #[cfg(all(feature = "nightly", feature = "use_std"))]
 pub fn log_panics() {
     std::panic::set_handler(panic::log);
