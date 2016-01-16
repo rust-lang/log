@@ -17,7 +17,7 @@ name = "filters"
 harness = false
 
 [dependencies]
-libc = "0.2"
+libc = {version = "0.2", optional = true}
 
 [features]
 max_level_off   = []
@@ -35,3 +35,5 @@ release_max_level_debug = []
 release_max_level_trace = []
 
 nightly = []
+use_std = ["libc"]
+default = ["use_std"]

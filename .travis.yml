@@ -7,8 +7,10 @@ rust:
   - nightly
 script:
   - cargo build --verbose
+  - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo build --verbose --no-default-features)
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo build --verbose --features nightly)
-  - cargo test --verbose
+  - ([ $TRAVIS_RUST_VERSION == 1.0.0 ] || cargo test --verbose)
+  - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo test --verbose --no-default-features)
   - cargo test --verbose --manifest-path env/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
