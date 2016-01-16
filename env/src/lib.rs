@@ -314,7 +314,11 @@ impl Log for Logger {
             }
         }
 
-        let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
+        if cfg!(feature="force-stdout") {
+            let _ = writeln!(io::stdout(), "{}", (self.format)(record));
+        } else {
+            let _ = writeln!(io::stderr(), "{}", (self.format)(record));
+        };
     }
 }
 

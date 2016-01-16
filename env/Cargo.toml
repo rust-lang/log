@@ -17,3 +17,7 @@ path = ".."
 
 [dependencies]
 regex = "0.1"
+
+[features]
+default = []
+force-stdout = []
