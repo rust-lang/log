@@ -228,7 +228,8 @@ mod macros;
 // refcount does not necessarily monotonically decrease at this point, as new
 // log calls still increment and decrement it, but the interval in between is
 // small enough that the wait is really just for the active log calls to finish.
-static mut LOGGER: Option<*const Log> = None;
+
+static mut LOGGER: *const Log = &NopLogger;
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
 static REFCOUNT: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -557,6 +558,15 @@ pub trait Log: Sync+Send {
     fn log(&self, record: &LogRecord);
 }
 
+// Just used as a dummy initial value for LOGGER
+struct NopLogger;
+
+impl Log for NopLogger {
+    fn enabled(&self, _: &LogMetadata) -> bool { false }
+
+    fn log(&self, _: &LogRecord) {}
+}
+
 /// The location of a log message.
 ///
 /// # Warning
@@ -697,7 +707,7 @@ pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
         return Err(SetLoggerError(()));
     }
 
-    LOGGER = Some(make_logger(MaxLogLevelFilter(())));
+    LOGGER = make_logger(MaxLogLevelFilter(()));
     STATE.store(INITIALIZED, Ordering::SeqCst);
     Ok(())
 }
@@ -731,7 +741,11 @@ pub fn shutdown_logger_raw() -> Result<*const Log, ShutdownLoggerError> {
         // FIXME add a sleep here when it doesn't involve timers
     }
 
-    Ok(unsafe { LOGGER.unwrap() })
+    unsafe {
+        let logger = LOGGER;
+        LOGGER = &NopLogger;
+        Ok(logger)
+    }
 }
 
 /// The type returned by `set_logger` if `set_logger` has already been called.
@@ -834,7 +848,7 @@ fn logger() -> Option<LoggerGuard> {
         REFCOUNT.fetch_sub(1, Ordering::SeqCst);
         None
     } else {
-        Some(LoggerGuard(unsafe { &*LOGGER.unwrap() }))
+        Some(LoggerGuard(unsafe { &*LOGGER }))
     }
 }
 
