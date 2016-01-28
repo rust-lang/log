@@ -17,3 +17,7 @@ path = ".."
 
 [dependencies]
 regex = "0.1"
+
+[[test]]
+name = "regexp_filter"
+harness = false
