@@ -195,9 +195,6 @@
 #[cfg(not(feature = "use_std"))]
 extern crate core as std;
 
-#[cfg(feature = "use_std")]
-extern crate libc;
-
 use std::cmp;
 #[cfg(feature = "use_std")]
 use std::error;
@@ -664,17 +661,10 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 
     return match result {
         Ok(()) => {
-            assert_eq!(unsafe { libc::atexit(shutdown) }, 0);
             Ok(())
         }
         Err(_) => Err(SetLoggerError(())),
     };
-
-    extern fn shutdown() {
-        shutdown_logger_raw().map(|logger| unsafe {
-            mem::transmute::<_, Box<Log>>(logger);
-        }).ok();
-    }
 }
 
 /// Sets the global logger from a raw pointer.

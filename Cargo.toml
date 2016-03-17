@@ -16,9 +16,6 @@ A lightweight logging facade for Rust
 name = "filters"
 harness = false
 
-[dependencies]
-libc = {version = "0.2", optional = true}
-
 [features]
 max_level_off   = []
 max_level_error = []
@@ -35,5 +32,5 @@ release_max_level_debug = []
 release_max_level_trace = []
 
 nightly = []
-use_std = ["libc"]
+use_std = []
 default = ["use_std"]
