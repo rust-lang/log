@@ -655,24 +655,13 @@ pub fn max_log_level() -> LogLevelFilter {
 #[cfg(feature = "use_std")]
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
-    let result = unsafe {
-        set_logger_raw(|max_level| mem::transmute(make_logger(max_level)))
-    };
-
-    return match result {
-        Ok(()) => {
-            Ok(())
-        }
-        Err(_) => Err(SetLoggerError(())),
-    };
+    unsafe { set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
 }
 
 /// Sets the global logger from a raw pointer.
 ///
 /// This function is similar to `set_logger` except that it is usable in
-/// `no_std` code. Another difference is that the logger is not automatically
-/// shut down on program exit, and `shutdown_logger_raw` must be called to
-/// manually shut it down.
+/// `no_std` code.
 ///
 /// The `make_logger` closure is passed a `MaxLogLevel` object, which the
 /// logger should use to keep the global maximum log level in sync with the
@@ -689,7 +678,8 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// # Safety
 ///
 /// The pointer returned by `make_logger` must remain valid for the entire
-/// duration of the program or until `shutdown_logger_raw` is called.
+/// duration of the program or until `shutdown_logger_raw` is called. In
+/// addition, `shutdown_logger` *must not* be called after this function.
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> *const Log {
     if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING,
@@ -705,6 +695,24 @@ pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// Shuts down the global logger.
 ///
 /// This function may only be called once in the lifetime of a program, and may
+/// not be called before `set_logger`. Once the global logger has been shut
+/// down, it can no longer be re-initialized by `set_logger`. Any log events
+/// that occur after the call to `shutdown_logger` completes will be ignored.
+///
+/// The logger that was originally created by the call to to `set_logger` is
+/// returned on success. At that point it is guaranteed that no other threads
+/// are concurrently accessing the logger object.
+#[cfg(feature = "use_std")]
+pub fn shutdown_logger() -> Result<Box<Log>, ShutdownLoggerError> {
+    shutdown_logger_raw().map(|l| unsafe { mem::transmute(l) })
+}
+
+/// Shuts down the global logger.
+///
+/// This function is similar to `shutdown_logger` except that it is usable in
+/// `no_std` code.
+///
+/// This function may only be called once in the lifetime of a program, and may
 /// not be called before `set_logger_raw`. Once the global logger has been shut
 /// down, it can no longer be re-initialized by `set_logger_raw`. Any log
 /// events that occur after the call to `shutdown_logger_raw` completes will be
@@ -713,10 +721,6 @@ pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// The pointer that was originally passed to `set_logger_raw` is returned on
 /// success. At that point it is guaranteed that no other threads are
 /// concurrently accessing the logger object.
-///
-/// This function should not be called when the global logger was registered
-/// using `set_logger`, since in that case the logger will automatically be shut
-/// down when the program exits
 pub fn shutdown_logger_raw() -> Result<*const Log, ShutdownLoggerError> {
     // Set the global log level to stop other thread from logging
     MAX_LOG_LEVEL_FILTER.store(0, Ordering::SeqCst);
@@ -764,14 +768,14 @@ pub struct ShutdownLoggerError(());
 
 impl fmt::Display for ShutdownLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to shut down a logger without an active logger")
+        write!(fmt, "attempted to shut down the logger without an active logger")
     }
 }
 
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for ShutdownLoggerError {
-    fn description(&self) -> &str { "shutdown_logger_raw() called without an active logger" }
+    fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
 }
 
 /// Registers a panic handler which logs at the error level.
