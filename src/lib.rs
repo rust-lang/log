@@ -774,15 +774,15 @@ impl error::Error for ShutdownLoggerError {
     fn description(&self) -> &str { "shutdown_logger_raw() called without an active logger" }
 }
 
-/// Registers a panic handler which logs at the error level.
+/// Registers a panic hook which logs at the error level.
 ///
-/// The format is the same as the default panic handler. The reporting module is
+/// The format is the same as the default panic hook . The reporting module is
 /// `log::panic`.
 ///
 /// Requires the `use_std` (enabled by default) and `nightly` features.
 #[cfg(all(feature = "nightly", feature = "use_std"))]
 pub fn log_panics() {
-    std::panic::set_handler(panic::log);
+    std::panic::set_hook(Box::new(panic::log));
 }
 
 // inner module so that the reporting module is log::panic instead of log
