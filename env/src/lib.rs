@@ -401,7 +401,7 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
 
 #[cfg(test)]
 mod tests {
-    use log::{Log, LogLevel, LogLevelFilter};
+    use log::{LogLevel, LogLevelFilter};
 
     use super::{LogBuilder, Logger, LogDirective, parse_logging_spec};
 
