@@ -141,7 +141,8 @@ use std::mem;
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
 
-struct Logger {
+/// The logger.
+pub struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<Regex>,
     format: Box<Fn(&LogRecord) -> String + Sync + Send>,
@@ -245,7 +246,15 @@ impl LogBuilder {
     /// global logger may only be initialized once. Future initialization
     /// attempts will return an error.
     pub fn init(&mut self) -> Result<(), SetLoggerError> {
+        log::set_logger(|max_level| {
+            let logger = self.build();
+            max_level.set(logger.filter());
+            Box::new(logger)
+        })
+    }
 
+    /// Build an env logger.
+    pub fn build(&mut self) -> Logger {
         if self.directives.is_empty() {
             // Adds the default filter if none exist
             self.directives.push(LogDirective {
@@ -262,18 +271,6 @@ impl LogBuilder {
             });
         }
 
-        log::set_logger(|max_level| {
-            let level = {
-                let max = self.directives.iter().map(|d| d.level).max();
-                max.unwrap_or(LogLevelFilter::Off)
-            };
-            max_level.set(level);
-
-            Box::new(self.build())
-        })
-    }
-
-    fn build(&mut self) -> Logger {
         Logger {
             directives: mem::replace(&mut self.directives, Vec::new()),
             filter: mem::replace(&mut self.filter, None),
@@ -283,6 +280,21 @@ impl LogBuilder {
 }
 
 impl Logger {
+    pub fn new() -> Logger {
+        let mut builder = LogBuilder::new();
+
+        if let Ok(s) = env::var("RUST_LOG") {
+            builder.parse(&s);
+        }
+
+        builder.build()
+    }
+
+    pub fn filter(&self) -> LogLevelFilter {
+        self.directives.iter()
+            .map(|d| d.level).max()
+            .unwrap_or(LogLevelFilter::Off)
+    }
 
     fn enabled(&self, level: LogLevel, target: &str) -> bool {
         // Search for the longest match, the vector is assumed to be pre-sorted.
