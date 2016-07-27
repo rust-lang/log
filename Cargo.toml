@@ -31,6 +31,7 @@ release_max_level_info  = []
 release_max_level_debug = []
 release_max_level_trace = []
 
-nightly = []
+nightly = ["log_panics"]
+log_panics = []
 use_std = []
 default = ["use_std"]
