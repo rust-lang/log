@@ -188,7 +188,6 @@
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
        html_root_url = "https://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
-#![cfg_attr(feature = "nightly", feature(panic_handler))]
 
 #![cfg_attr(not(feature = "use_std"), no_std)]
 
@@ -783,14 +782,14 @@ impl error::Error for ShutdownLoggerError {
 /// The format is the same as the default panic hook . The reporting module is
 /// `log::panic`.
 ///
-/// Requires the `use_std` (enabled by default) and `nightly` features.
-#[cfg(all(feature = "nightly", feature = "use_std"))]
+/// Requires the `use_std` (enabled by default) and `log_panics` features.
+#[cfg(all(feature = "log_panics", feature = "use_std"))]
 pub fn log_panics() {
     std::panic::set_hook(Box::new(panic::log));
 }
 
 // inner module so that the reporting module is log::panic instead of log
-#[cfg(all(feature = "nightly", feature = "use_std"))]
+#[cfg(all(feature = "log_panics", feature = "use_std"))]
 mod panic {
     use std::panic::PanicInfo;
     use std::thread;
