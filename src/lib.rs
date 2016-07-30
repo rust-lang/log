@@ -778,12 +778,9 @@ impl error::Error for ShutdownLoggerError {
     fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
 }
 
-/// Registers a panic hook which logs at the error level.
+/// Deprecated
 ///
-/// The format is the same as the default panic hook . The reporting module is
-/// `log::panic`.
-///
-/// Requires the `use_std` (enabled by default) and `nightly` features.
+/// Use https://crates.io/crates/log-panics instead.
 #[cfg(all(feature = "nightly", feature = "use_std"))]
 pub fn log_panics() {
     std::panic::set_hook(Box::new(panic::log));
