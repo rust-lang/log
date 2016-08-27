@@ -579,6 +579,8 @@ pub struct LogLocation {
     pub __file: &'static str,
     #[doc(hidden)]
     pub __line: u32,
+    #[doc(hidden)]
+    pub __column: u32,
 }
 
 impl LogLocation {
@@ -595,6 +597,11 @@ impl LogLocation {
     /// The line containing the message.
     pub fn line(&self) -> u32 {
         self.__line
+    }
+
+    /// The column at which the message was logged.
+    pub fn column(&self) -> u32 {
+        self.__column
     }
 }
 
