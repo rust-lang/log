@@ -130,10 +130,8 @@
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
 #![cfg_attr(test, deny(warnings))]
 
-extern crate regex;
 extern crate log;
 
-use regex::Regex;
 use std::env;
 use std::io::prelude::*;
 use std::io;
@@ -141,10 +139,18 @@ use std::mem;
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
 
+#[cfg(feature = "regex")]
+#[path = "regex.rs"]
+mod filter;
+
+#[cfg(not(feature = "regex"))]
+#[path = "string.rs"]
+mod filter;
+
 /// The logger.
 pub struct Logger {
     directives: Vec<LogDirective>,
-    filter: Option<Regex>,
+    filter: Option<filter::Filter>,
     format: Box<Fn(&LogRecord) -> String + Sync + Send>,
 }
 
@@ -183,7 +189,7 @@ pub struct Logger {
 /// ```
 pub struct LogBuilder {
     directives: Vec<LogDirective>,
-    filter: Option<Regex>,
+    filter: Option<filter::Filter>,
     format: Box<Fn(&LogRecord) -> String + Sync + Send>,
 }
 
@@ -352,7 +358,7 @@ pub fn init() -> Result<(), SetLoggerError> {
 
 /// Parse a logging specification string (e.g: "crate1,crate2::mod3,crate3::x=error/foo")
 /// and return a vector with log directives.
-fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
+fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<filter::Filter>) {
     let mut dirs = Vec::new();
 
     let mut parts = spec.split('/');
@@ -399,7 +405,7 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<Regex>) {
     }});
 
     let filter = filter.map_or(None, |filter| {
-        match Regex::new(filter) {
+        match filter::Filter::new(filter) {
             Ok(re) => Some(re),
             Err(e) => {
                 println!("warning: invalid regex filter - {}", e);

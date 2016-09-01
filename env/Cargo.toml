@@ -11,13 +11,13 @@ An logging implementation for `log` which is configured via an environment
 variable.
 """
 
-[dependencies.log]
-version = "0.3"
-path = ".."
-
 [dependencies]
-regex = "0.1"
+log = { version = "0.3", path = ".." }
+regex = { version = "0.1", optional = true }
 
 [[test]]
 name = "regexp_filter"
 harness = false
+
+[features]
+default = ["regex"]
