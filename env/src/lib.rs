@@ -130,6 +130,11 @@
        html_root_url = "http://doc.rust-lang.org/env_logger/")]
 #![cfg_attr(test, deny(warnings))]
 
+// When compiled for the rustc compiler itself we want to make sure that this is
+// an unstable crate
+#![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
+#![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
+
 extern crate log;
 
 use std::env;
