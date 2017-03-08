@@ -11,6 +11,7 @@ homepage = "https://github.com/rust-lang/log"
 description = """
 A lightweight logging facade for Rust
 """
+categories = ["development-tools::debugging"]
 
 [[test]]
 name = "filters"

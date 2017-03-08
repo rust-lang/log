@@ -10,6 +10,7 @@ description = """
 A logging implementation for `log` which is configured via an environment
 variable.
 """
+categories = ["development-tools::debugging"]
 
 [dependencies]
 log = { version = "0.3", path = ".." }
