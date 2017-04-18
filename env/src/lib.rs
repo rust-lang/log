@@ -152,11 +152,19 @@ mod filter;
 #[path = "string.rs"]
 mod filter;
 
+/// Log target, either stdout or stderr.
+#[derive(Debug)]
+pub enum LogTarget {
+    Stdout,
+    Stderr,
+}
+
 /// The logger.
 pub struct Logger {
     directives: Vec<LogDirective>,
     filter: Option<filter::Filter>,
     format: Box<Fn(&LogRecord) -> String + Sync + Send>,
+    target: LogTarget,
 }
 
 /// LogBuilder acts as builder for initializing the Logger.
@@ -196,6 +204,7 @@ pub struct LogBuilder {
     directives: Vec<LogDirective>,
     filter: Option<filter::Filter>,
     format: Box<Fn(&LogRecord) -> String + Sync + Send>,
+    target: LogTarget,
 }
 
 impl LogBuilder {
@@ -208,6 +217,7 @@ impl LogBuilder {
                 format!("{}:{}: {}", record.level(),
                         record.location().module_path(), record.args())
             }),
+            target: LogTarget::Stderr,
         }
     }
 
@@ -233,6 +243,14 @@ impl LogBuilder {
         where F: Fn(&LogRecord) -> String + Sync + Send
     {
         self.format = Box::new(format);
+        self
+    }
+
+    /// Sets the target for the log output.
+    ///
+    /// Env logger can log to either stdout or stderr. The default is stderr.
+    pub fn target(&mut self, target: LogTarget) -> &mut Self {
+        self.target = target;
         self
     }
 
@@ -286,6 +304,7 @@ impl LogBuilder {
             directives: mem::replace(&mut self.directives, Vec::new()),
             filter: mem::replace(&mut self.filter, None),
             format: mem::replace(&mut self.format, Box::new(|_| String::new())),
+            target: mem::replace(&mut self.target, LogTarget::Stderr),
         }
     }
 }
@@ -337,7 +356,12 @@ impl Log for Logger {
             }
         }
 
-        let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
+        match self.target {
+            LogTarget::Stdout => println!("{}", (self.format)(record)),
+            LogTarget::Stderr => {
+                let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
+            },
+        };
     }
 }
 
