@@ -490,7 +490,11 @@ impl LogLevelFilter {
     }
 }
 
-/// The "payload" of a log message.
+/// The "payload" of a log message. This structure is primarily used as a
+/// parameter in the [`log`] method of the [`Log`] trait.
+///
+/// [`log`]: trait.Log.html#tymethod.log
+/// [`Log`]: trait.Log.html
 pub struct LogRecord<'a> {
     metadata: LogMetadata<'a>,
     location: &'a LogLocation,
