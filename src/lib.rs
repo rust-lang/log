@@ -10,7 +10,7 @@
 
 //! A lightweight logging facade.
 //!
-//! A logging facade provides a single logging API that abstracts over the
+//! The `log` crate provides a single logging API that abstracts over the
 //! actual logging implementation. Libraries can use the logging API provided
 //! by this crate, and the consumer of those libraries can choose the logging
 //! framework that is most suitable for its use case.
@@ -19,11 +19,10 @@
 //! implementation that ignores all log messages. The overhead in this case
 //! is very small - just an integer load, comparison and jump.
 //!
-//! A log request consists of a target, a level, and a body. A target is a
-//! string which defaults to the module path of the location of the log
-//! request, though that default may be overridden. Logger implementations
-//! typically use the target to filter requests based on some user
-//! configuration.
+//! A log request consists of a _target_, a _level_, and a _body_. A target is a
+//! string which defaults to the module path of the location of the log request,
+//! though that default may be overridden. Logger implementations typically use
+//! the target to filter requests based on some user configuration.
 //!
 //! # Use
 //!
