@@ -385,6 +385,22 @@ pub fn init() -> Result<(), SetLoggerError> {
     builder.init()
 }
 
+/// Initializes the global logger with an env logger.
+///
+/// If `RUST_LOG` env var is not available, function parameter is used
+/// as logging spec.
+///
+/// This should be called early in the execution of a Rust program, and the
+/// global logger may only be initialized once. Future initialization attempts
+/// will return an error.
+pub fn init_or_default(default: &str) -> Result<(), SetLoggerError> {
+    let mut builder = LogBuilder::new();
+
+    builder.parse(env::var("RUST_LOG").as_ref().map(|s| &s[..]).unwrap_or(default));
+
+    builder.init()
+}
+
 /// Parse a logging specification string (e.g: "crate1,crate2::mod3,crate3::x=error/foo")
 /// and return a vector with log directives.
 fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<filter::Filter>) {
