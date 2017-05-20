@@ -247,7 +247,7 @@ static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
 ///
 /// A `LogLevel` may be compared directly to a `LogLevelFilter`.
 #[repr(usize)]
-#[derive(Copy, Eq, Debug)]
+#[derive(Copy, Eq, Debug, Hash)]
 pub enum LogLevel {
     /// The "error" level.
     ///
@@ -387,7 +387,7 @@ impl LogLevel {
 ///
 /// A `LogLevelFilter` may be compared directly to a `LogLevel`.
 #[repr(usize)]
-#[derive(Copy, Eq, Debug)]
+#[derive(Copy, Eq, Debug, Hash)]
 pub enum LogLevelFilter {
     /// A level lower than all log levels.
     Off,
@@ -528,6 +528,7 @@ impl<'a> LogRecord<'a> {
 }
 
 /// Metadata about a log message.
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct LogMetadata<'a> {
     level: LogLevel,
     target: &'a str,
@@ -579,7 +580,7 @@ impl Log for NopLogger {
 /// The fields of this struct are public so that they may be initialized by the
 /// `log!` macro. They are subject to change at any time and should never be
 /// accessed directly.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct LogLocation {
     #[doc(hidden)]
     pub __module_path: &'static str,
