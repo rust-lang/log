@@ -78,13 +78,16 @@
 //! ```rust,ignore
 //! #[macro_use]
 //! extern crate log;
-//! extern crate my_logger;
+//! extern crate env_logger;
 //!
 //! fn main() {
-//!     my_logger::init();
-//!
+//!     // Select env_logger, one possible logger implementation
+//!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
+//!     env_logger::init().unwrap();
+//!     
 //!     info!("starting up");
-//!
+//!     error!("error: {}", 404);
+//!     
 //!     // ...
 //! }
 //! ```
