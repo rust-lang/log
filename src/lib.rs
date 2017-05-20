@@ -247,9 +247,12 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
                                              "DEBUG", "TRACE"];
 
-/// An enum representing the available verbosity levels of the logging framework
+/// An enum representing the available verbosity levels of the logging framework.
 ///
-/// A `LogLevel` may be compared directly to a `LogLevelFilter`.
+/// Typical usage includes: checking if a certain `LogLevel` is enabled with
+/// [`log_enabled!`](macro.log_enabled.html), specifying the `LogLevel` of
+/// [`log!`](macro.log.html), and comparing a `LogLevel` directly to a
+/// [`LogLevelFilter`](enum.LogLevelFilter.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
 pub enum LogLevel {
@@ -389,7 +392,11 @@ impl LogLevel {
 /// An enum representing the available verbosity level filters of the logging
 /// framework.
 ///
-/// A `LogLevelFilter` may be compared directly to a `LogLevel`.
+/// A `LogLevelFilter` may be compared directly to a [`LogLevel`](enum.LogLevel.html).
+/// Use this type to [`get()`](struct.MaxLogLevelFilter.html#method.get) and
+/// [`set()`](struct.MaxLogLevelFilter.html#method.set) the
+/// [`MaxLogLevelFilter`](struct.MaxLogLevelFilter.html), or to match with the getter
+/// [`max_log_level()`](fn.max_log_level.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
 pub enum LogLevelFilter {
