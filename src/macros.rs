@@ -22,11 +22,15 @@
 /// # extern crate log;
 /// use log::LogLevel;
 ///
-/// fn main() {
-///     let data = (42, "Forty-two");
-///     log!(LogLevel::Error, "Got errors: {}, {}", data.0, data.1);
-///     log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}", data.0, data.1);
-/// }
+/// # fn main() {
+/// let data = (42, "Forty-two");
+/// let private_data = "private";
+///
+/// log!(LogLevel::Error, "Received errors: {}, {}", data.0, data.1);
+/// log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}, {}", 
+///     data.0, data.1, private_data);
+/// # }
+/// ```
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
