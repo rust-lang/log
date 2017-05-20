@@ -190,6 +190,7 @@
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
        html_root_url = "https://doc.rust-lang.org/log/")]
 #![warn(missing_docs)]
+#![deny(missing_debug_implementations)]
 #![cfg_attr(feature = "nightly", feature(panic_handler))]
 
 #![cfg_attr(not(feature = "use_std"), no_std)]
@@ -497,6 +498,7 @@ impl LogLevelFilter {
 ///
 /// [`log`]: trait.Log.html#tymethod.log
 /// [`Log`]: trait.Log.html
+#[derive(Debug)]
 pub struct LogRecord<'a> {
     metadata: LogMetadata<'a>,
     location: &'a LogLocation,
@@ -531,7 +533,7 @@ impl<'a> LogRecord<'a> {
 }
 
 /// Metadata about a log message.
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct LogMetadata<'a> {
     level: LogLevel,
     target: &'a str,
