@@ -340,14 +340,14 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 }
 
 impl FromStr for LogLevel {
-    type Err = ();
-    fn from_str(level: &str) -> Result<LogLevel, ()> {
+    type Err =  LogLevelParseError;
+    fn from_str(level: &str) -> Result<LogLevel, LogLevelParseError> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
                     .into_iter()
                     .filter(|&idx| idx != 0)
                     .map(|idx| LogLevel::from_usize(idx).unwrap())
-                    .next(), ())
+                    .next(), LogLevelParseError(()))
     }
 }
 
@@ -448,11 +448,11 @@ impl Ord for LogLevelFilter {
 }
 
 impl FromStr for LogLevelFilter {
-    type Err = ();
-    fn from_str(level: &str) -> Result<LogLevelFilter, ()> {
+    type Err = LogLevelParseError;
+    fn from_str(level: &str) -> Result<LogLevelFilter, LogLevelParseError> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
-                    .map(|p| LogLevelFilter::from_usize(p).unwrap()), ())
+                    .map(|p| LogLevelFilter::from_usize(p).unwrap()), LogLevelParseError(()))
     }
 }
 
@@ -787,6 +787,24 @@ impl error::Error for ShutdownLoggerError {
     fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
 }
 
+/// The type returned by `from_str` when the string doesn't match any of the log levels.
+#[allow(missing_copy_implementations)]
+#[derive(Debug, PartialEq)]
+pub struct LogLevelParseError(());
+
+impl fmt::Display for LogLevelParseError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "attempted to convert a string that doesn't match an existing log level")
+    }
+}
+
+// The Error trait is not available in libcore
+#[cfg(feature = "use_std")]
+impl error::Error for LogLevelParseError {
+    fn description(&self) -> &str { "called from_str() on a string without a matching log level" }
+}
+
+
 /// Deprecated
 ///
 /// Use https://crates.io/crates/log-panics instead.
@@ -924,7 +942,7 @@ pub fn __static_max_level() -> LogLevelFilter {
 mod tests {
      extern crate std;
      use tests::std::string::ToString;
-     use super::{LogLevel, LogLevelFilter};
+     use super::{LogLevel, LogLevelFilter, LogLevelParseError};
 
      #[test]
      fn test_loglevelfilter_from_str() {
@@ -941,7 +959,7 @@ mod tests {
              ("INFO",  Ok(LogLevelFilter::Info)),
              ("DEBUG", Ok(LogLevelFilter::Debug)),
              ("TRACE", Ok(LogLevelFilter::Trace)),
-             ("asdf",  Err(())),
+             ("asdf",  Err(LogLevelParseError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
@@ -951,7 +969,7 @@ mod tests {
      #[test]
      fn test_loglevel_from_str() {
          let tests = [
-             ("OFF",   Err(())),
+             ("OFF",   Err(LogLevelParseError(()))),
              ("error", Ok(LogLevel::Error)),
              ("warn",  Ok(LogLevel::Warn)),
              ("info",  Ok(LogLevel::Info)),
@@ -962,7 +980,7 @@ mod tests {
              ("INFO",  Ok(LogLevel::Info)),
              ("DEBUG", Ok(LogLevel::Debug)),
              ("TRACE", Ok(LogLevel::Trace)),
-             ("asdf",  Err(())),
+             ("asdf",  Err(LogLevelParseError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
