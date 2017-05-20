@@ -14,6 +14,19 @@
 ///
 /// The `max_level_*` features can be used to statically disable logging at
 /// various levels.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// use log::LogLevel;
+///
+/// fn main() {
+///     let data = (42, "Forty-two");
+///     log!(LogLevel::Error, "Got errors: {}, {}", data.0, data.1);
+///     log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}", data.0, data.1);
+/// }
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
