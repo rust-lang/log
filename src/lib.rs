@@ -81,10 +81,10 @@
 //! extern crate env_logger;
 //!
 //! fn main() {
+//!     // Select env_logger, one possible logger implementation
+//!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
 //!     env_logger::init().unwrap();
 //!     
-//!     // Set the RUST_LOG level prior to running the binary
-//!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
 //!     info!("starting up");
 //!     error!("error: {}", 404);
 //!     
