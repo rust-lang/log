@@ -35,3 +35,7 @@ release_max_level_trace = []
 nightly = []
 use_std = []
 default = ["use_std"]
+
+[badges]
+travis-ci = { repository = "rust-lang-nursery/log" }
+appveyor = { repository = "alexcrichton/log" }
