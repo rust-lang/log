@@ -78,13 +78,16 @@
 //! ```rust,ignore
 //! #[macro_use]
 //! extern crate log;
-//! extern crate my_logger;
+//! extern crate env_logger;
 //!
 //! fn main() {
-//!     my_logger::init();
-//!
+//!     env_logger::init().unwrap();
+//!     
+//!     // Set the RUST_LOG level prior to running the binary
+//!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
 //!     info!("starting up");
-//!
+//!     error!("error: {}", 404);
+//!     
 //!     // ...
 //! }
 //! ```
