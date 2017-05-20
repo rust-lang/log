@@ -120,7 +120,7 @@
 //! ```
 //!
 //! Loggers are installed by calling the `set_logger` function. It takes a
-//! closure which is provided a `MaxLogLevel` token and returns a `Log` trait
+//! closure which is provided by a `MaxLogLevel` token and returns a `Log` trait
 //! object. The `MaxLogLevel` token controls the global maximum log level. The
 //! logging facade uses this as an optimization to improve performance of log
 //! messages at levels that are disabled. In the case of our example logger,
