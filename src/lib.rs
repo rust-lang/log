@@ -94,8 +94,9 @@
 //!
 //! # Logger implementations
 //!
-//! Loggers implement the `Log` trait. Here's a very basic example that simply
-//! logs all messages at the `Error`, `Warn` or `Info` levels to stdout:
+//! Loggers implement the [`Log`] trait. Here's a very basic example that simply
+//! logs all messages at the [`Error`][level_link], [`Warn`][level_link] or
+//! [`Info`][level_link] levels to stdout:
 //!
 //! ```rust
 //! extern crate log;
@@ -119,15 +120,16 @@
 //! # fn main() {}
 //! ```
 //!
-//! Loggers are installed by calling the `set_logger` function. It takes a
-//! closure which is provided a `MaxLogLevel` token and returns a `Log` trait
-//! object. The `MaxLogLevel` token controls the global maximum log level. The
-//! logging facade uses this as an optimization to improve performance of log
-//! messages at levels that are disabled. In the case of our example logger,
-//! we'll want to set the maximum log level to `Info`, since we ignore any
-//! `Debug` or `Trace` level log messages. A logging framework should provide a
-//! function that wraps a call to `set_logger`, handling initialization of the
-//! logger:
+//! Loggers are installed by calling the [`set_logger`] function. It takes a
+//! closure which is provided a [`MaxLogLevelFilter`] token and returns a
+//! [`Log`] trait object. The [`MaxLogLevelFilter`] token controls the global
+//! maximum log level. The logging facade uses this as an optimization to
+//! improve performance of log messages at levels that are disabled. In the
+//! case of our example logger, we'll want to set the maximum log level to
+//! [`Info`][level_link], since we ignore any [`Debug`][level_link] or
+//! [`Trace`][level_link] level log messages. A logging framework should
+//! provide a function that wraps a call to [`set_logger`], handling
+//! initialization of the logger:
 //!
 //! ```rust
 //! # extern crate log;
@@ -152,8 +154,8 @@
 //! To use the `log` crate without depending on `libstd`, you need to specify
 //! `default-features = false` when specifying the dependency in `Cargo.toml`.
 //! This makes no difference to libraries using `log` since the logging API
-//! remains the same. However executables will need to use the `set_logger_raw`
-//! function to initialize a logger and the `shutdown_logger_raw` function to
+//! remains the same. However executables will need to use the [`set_logger_raw`]
+//! function to initialize a logger and the [`shutdown_logger_raw`] function to
 //! shut down the global logger before exiting:
 //!
 //! ```rust
@@ -185,6 +187,13 @@
 //!     })
 //! }
 //! ```
+//!
+//! [`Log`]: trait.Log.html
+//! [level_link]: enum.LogLevel.html
+//! [`set_logger`]: fn.set_logger.html
+//! [`MaxLogLevelFilter`]: struct.MaxLogLevelFilter.html
+//! [`set_logger_raw`]: fn.set_logger_raw.html
+//! [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
