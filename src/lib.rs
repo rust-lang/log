@@ -283,6 +283,7 @@ static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doe
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
+#[cfg_attr(serde, derive(Serialize, Deserialize))]
 pub enum Level {
     /// The "error" level.
     ///
@@ -427,6 +428,7 @@ impl Level {
 /// [`max_level()`](fn.max_level.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
+#[cfg_attr(serde, derive(Serialize, Deserialize))]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
