@@ -35,6 +35,7 @@
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         static _LOC: $crate::LogLocation = $crate::LogLocation {
+            __column: column!(),
             __line: line!(),
             __file: file!(),
             __module_path: module_path!(),
