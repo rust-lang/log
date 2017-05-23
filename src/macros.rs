@@ -227,6 +227,10 @@ macro_rules! trace {
 ///     let data = expensive_call();
 ///     debug!("expensive debug data: {} {}", data.x, data.y);
 /// }
+/// if log_enabled!(target: "Global", Debug) {
+///    let data = expensive_call();
+///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
+/// }
 /// # }
 /// # struct Data { x: u32, y: u32 }
 /// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
