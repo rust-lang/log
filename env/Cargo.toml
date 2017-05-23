@@ -11,6 +11,7 @@ A logging implementation for `log` which is configured via an environment
 variable.
 """
 categories = ["development-tools::debugging"]
+keywords = ["logging"]
 publish = false # this branch contains breaking changes
 
 [dependencies]
