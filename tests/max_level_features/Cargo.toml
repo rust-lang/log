@@ -1,6 +1,7 @@
 [package]
 name = "optimized"
 version = "0.1.0"
+publish = false
 
 [[bin]]
 name = "max_level_features"
