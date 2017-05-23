@@ -101,16 +101,16 @@
 //! ```rust
 //! extern crate log;
 //!
-//! use log::{LogRecord, LogLevel, LogMetadata};
+//! use log::{Record, Level, Metadata};
 //!
 //! struct SimpleLogger;
 //!
 //! impl log::Log for SimpleLogger {
-//!     fn enabled(&self, metadata: &LogMetadata) -> bool {
-//!         metadata.level() <= LogLevel::Info
+//!     fn enabled(&self, metadata: &Metadata) -> bool {
+//!         metadata.level() <= Level::Info
 //!     }
 //!
-//!     fn log(&self, record: &LogRecord) {
+//!     fn log(&self, record: &Record) {
 //!         if self.enabled(record.metadata()) {
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
@@ -121,8 +121,8 @@
 //! ```
 //!
 //! Loggers are installed by calling the [`set_logger`] function. It takes a
-//! closure which is provided a [`MaxLogLevelFilter`] token and returns a
-//! [`Log`] trait object. The [`MaxLogLevelFilter`] token controls the global
+//! closure which is provided a [`MaxLevelFilter`] token and returns a
+//! [`Log`] trait object. The [`MaxLevelFilter`] token controls the global
 //! maximum log level. The logging facade uses this as an optimization to
 //! improve performance of log messages at levels that are disabled. In the
 //! case of our example logger, we'll want to set the maximum log level to
@@ -133,17 +133,17 @@
 //!
 //! ```rust
 //! # extern crate log;
-//! # use log::{LogLevel, LogLevelFilter, SetLoggerError, LogMetadata};
+//! # use log::{Level, LevelFilter, SetLoggerError, Metadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
-//! #   fn enabled(&self, _: &LogMetadata) -> bool { false }
-//! #   fn log(&self, _: &log::LogRecord) {}
+//! #   fn enabled(&self, _: &Metadata) -> bool { false }
+//! #   fn log(&self, _: &log::Record) {}
 //! # }
 //! # fn main() {}
 //! # #[cfg(feature = "use_std")]
 //! pub fn init() -> Result<(), SetLoggerError> {
-//!     log::set_logger(|max_log_level| {
-//!         max_log_level.set(LogLevelFilter::Info);
+//!     log::set_logger(|max_level| {
+//!         max_level.set(LevelFilter::Info);
 //!         Box::new(SimpleLogger)
 //!     })
 //! }
@@ -160,12 +160,12 @@
 //!
 //! ```rust
 //! # extern crate log;
-//! # use log::{LogLevel, LogLevelFilter, SetLoggerError, ShutdownLoggerError,
-//! #           LogMetadata};
+//! # use log::{Level, LevelFilter, SetLoggerError, ShutdownLoggerError,
+//! #           Metadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
-//! #   fn enabled(&self, _: &LogMetadata) -> bool { false }
-//! #   fn log(&self, _: &log::LogRecord) {}
+//! #   fn enabled(&self, _: &Metadata) -> bool { false }
+//! #   fn log(&self, _: &log::Record) {}
 //! # }
 //! # impl SimpleLogger {
 //! #   fn flush(&self) {}
@@ -173,9 +173,9 @@
 //! # fn main() {}
 //! pub fn init() -> Result<(), SetLoggerError> {
 //!     unsafe {
-//!         log::set_logger_raw(|max_log_level| {
+//!         log::set_logger_raw(|max_level| {
 //!             static LOGGER: SimpleLogger = SimpleLogger;
-//!             max_log_level.set(LogLevelFilter::Info);
+//!             max_level.set(LevelFilter::Info);
 //!             &SimpleLogger
 //!         })
 //!     }
@@ -189,9 +189,9 @@
 //! ```
 //!
 //! [`Log`]: trait.Log.html
-//! [level_link]: enum.LogLevel.html
+//! [level_link]: enum.Level.html
 //! [`set_logger`]: fn.set_logger.html
-//! [`MaxLogLevelFilter`]: struct.MaxLogLevelFilter.html
+//! [`MaxLevelFilter`]: struct.MaxLevelFilter.html
 //! [`set_logger_raw`]: fn.set_logger_raw.html
 //! [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 
@@ -258,17 +258,17 @@ static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
 
 /// An enum representing the available verbosity levels of the logging framework.
 ///
-/// Typical usage includes: checking if a certain `LogLevel` is enabled with
-/// [`log_enabled!`](macro.log_enabled.html), specifying the `LogLevel` of
-/// [`log!`](macro.log.html), and comparing a `LogLevel` directly to a
-/// [`LogLevelFilter`](enum.LogLevelFilter.html).
+/// Typical usage includes: checking if a certain `Level` is enabled with
+/// [`log_enabled!`](macro.log_enabled.html), specifying the `Level` of
+/// [`log!`](macro.log.html), and comparing a `Level` directly to a
+/// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
-pub enum LogLevel {
+pub enum Level {
     /// The "error" level.
     ///
     /// Designates very serious errors.
-    Error = 1, // This way these line up with the discriminants for LogLevelFilter below
+    Error = 1, // This way these line up with the discriminants for LevelFilter below
     /// The "warn" level.
     ///
     /// Designates hazardous situations.
@@ -287,44 +287,44 @@ pub enum LogLevel {
     Trace,
 }
 
-impl Clone for LogLevel {
+impl Clone for Level {
     #[inline]
-    fn clone(&self) -> LogLevel {
+    fn clone(&self) -> Level {
         *self
     }
 }
 
-impl PartialEq for LogLevel {
+impl PartialEq for Level {
     #[inline]
-    fn eq(&self, other: &LogLevel) -> bool {
+    fn eq(&self, other: &Level) -> bool {
         *self as usize == *other as usize
     }
 }
 
-impl PartialEq<LogLevelFilter> for LogLevel {
+impl PartialEq<LevelFilter> for Level {
     #[inline]
-    fn eq(&self, other: &LogLevelFilter) -> bool {
+    fn eq(&self, other: &LevelFilter) -> bool {
         *self as usize == *other as usize
     }
 }
 
-impl PartialOrd for LogLevel {
+impl PartialOrd for Level {
     #[inline]
-    fn partial_cmp(&self, other: &LogLevel) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialOrd<LogLevelFilter> for LogLevel {
+impl PartialOrd<LevelFilter> for Level {
     #[inline]
-    fn partial_cmp(&self, other: &LogLevelFilter) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
     }
 }
 
-impl Ord for LogLevel {
+impl Ord for Level {
     #[inline]
-    fn cmp(&self, other: &LogLevel) -> cmp::Ordering {
+    fn cmp(&self, other: &Level) -> cmp::Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
@@ -355,60 +355,60 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
     }
 }
 
-impl FromStr for LogLevel {
+impl FromStr for Level {
     type Err = ();
-    fn from_str(level: &str) -> Result<LogLevel, ()> {
+    fn from_str(level: &str) -> Result<Level, ()> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
                     .into_iter()
                     .filter(|&idx| idx != 0)
-                    .map(|idx| LogLevel::from_usize(idx).unwrap())
+                    .map(|idx| Level::from_usize(idx).unwrap())
                     .next(), ())
     }
 }
 
-impl fmt::Display for LogLevel {
+impl fmt::Display for Level {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(LOG_LEVEL_NAMES[*self as usize])
     }
 }
 
-impl LogLevel {
-    fn from_usize(u: usize) -> Option<LogLevel> {
+impl Level {
+    fn from_usize(u: usize) -> Option<Level> {
         match u {
-            1 => Some(LogLevel::Error),
-            2 => Some(LogLevel::Warn),
-            3 => Some(LogLevel::Info),
-            4 => Some(LogLevel::Debug),
-            5 => Some(LogLevel::Trace),
+            1 => Some(Level::Error),
+            2 => Some(Level::Warn),
+            3 => Some(Level::Info),
+            4 => Some(Level::Debug),
+            5 => Some(Level::Trace),
             _ => None
         }
     }
 
     /// Returns the most verbose logging level.
     #[inline]
-    pub fn max() -> LogLevel {
-        LogLevel::Trace
+    pub fn max() -> Level {
+        Level::Trace
     }
 
-    /// Converts the `LogLevel` to the equivalent `LogLevelFilter`.
+    /// Converts the `Level` to the equivalent `LevelFilter`.
     #[inline]
-    pub fn to_log_level_filter(&self) -> LogLevelFilter {
-        LogLevelFilter::from_usize(*self as usize).unwrap()
+    pub fn to_level_filter(&self) -> LevelFilter {
+        LevelFilter::from_usize(*self as usize).unwrap()
     }
 }
 
 /// An enum representing the available verbosity level filters of the logging
 /// framework.
 ///
-/// A `LogLevelFilter` may be compared directly to a [`LogLevel`](enum.LogLevel.html).
-/// Use this type to [`get()`](struct.MaxLogLevelFilter.html#method.get) and
-/// [`set()`](struct.MaxLogLevelFilter.html#method.set) the
-/// [`MaxLogLevelFilter`](struct.MaxLogLevelFilter.html), or to match with the getter
-/// [`max_log_level()`](fn.max_log_level.html).
+/// A `LevelFilter` may be compared directly to a [`Level`](enum.Level.html).
+/// Use this type to [`get()`](struct.MaxLevelFilter.html#method.get) and
+/// [`set()`](struct.MaxLevelFilter.html#method.set) the
+/// [`MaxLevelFilter`](struct.MaxLevelFilter.html), or to match with the getter
+/// [`max_level()`](fn.max_level.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
-pub enum LogLevelFilter {
+pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
     /// Corresponds to the `Error` log level.
@@ -425,87 +425,87 @@ pub enum LogLevelFilter {
 
 // Deriving generates terrible impls of these traits
 
-impl Clone for LogLevelFilter {
+impl Clone for LevelFilter {
     #[inline]
-    fn clone(&self) -> LogLevelFilter {
+    fn clone(&self) -> LevelFilter {
         *self
     }
 }
 
-impl PartialEq for LogLevelFilter {
+impl PartialEq for LevelFilter {
     #[inline]
-    fn eq(&self, other: &LogLevelFilter) -> bool {
+    fn eq(&self, other: &LevelFilter) -> bool {
         *self as usize == *other as usize
     }
 }
 
-impl PartialEq<LogLevel> for LogLevelFilter {
+impl PartialEq<Level> for LevelFilter {
     #[inline]
-    fn eq(&self, other: &LogLevel) -> bool {
+    fn eq(&self, other: &Level) -> bool {
         other.eq(self)
     }
 }
 
-impl PartialOrd for LogLevelFilter {
+impl PartialOrd for LevelFilter {
     #[inline]
-    fn partial_cmp(&self, other: &LogLevelFilter) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialOrd<LogLevel> for LogLevelFilter {
+impl PartialOrd<Level> for LevelFilter {
     #[inline]
-    fn partial_cmp(&self, other: &LogLevel) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
         other.partial_cmp(self).map(|x| x.reverse())
     }
 }
 
-impl Ord for LogLevelFilter {
+impl Ord for LevelFilter {
     #[inline]
-    fn cmp(&self, other: &LogLevelFilter) -> cmp::Ordering {
+    fn cmp(&self, other: &LevelFilter) -> cmp::Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
 
-impl FromStr for LogLevelFilter {
+impl FromStr for LevelFilter {
     type Err = ();
-    fn from_str(level: &str) -> Result<LogLevelFilter, ()> {
+    fn from_str(level: &str) -> Result<LevelFilter, ()> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
-                    .map(|p| LogLevelFilter::from_usize(p).unwrap()), ())
+                    .map(|p| LevelFilter::from_usize(p).unwrap()), ())
     }
 }
 
-impl fmt::Display for LogLevelFilter {
+impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
     }
 }
 
-impl LogLevelFilter {
-    fn from_usize(u: usize) -> Option<LogLevelFilter> {
+impl LevelFilter {
+    fn from_usize(u: usize) -> Option<LevelFilter> {
         match u {
-            0 => Some(LogLevelFilter::Off),
-            1 => Some(LogLevelFilter::Error),
-            2 => Some(LogLevelFilter::Warn),
-            3 => Some(LogLevelFilter::Info),
-            4 => Some(LogLevelFilter::Debug),
-            5 => Some(LogLevelFilter::Trace),
+            0 => Some(LevelFilter::Off),
+            1 => Some(LevelFilter::Error),
+            2 => Some(LevelFilter::Warn),
+            3 => Some(LevelFilter::Info),
+            4 => Some(LevelFilter::Debug),
+            5 => Some(LevelFilter::Trace),
             _ => None
         }
     }
     /// Returns the most verbose logging level filter.
     #[inline]
-    pub fn max() -> LogLevelFilter {
-        LogLevelFilter::Trace
+    pub fn max() -> LevelFilter {
+        LevelFilter::Trace
     }
 
-    /// Converts `self` to the equivalent `LogLevel`.
+    /// Converts `self` to the equivalent `Level`.
     ///
-    /// Returns `None` if `self` is `LogLevelFilter::Off`.
+    /// Returns `None` if `self` is `LevelFilter::Off`.
     #[inline]
-    pub fn to_log_level(&self) -> Option<LogLevel> {
-        LogLevel::from_usize(*self as usize)
+    pub fn to_level(&self) -> Option<Level> {
+        Level::from_usize(*self as usize)
     }
 }
 
@@ -515,30 +515,30 @@ impl LogLevelFilter {
 /// [`log`]: trait.Log.html#tymethod.log
 /// [`Log`]: trait.Log.html
 #[derive(Debug)]
-pub struct LogRecord<'a> {
-    metadata: LogMetadata<'a>,
-    location: &'a LogLocation,
+pub struct Record<'a> {
+    metadata: Metadata<'a>,
+    location: &'a Location,
     args: fmt::Arguments<'a>,
 }
 
-impl<'a> LogRecord<'a> {
+impl<'a> Record<'a> {
     /// The message body.
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
     }
 
     /// Metadata about the log directive.
-    pub fn metadata(&self) -> &LogMetadata {
+    pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
     /// The location of the log directive.
-    pub fn location(&self) -> &LogLocation {
+    pub fn location(&self) -> &Location {
         self.location
     }
 
     /// The verbosity level of the message.
-    pub fn level(&self) -> LogLevel {
+    pub fn level(&self) -> Level {
         self.metadata.level()
     }
 
@@ -550,14 +550,14 @@ impl<'a> LogRecord<'a> {
 
 /// Metadata about a log message.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct LogMetadata<'a> {
-    level: LogLevel,
+pub struct Metadata<'a> {
+    level: Level,
     target: &'a str,
 }
 
-impl<'a> LogMetadata<'a> {
+impl<'a> Metadata<'a> {
     /// The verbosity level of the message.
-    pub fn level(&self) -> LogLevel {
+    pub fn level(&self) -> Level {
         self.level
     }
 
@@ -575,23 +575,23 @@ pub trait Log: Sync+Send {
     /// This is used by the `log_enabled!` macro to allow callers to avoid
     /// expensive computation of log message arguments if the message would be
     /// discarded anyway.
-    fn enabled(&self, metadata: &LogMetadata) -> bool;
+    fn enabled(&self, metadata: &Metadata) -> bool;
 
-    /// Logs the `LogRecord`.
+    /// Logs the `Record`.
     ///
     /// Note that `enabled` is *not* necessarily called before this method.
     /// Implementations of `log` should perform all necessary filtering
     /// internally.
-    fn log(&self, record: &LogRecord);
+    fn log(&self, record: &Record);
 }
 
 // Just used as a dummy initial value for LOGGER
 struct NopLogger;
 
 impl Log for NopLogger {
-    fn enabled(&self, _: &LogMetadata) -> bool { false }
+    fn enabled(&self, _: &Metadata) -> bool { false }
 
-    fn log(&self, _: &LogRecord) {}
+    fn log(&self, _: &Record) {}
 }
 
 /// The location of a log message.
@@ -602,7 +602,7 @@ impl Log for NopLogger {
 /// `log!` macro. They are subject to change at any time and should never be
 /// accessed directly.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct LogLocation {
+pub struct Location {
     #[doc(hidden)]
     pub __module_path: &'static str,
     #[doc(hidden)]
@@ -611,7 +611,7 @@ pub struct LogLocation {
     pub __line: u32,
 }
 
-impl LogLocation {
+impl Location {
     /// The module path of the message.
     pub fn module_path(&self) -> &str {
         self.__module_path
@@ -637,22 +637,22 @@ impl LogLocation {
 /// make sure to keep the maximum log level filter in sync with its current
 /// configuration.
 #[allow(missing_copy_implementations)]
-pub struct MaxLogLevelFilter(());
+pub struct MaxLevelFilter(());
 
-impl fmt::Debug for MaxLogLevelFilter {
+impl fmt::Debug for MaxLevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MaxLogLevelFilter")
+        write!(fmt, "MaxLevelFilter")
     }
 }
 
-impl MaxLogLevelFilter {
+impl MaxLevelFilter {
     /// Gets the current maximum log level filter.
-    pub fn get(&self) -> LogLevelFilter {
-        max_log_level()
+    pub fn get(&self) -> LevelFilter {
+        max_level()
     }
 
     /// Sets the maximum log level.
-    pub fn set(&self, level: LogLevelFilter) {
+    pub fn set(&self, level: LevelFilter) {
         MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
     }
 }
@@ -661,15 +661,15 @@ impl MaxLogLevelFilter {
 ///
 /// The `log!`, `error!`, `warn!`, `info!`, `debug!`, and `trace!` macros check
 /// this value and discard any message logged at a higher level. The maximum
-/// log level is set by the `MaxLogLevel` token passed to loggers.
+/// log level is set by the `MaxLevel` token passed to loggers.
 #[inline(always)]
-pub fn max_log_level() -> LogLevelFilter {
+pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
 }
 
 /// Sets the global logger.
 ///
-/// The `make_logger` closure is passed a `MaxLogLevel` object, which the
+/// The `make_logger` closure is passed a `MaxLevel` object, which the
 /// logger should use to keep the global maximum log level in sync with the
 /// highest log level that the logger will not ignore.
 ///
@@ -684,7 +684,7 @@ pub fn max_log_level() -> LogLevelFilter {
 /// Requires the `use_std` feature (enabled by default).
 #[cfg(feature = "use_std")]
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
-        where M: FnOnce(MaxLogLevelFilter) -> Box<Log> {
+        where M: FnOnce(MaxLevelFilter) -> Box<Log> {
     unsafe { set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
 }
 
@@ -693,7 +693,7 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// This function is similar to `set_logger` except that it is usable in
 /// `no_std` code.
 ///
-/// The `make_logger` closure is passed a `MaxLogLevel` object, which the
+/// The `make_logger` closure is passed a `MaxLevel` object, which the
 /// logger should use to keep the global maximum log level in sync with the
 /// highest log level that the logger will not ignore.
 ///
@@ -711,13 +711,13 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// duration of the program or until `shutdown_logger_raw` is called. In
 /// addition, `shutdown_logger` *must not* be called after this function.
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
-        where M: FnOnce(MaxLogLevelFilter) -> *const Log {
+        where M: FnOnce(MaxLevelFilter) -> *const Log {
     if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING,
                               Ordering::SeqCst) != UNINITIALIZED {
         return Err(SetLoggerError(()));
     }
 
-    LOGGER = make_logger(MaxLogLevelFilter(()));
+    LOGGER = make_logger(MaxLevelFilter(()));
     STATE.store(INITIALIZED, Ordering::SeqCst);
     Ok(())
 }
@@ -877,9 +877,9 @@ fn logger() -> Option<LoggerGuard> {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __enabled(level: LogLevel, target: &str) -> bool {
+pub fn __enabled(level: Level, target: &str) -> bool {
     if let Some(logger) = logger() {
-        logger.enabled(&LogMetadata { level: level, target: target })
+        logger.enabled(&Metadata { level: level, target: target })
     } else {
         false
     }
@@ -889,11 +889,11 @@ pub fn __enabled(level: LogLevel, target: &str) -> bool {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
+pub fn __log(level: Level, target: &str, loc: &Location,
              args: fmt::Arguments) {
     if let Some(logger) = logger() {
-        let record = LogRecord {
-            metadata: LogMetadata {
+        let record = Record {
+            metadata: Metadata {
                 level: level,
                 target: target,
             },
@@ -909,35 +909,35 @@ pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
 // change at any time.
 #[inline(always)]
 #[doc(hidden)]
-pub fn __static_max_level() -> LogLevelFilter {
+pub fn __static_max_level() -> LevelFilter {
     if !cfg!(debug_assertions) {
         // This is a release build. Check `release_max_level_*` first.
         if cfg!(feature = "release_max_level_off") {
-            return LogLevelFilter::Off
+            return LevelFilter::Off
         } else if cfg!(feature = "release_max_level_error") {
-            return LogLevelFilter::Error
+            return LevelFilter::Error
         } else if cfg!(feature = "release_max_level_warn") {
-            return LogLevelFilter::Warn
+            return LevelFilter::Warn
         } else if cfg!(feature = "release_max_level_info") {
-            return LogLevelFilter::Info
+            return LevelFilter::Info
         } else if cfg!(feature = "release_max_level_debug") {
-            return LogLevelFilter::Debug
+            return LevelFilter::Debug
         } else if cfg!(feature = "release_max_level_trace") {
-            return LogLevelFilter::Trace
+            return LevelFilter::Trace
         }
     }
     if cfg!(feature = "max_level_off") {
-        LogLevelFilter::Off
+        LevelFilter::Off
     } else if cfg!(feature = "max_level_error") {
-        LogLevelFilter::Error
+        LevelFilter::Error
     } else if cfg!(feature = "max_level_warn") {
-        LogLevelFilter::Warn
+        LevelFilter::Warn
     } else if cfg!(feature = "max_level_info") {
-        LogLevelFilter::Info
+        LevelFilter::Info
     } else if cfg!(feature = "max_level_debug") {
-        LogLevelFilter::Debug
+        LevelFilter::Debug
     } else {
-        LogLevelFilter::Trace
+        LevelFilter::Trace
     }
 }
 
@@ -945,23 +945,23 @@ pub fn __static_max_level() -> LogLevelFilter {
 mod tests {
      extern crate std;
      use tests::std::string::ToString;
-     use super::{LogLevel, LogLevelFilter};
+     use super::{Level, LevelFilter};
 
      #[test]
-     fn test_loglevelfilter_from_str() {
+     fn test_levelfilter_from_str() {
          let tests = [
-             ("off",   Ok(LogLevelFilter::Off)),
-             ("error", Ok(LogLevelFilter::Error)),
-             ("warn",  Ok(LogLevelFilter::Warn)),
-             ("info",  Ok(LogLevelFilter::Info)),
-             ("debug", Ok(LogLevelFilter::Debug)),
-             ("trace", Ok(LogLevelFilter::Trace)),
-             ("OFF",   Ok(LogLevelFilter::Off)),
-             ("ERROR", Ok(LogLevelFilter::Error)),
-             ("WARN",  Ok(LogLevelFilter::Warn)),
-             ("INFO",  Ok(LogLevelFilter::Info)),
-             ("DEBUG", Ok(LogLevelFilter::Debug)),
-             ("TRACE", Ok(LogLevelFilter::Trace)),
+             ("off",   Ok(LevelFilter::Off)),
+             ("error", Ok(LevelFilter::Error)),
+             ("warn",  Ok(LevelFilter::Warn)),
+             ("info",  Ok(LevelFilter::Info)),
+             ("debug", Ok(LevelFilter::Debug)),
+             ("trace", Ok(LevelFilter::Trace)),
+             ("OFF",   Ok(LevelFilter::Off)),
+             ("ERROR", Ok(LevelFilter::Error)),
+             ("WARN",  Ok(LevelFilter::Warn)),
+             ("INFO",  Ok(LevelFilter::Info)),
+             ("DEBUG", Ok(LevelFilter::Debug)),
+             ("TRACE", Ok(LevelFilter::Trace)),
              ("asdf",  Err(())),
          ];
          for &(s, ref expected) in &tests {
@@ -970,19 +970,19 @@ mod tests {
      }
 
      #[test]
-     fn test_loglevel_from_str() {
+     fn test_level_from_str() {
          let tests = [
              ("OFF",   Err(())),
-             ("error", Ok(LogLevel::Error)),
-             ("warn",  Ok(LogLevel::Warn)),
-             ("info",  Ok(LogLevel::Info)),
-             ("debug", Ok(LogLevel::Debug)),
-             ("trace", Ok(LogLevel::Trace)),
-             ("ERROR", Ok(LogLevel::Error)),
-             ("WARN",  Ok(LogLevel::Warn)),
-             ("INFO",  Ok(LogLevel::Info)),
-             ("DEBUG", Ok(LogLevel::Debug)),
-             ("TRACE", Ok(LogLevel::Trace)),
+             ("error", Ok(Level::Error)),
+             ("warn",  Ok(Level::Warn)),
+             ("info",  Ok(Level::Info)),
+             ("debug", Ok(Level::Debug)),
+             ("trace", Ok(Level::Trace)),
+             ("ERROR", Ok(Level::Error)),
+             ("WARN",  Ok(Level::Warn)),
+             ("INFO",  Ok(Level::Info)),
+             ("DEBUG", Ok(Level::Debug)),
+             ("TRACE", Ok(Level::Trace)),
              ("asdf",  Err(())),
          ];
          for &(s, ref expected) in &tests {
@@ -991,42 +991,42 @@ mod tests {
      }
 
      #[test]
-     fn test_loglevel_show() {
-         assert_eq!("INFO", LogLevel::Info.to_string());
-         assert_eq!("ERROR", LogLevel::Error.to_string());
+     fn test_level_show() {
+         assert_eq!("INFO", Level::Info.to_string());
+         assert_eq!("ERROR", Level::Error.to_string());
      }
 
      #[test]
-     fn test_loglevelfilter_show() {
-         assert_eq!("OFF", LogLevelFilter::Off.to_string());
-         assert_eq!("ERROR", LogLevelFilter::Error.to_string());
+     fn test_levelfilter_show() {
+         assert_eq!("OFF", LevelFilter::Off.to_string());
+         assert_eq!("ERROR", LevelFilter::Error.to_string());
      }
 
      #[test]
      fn test_cross_cmp() {
-         assert!(LogLevel::Debug > LogLevelFilter::Error);
-         assert!(LogLevelFilter::Warn < LogLevel::Trace);
-         assert!(LogLevelFilter::Off < LogLevel::Error);
+         assert!(Level::Debug > LevelFilter::Error);
+         assert!(LevelFilter::Warn < Level::Trace);
+         assert!(LevelFilter::Off < Level::Error);
      }
 
      #[test]
      fn test_cross_eq() {
-         assert!(LogLevel::Error == LogLevelFilter::Error);
-         assert!(LogLevelFilter::Off != LogLevel::Error);
-         assert!(LogLevel::Trace == LogLevelFilter::Trace);
+         assert!(Level::Error == LevelFilter::Error);
+         assert!(LevelFilter::Off != Level::Error);
+         assert!(Level::Trace == LevelFilter::Trace);
      }
 
      #[test]
-     fn test_to_log_level() {
-         assert_eq!(Some(LogLevel::Error), LogLevelFilter::Error.to_log_level());
-         assert_eq!(None, LogLevelFilter::Off.to_log_level());
-         assert_eq!(Some(LogLevel::Debug), LogLevelFilter::Debug.to_log_level());
+     fn test_to_level() {
+         assert_eq!(Some(Level::Error), LevelFilter::Error.to_level());
+         assert_eq!(None, LevelFilter::Off.to_level());
+         assert_eq!(Some(Level::Debug), LevelFilter::Debug.to_level());
      }
 
      #[test]
-     fn test_to_log_level_filter() {
-         assert_eq!(LogLevelFilter::Error, LogLevel::Error.to_log_level_filter());
-         assert_eq!(LogLevelFilter::Trace, LogLevel::Trace.to_log_level_filter());
+     fn test_to_level_filter() {
+         assert_eq!(LevelFilter::Error, Level::Error.to_level_filter());
+         assert_eq!(LevelFilter::Trace, Level::Trace.to_level_filter());
      }
 
      #[test]

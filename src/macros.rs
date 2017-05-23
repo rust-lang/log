@@ -9,7 +9,7 @@
 // except according to those terms.
 /// The standard logging macro.
 ///
-/// This macro will generically log with the specified `LogLevel` and `format!`
+/// This macro will generically log with the specified `Level` and `format!`
 /// based argument list.
 ///
 /// The `max_level_*` features can be used to statically disable logging at
@@ -20,27 +20,27 @@
 /// ```rust
 /// # #[macro_use]
 /// # extern crate log;
-/// use log::LogLevel;
+/// use log::Level;
 ///
 /// # fn main() {
 /// let data = (42, "Forty-two");
 /// let private_data = "private";
 ///
-/// log!(LogLevel::Error, "Received errors: {}, {}", data.0, data.1);
-/// log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}, {}", 
+/// log!(Level::Error, "Received errors: {}, {}", data.0, data.1);
+/// log!(target: "app_events", Level::Warn, "App warning: {}, {}, {}",
 ///     data.0, data.1, private_data);
 /// # }
 /// ```
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        static _LOC: $crate::LogLocation = $crate::LogLocation {
+        static _LOC: $crate::Location = $crate::Location {
             __line: line!(),
             __file: file!(),
             __module_path: module_path!(),
         };
         let lvl = $lvl;
-        if lvl <= $crate::__static_max_level() && lvl <= $crate::max_log_level() {
+        if lvl <= $crate::__static_max_level() && lvl <= $crate::max_level() {
             $crate::__log(lvl, $target, &_LOC, format_args!($($arg)+))
         }
     });
@@ -66,10 +66,10 @@ macro_rules! log {
 #[macro_export]
 macro_rules! error {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::LogLevel::Error, $($arg)*);
+        log!(target: $target, $crate::Level::Error, $($arg)*);
     );
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Error, $($arg)*);
+        log!($crate::Level::Error, $($arg)*);
     )
 }
 
@@ -97,10 +97,10 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::LogLevel::Warn, $($arg)*);
+        log!(target: $target, $crate::Level::Warn, $($arg)*);
     );
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Warn, $($arg)*);
+        log!($crate::Level::Warn, $($arg)*);
     )
 }
 
@@ -131,10 +131,10 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::LogLevel::Info, $($arg)*);
+        log!(target: $target, $crate::Level::Info, $($arg)*);
     );
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Info, $($arg)*);
+        log!($crate::Level::Info, $($arg)*);
     )
 }
 
@@ -165,10 +165,10 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::LogLevel::Debug, $($arg)*);
+        log!(target: $target, $crate::Level::Debug, $($arg)*);
     );
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Debug, $($arg)*);
+        log!($crate::Level::Debug, $($arg)*);
     )
 }
 
@@ -202,10 +202,10 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::LogLevel::Trace, $($arg)*);
+        log!(target: $target, $crate::Level::Trace, $($arg)*);
     );
     ($($arg:tt)*) => (
-        log!($crate::LogLevel::Trace, $($arg)*);
+        log!($crate::Level::Trace, $($arg)*);
     )
 }
 
@@ -220,7 +220,7 @@ macro_rules! trace {
 /// ```rust
 /// # #[macro_use]
 /// # extern crate log;
-/// use log::LogLevel::Debug;
+/// use log::Level::Debug;
 ///
 /// # fn foo() {
 /// if log_enabled!(Debug) {
@@ -236,7 +236,7 @@ macro_rules! trace {
 macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => ({
         let lvl = $lvl;
-        lvl <= $crate::__static_max_level() && lvl <= $crate::max_log_level() &&
+        lvl <= $crate::__static_max_level() && lvl <= $crate::max_level() &&
             $crate::__enabled(lvl, $target)
     });
     ($lvl:expr) => (log_enabled!(target: module_path!(), $lvl))
