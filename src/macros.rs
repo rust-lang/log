@@ -27,7 +27,7 @@
 /// let private_data = "private";
 ///
 /// log!(LogLevel::Error, "Received errors: {}, {}", data.0, data.1);
-/// log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}, {}", 
+/// log!(target: "app_events", LogLevel::Warn, "App warning: {}, {}, {}",
 ///     data.0, data.1, private_data);
 /// # }
 /// ```
@@ -226,6 +226,10 @@ macro_rules! trace {
 /// if log_enabled!(Debug) {
 ///     let data = expensive_call();
 ///     debug!("expensive debug data: {} {}", data.x, data.y);
+/// }
+/// if log_enabled!(target: "Global", Debug) {
+///    let data = expensive_call();
+///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
 /// }
 /// # }
 /// # struct Data { x: u32, y: u32 }
