@@ -270,6 +270,11 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
                                              "DEBUG", "TRACE"];
 
+static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
+                     was already initialized";
+static SHUTDOWN_LOGGER_ERROR: &'static str = "attempted to shut down the logger without an active logger";
+static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doesn't match an existing log level";
+
 /// An enum representing the available verbosity levels of the logging framework.
 ///
 /// Typical usage includes: checking if a certain `Level` is enabled with
@@ -794,15 +799,16 @@ pub struct SetLoggerError(());
 
 impl fmt::Display for SetLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to set a logger after the logging system \
-                     was already initialized")
+        fmt.write_str(SET_LOGGER_ERROR)
     }
 }
 
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for SetLoggerError {
-    fn description(&self) -> &str { "set_logger() called multiple times" }
+    fn description(&self) -> &str {
+        SET_LOGGER_ERROR
+    }
 }
 
 /// The type returned by [`shutdown_logger_raw`] if [`shutdown_logger_raw`] has
@@ -815,14 +821,16 @@ pub struct ShutdownLoggerError(());
 
 impl fmt::Display for ShutdownLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to shut down the logger without an active logger")
+        fmt.write_str(SHUTDOWN_LOGGER_ERROR)
     }
 }
 
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for ShutdownLoggerError {
-    fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
+    fn description(&self) -> &str {
+       SHUTDOWN_LOGGER_ERROR
+    }
 }
 
 /// The type returned by `from_str` when the string doesn't match any of the log levels.
@@ -832,14 +840,16 @@ pub struct LevelParseError(());
 
 impl fmt::Display for LevelParseError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to convert a string that doesn't match an existing log level")
+        fmt.write_str(LEVEL_PARSE_ERROR)
     }
 }
 
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for LevelParseError {
-    fn description(&self) -> &str { "called from_str() on a string without a matching log level" }
+    fn description(&self) -> &str {
+        LEVEL_PARSE_ERROR
+    }
 }
 
 
@@ -1070,6 +1080,7 @@ mod tests {
          use std::error::Error;
          use super::SetLoggerError;
          let e = SetLoggerError(());
-         assert_eq!(e.description(), "set_logger() called multiple times");
+         assert_eq!(e.description(), "attempted to set a logger after the logging system \
+                     was already initialized");
      }
 }
