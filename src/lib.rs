@@ -786,7 +786,8 @@ pub fn shutdown_logger_raw() -> Result<*const Log, ShutdownLoggerError> {
     }
 }
 
-/// The type returned by `set_logger` if `set_logger` has already been called.
+/// The type returned by [`set_logger`] if [`set_logger`] has already been called.
+/// [`set_logger`]: fn.set_logger.html
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
 pub struct SetLoggerError(());
@@ -804,8 +805,10 @@ impl error::Error for SetLoggerError {
     fn description(&self) -> &str { "set_logger() called multiple times" }
 }
 
-/// The type returned by `shutdown_logger_raw` if `shutdown_logger_raw` has
-/// already been called or if `set_logger_raw` has not been called yet.
+/// The type returned by [`shutdown_logger_raw`] if [`shutdown_logger_raw`] has
+/// already been called or if [`set_logger_raw`] has not been called yet.
+/// [`set_logger_raw`]: fn.set_logger_raw.html
+/// [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
 pub struct ShutdownLoggerError(());
