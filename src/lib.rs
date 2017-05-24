@@ -84,10 +84,10 @@
 //!     // Select env_logger, one possible logger implementation
 //!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
 //!     env_logger::init().unwrap();
-//!     
+//!
 //!     info!("starting up");
 //!     error!("error: {}", 404);
-//!     
+//!
 //!     // ...
 //! }
 //! ```
@@ -186,6 +186,20 @@
 //!         logger.flush();
 //!     })
 //! }
+//! ```
+//!
+//! # Features
+//!
+//! Optionally, when defining a `Cargo.toml` file, additional parameters can be passed that affect
+//! the logger depending on the target of the build.  Effectively, `max_level_*` and
+//! `release_max_level_*` directives can be added as features of the log dependency.  When
+//! these are set, they override the behavior of the logging levels above the declared maximum
+//! preventing anything higher from logging.
+//!
+//! ```toml
+//! [dependencies.log]
+//! version = "^0.3.7"
+//! features = ["max_level_debug", "release_max_level_warn"]
 //! ```
 //!
 //! [`Log`]: trait.Log.html
