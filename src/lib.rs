@@ -356,14 +356,14 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 }
 
 impl FromStr for Level {
-    type Err = ();
-    fn from_str(level: &str) -> Result<Level, ()> {
+    type Err = LevelParseError;
+    fn from_str(level: &str) -> Result<Level, Self::Err> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
                     .into_iter()
                     .filter(|&idx| idx != 0)
                     .map(|idx| Level::from_usize(idx).unwrap())
-                    .next(), ())
+                    .next(), LevelParseError(()))
     }
 }
 
@@ -468,11 +468,11 @@ impl Ord for LevelFilter {
 }
 
 impl FromStr for LevelFilter {
-    type Err = ();
-    fn from_str(level: &str) -> Result<LevelFilter, ()> {
+    type Err = LevelParseError;
+    fn from_str(level: &str) -> Result<LevelFilter, Self::Err> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
-                    .map(|p| LevelFilter::from_usize(p).unwrap()), ())
+                    .map(|p| LevelFilter::from_usize(p).unwrap()), LevelParseError(()))
     }
 }
 
@@ -808,6 +808,24 @@ impl error::Error for ShutdownLoggerError {
     fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
 }
 
+/// The type returned by `from_str` when the string doesn't match any of the log levels.
+#[allow(missing_copy_implementations)]
+#[derive(Debug, PartialEq)]
+pub struct LevelParseError(());
+
+impl fmt::Display for LevelParseError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "attempted to convert a string that doesn't match an existing log level")
+    }
+}
+
+// The Error trait is not available in libcore
+#[cfg(feature = "use_std")]
+impl error::Error for LevelParseError {
+    fn description(&self) -> &str { "called from_str() on a string without a matching log level" }
+}
+
+
 /// Deprecated
 ///
 /// Use https://crates.io/crates/log-panics instead.
@@ -945,7 +963,7 @@ pub fn __static_max_level() -> LevelFilter {
 mod tests {
      extern crate std;
      use tests::std::string::ToString;
-     use super::{Level, LevelFilter};
+     use super::{Level, LevelFilter, LevelParseError};
 
      #[test]
      fn test_levelfilter_from_str() {
@@ -962,7 +980,7 @@ mod tests {
              ("INFO",  Ok(LevelFilter::Info)),
              ("DEBUG", Ok(LevelFilter::Debug)),
              ("TRACE", Ok(LevelFilter::Trace)),
-             ("asdf",  Err(())),
+             ("asdf",  Err(LevelParseError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
@@ -972,7 +990,7 @@ mod tests {
      #[test]
      fn test_level_from_str() {
          let tests = [
-             ("OFF",   Err(())),
+             ("OFF",   Err(LevelParseError(()))),
              ("error", Ok(Level::Error)),
              ("warn",  Ok(Level::Warn)),
              ("info",  Ok(Level::Info)),
@@ -983,7 +1001,7 @@ mod tests {
              ("INFO",  Ok(Level::Info)),
              ("DEBUG", Ok(Level::Debug)),
              ("TRACE", Ok(Level::Trace)),
-             ("asdf",  Err(())),
+             ("asdf",  Err(LevelParseError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
