@@ -12,6 +12,7 @@ description = """
 A lightweight logging facade for Rust
 """
 categories = ["development-tools::debugging"]
+keywords = ["logging"]
 publish = false # this branch contains breaking changes
 
 [[test]]
