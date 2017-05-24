@@ -80,6 +80,18 @@ fn main() {
 }
 ```
 
+Then when running the executable, specify a value for the `RUST_LOG`
+environment variable that corresponds with the log messages you want to show.
+
+```bash
+$ RUST_LOG=info ./main
+starting up
+```
+
+See the [`env_logger` documentation](http://rust-lang-nursery.github.io/log/env_logger/)
+for the `RUST_LOG` values that can be used to get log messages with different
+levels or filtered to different modules.
+
 ## In tests
 
 Tests can use the `env_logger` crate to see log messages generated during that test:
