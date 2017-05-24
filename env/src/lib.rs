@@ -161,7 +161,7 @@ pub enum Target {
 
 /// The logger.
 pub struct Logger {
-    directives: Vec<LogDirective>,
+    directives: Vec<Directive>,
     filter: Option<filter::Filter>,
     format: Box<Fn(&Record) -> String + Sync + Send>,
     target: Target,
@@ -201,7 +201,7 @@ pub struct Logger {
 /// }
 /// ```
 pub struct Builder {
-    directives: Vec<LogDirective>,
+    directives: Vec<Directive>,
     filter: Option<filter::Filter>,
     format: Box<Fn(&Record) -> String + Sync + Send>,
     target: Target,
@@ -228,7 +228,7 @@ impl Builder {
     pub fn filter(&mut self,
                   module: Option<&str>,
                   level: LevelFilter) -> &mut Self {
-        self.directives.push(LogDirective {
+        self.directives.push(Directive {
             name: module.map(|s| s.to_string()),
             level: level,
         });
@@ -259,7 +259,7 @@ impl Builder {
     ///
     /// See the module documentation for more details.
     pub fn parse(&mut self, filters: &str) -> &mut Self {
-        let (directives, filter) = parse_logging_spec(filters);
+        let (directives, filter) = parse_spec(filters);
 
         self.filter = filter;
 
@@ -286,7 +286,7 @@ impl Builder {
     pub fn build(&mut self) -> Logger {
         if self.directives.is_empty() {
             // Adds the default filter if none exist
-            self.directives.push(LogDirective {
+            self.directives.push(Directive {
                 name: None,
                 level: LevelFilter::Error,
             });
@@ -365,7 +365,7 @@ impl Log for Logger {
     }
 }
 
-struct LogDirective {
+struct Directive {
     name: Option<String>,
     level: LevelFilter,
 }
@@ -387,7 +387,7 @@ pub fn init() -> Result<(), SetLoggerError> {
 
 /// Parse a logging specification string (e.g: "crate1,crate2::mod3,crate3::x=error/foo")
 /// and return a vector with log directives.
-fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<filter::Filter>) {
+fn parse_spec(spec: &str) -> (Vec<Directive>, Option<filter::Filter>) {
     let mut dirs = Vec::new();
 
     let mut parts = spec.split('/');
@@ -427,7 +427,7 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<filter::Filter>)
                 continue
             }
         };
-        dirs.push(LogDirective {
+        dirs.push(Directive {
             name: name.map(|s| s.to_string()),
             level: log_level,
         });
@@ -450,9 +450,9 @@ fn parse_logging_spec(spec: &str) -> (Vec<LogDirective>, Option<filter::Filter>)
 mod tests {
     use log::{Level, LevelFilter};
 
-    use super::{Builder, Logger, LogDirective, parse_logging_spec};
+    use super::{Builder, Logger, Directive, parse_spec};
 
-    fn make_logger(dirs: Vec<LogDirective>) -> Logger {
+    fn make_logger(dirs: Vec<Directive>) -> Logger {
         let mut logger = Builder::new().build();
         logger.directives = dirs;
         logger
@@ -486,11 +486,11 @@ mod tests {
     #[test]
     fn match_full_path() {
         let logger = make_logger(vec![
-            LogDirective {
+            Directive {
                 name: Some("crate2".to_string()),
                 level: LevelFilter::Info
             },
-            LogDirective {
+            Directive {
                 name: Some("crate1::mod1".to_string()),
                 level: LevelFilter::Warn
             }
@@ -504,8 +504,8 @@ mod tests {
     #[test]
     fn no_match() {
         let logger = make_logger(vec![
-            LogDirective { name: Some("crate2".to_string()), level: LevelFilter::Info },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
+            Directive { name: Some("crate2".to_string()), level: LevelFilter::Info },
+            Directive { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
         ]);
         assert!(!logger.enabled(Level::Warn, "crate3"));
     }
@@ -513,8 +513,8 @@ mod tests {
     #[test]
     fn match_beginning() {
         let logger = make_logger(vec![
-            LogDirective { name: Some("crate2".to_string()), level: LevelFilter::Info },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
+            Directive { name: Some("crate2".to_string()), level: LevelFilter::Info },
+            Directive { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
         ]);
         assert!(logger.enabled(Level::Info, "crate2::mod1"));
     }
@@ -522,9 +522,9 @@ mod tests {
     #[test]
     fn match_beginning_longest_match() {
         let logger = make_logger(vec![
-            LogDirective { name: Some("crate2".to_string()), level: LevelFilter::Info },
-            LogDirective { name: Some("crate2::mod".to_string()), level: LevelFilter::Debug },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
+            Directive { name: Some("crate2".to_string()), level: LevelFilter::Info },
+            Directive { name: Some("crate2::mod".to_string()), level: LevelFilter::Debug },
+            Directive { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
         ]);
         assert!(logger.enabled(Level::Debug, "crate2::mod1"));
         assert!(!logger.enabled(Level::Debug, "crate2"));
@@ -533,8 +533,8 @@ mod tests {
     #[test]
     fn match_default() {
         let logger = make_logger(vec![
-            LogDirective { name: None, level: LevelFilter::Info },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
+            Directive { name: None, level: LevelFilter::Info },
+            Directive { name: Some("crate1::mod1".to_string()), level: LevelFilter::Warn }
         ]);
         assert!(logger.enabled(Level::Warn, "crate1::mod1"));
         assert!(logger.enabled(Level::Info, "crate2::mod2"));
@@ -543,16 +543,16 @@ mod tests {
     #[test]
     fn zero_level() {
         let logger = make_logger(vec![
-            LogDirective { name: None, level: LevelFilter::Info },
-            LogDirective { name: Some("crate1::mod1".to_string()), level: LevelFilter::Off }
+            Directive { name: None, level: LevelFilter::Info },
+            Directive { name: Some("crate1::mod1".to_string()), level: LevelFilter::Off }
         ]);
         assert!(!logger.enabled(Level::Error, "crate1::mod1"));
         assert!(logger.enabled(Level::Info, "crate2::mod2"));
     }
 
     #[test]
-    fn parse_logging_spec_valid() {
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=error,crate1::mod2,crate2=debug");
+    fn parse_spec_valid() {
+        let (dirs, filter) = parse_spec("crate1::mod1=error,crate1::mod2,crate2=debug");
         assert_eq!(dirs.len(), 3);
         assert_eq!(dirs[0].name, Some("crate1::mod1".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Error);
@@ -566,9 +566,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_invalid_crate() {
-        // test parse_logging_spec with multiple = in specification
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=warn=info,crate2=debug");
+    fn parse_spec_invalid_crate() {
+        // test parse_spec with multiple = in specification
+        let (dirs, filter) = parse_spec("crate1::mod1=warn=info,crate2=debug");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate2".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Debug);
@@ -576,9 +576,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_invalid_level() {
-        // test parse_logging_spec with 'noNumber' as log level
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=noNumber,crate2=debug");
+    fn parse_spec_invalid_level() {
+        // test parse_spec with 'noNumber' as log level
+        let (dirs, filter) = parse_spec("crate1::mod1=noNumber,crate2=debug");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate2".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Debug);
@@ -586,9 +586,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_string_level() {
-        // test parse_logging_spec with 'warn' as log level
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=wrong,crate2=warn");
+    fn parse_spec_string_level() {
+        // test parse_spec with 'warn' as log level
+        let (dirs, filter) = parse_spec("crate1::mod1=wrong,crate2=warn");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate2".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Warn);
@@ -596,9 +596,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_empty_level() {
-        // test parse_logging_spec with '' as log level
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=wrong,crate2=");
+    fn parse_spec_empty_level() {
+        // test parse_spec with '' as log level
+        let (dirs, filter) = parse_spec("crate1::mod1=wrong,crate2=");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate2".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::max());
@@ -606,9 +606,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_global() {
-        // test parse_logging_spec with no crate
-        let (dirs, filter) = parse_logging_spec("warn,crate2=debug");
+    fn parse_spec_global() {
+        // test parse_spec with no crate
+        let (dirs, filter) = parse_spec("warn,crate2=debug");
         assert_eq!(dirs.len(), 2);
         assert_eq!(dirs[0].name, None);
         assert_eq!(dirs[0].level, LevelFilter::Warn);
@@ -618,8 +618,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_valid_filter() {
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=error,crate1::mod2,crate2=debug/abc");
+    fn parse_spec_valid_filter() {
+        let (dirs, filter) = parse_spec("crate1::mod1=error,crate1::mod2,crate2=debug/abc");
         assert_eq!(dirs.len(), 3);
         assert_eq!(dirs[0].name, Some("crate1::mod1".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Error);
@@ -633,8 +633,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_invalid_crate_filter() {
-        let (dirs, filter) = parse_logging_spec("crate1::mod1=error=warn,crate2=debug/a.c");
+    fn parse_spec_invalid_crate_filter() {
+        let (dirs, filter) = parse_spec("crate1::mod1=error=warn,crate2=debug/a.c");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate2".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::Debug);
@@ -642,8 +642,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_logging_spec_empty_with_filter() {
-        let (dirs, filter) = parse_logging_spec("crate1/a*c");
+    fn parse_spec_empty_with_filter() {
+        let (dirs, filter) = parse_spec("crate1/a*c");
         assert_eq!(dirs.len(), 1);
         assert_eq!(dirs[0].name, Some("crate1".to_string()));
         assert_eq!(dirs[0].level, LevelFilter::max());
