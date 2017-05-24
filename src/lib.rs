@@ -1068,6 +1068,7 @@ mod tests {
          use std::error::Error;
          use super::SetLoggerError;
          let e = SetLoggerError(());
-         assert_eq!(e.description(), "set_logger() called multiple times");
+         assert_eq!(e.description(), "attempted to set a logger after the logging system \
+                     was already initialized");
      }
 }
