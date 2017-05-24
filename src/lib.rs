@@ -793,8 +793,8 @@ pub struct SetLoggerError(());
 
 impl fmt::Display for SetLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to set a logger after the logging system \
-                     was already initialized")
+        use error::Error;
+        fmt.write_str(self.description())
     }
 }
 
@@ -813,7 +813,8 @@ pub struct ShutdownLoggerError(());
 
 impl fmt::Display for ShutdownLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to shut down the logger without an active logger")
+        use error::Error;
+        fmt.write_str(self.description())
     }
 }
 
@@ -830,7 +831,8 @@ pub struct LevelParseError(());
 
 impl fmt::Display for LevelParseError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "attempted to convert a string that doesn't match an existing log level")
+        use error::Error;
+        fmt.write_str(self.description())
     }
 }
 
