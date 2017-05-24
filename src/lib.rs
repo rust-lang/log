@@ -801,7 +801,8 @@ impl fmt::Display for SetLoggerError {
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for SetLoggerError {
-    fn description(&self) -> &str { "set_logger() called multiple times" }
+    fn description(&self) -> &str { "attempted to set a logger after the logging system \
+                     was already initialized" }
 }
 
 /// The type returned by `shutdown_logger_raw` if `shutdown_logger_raw` has
@@ -819,7 +820,7 @@ impl fmt::Display for ShutdownLoggerError {
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for ShutdownLoggerError {
-    fn description(&self) -> &str { "shutdown_logger() called without an active logger" }
+    fn description(&self) -> &str { "attempted to shut down the logger without an active logger" }
 }
 
 /// The type returned by `from_str` when the string doesn't match any of the log levels.
@@ -836,7 +837,7 @@ impl fmt::Display for LevelParseError {
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
 impl error::Error for LevelParseError {
-    fn description(&self) -> &str { "called from_str() on a string without a matching log level" }
+    fn description(&self) -> &str { "attempted to convert a string that doesn't match an existing log level" }
 }
 
 
