@@ -196,7 +196,7 @@
 //! these are set, they override the behavior of the logging levels above the declared maximum
 //! preventing anything higher from logging.
 //!
-//! ```
+//! ```toml
 //! [dependencies.log]
 //! version = "^0.3.7"
 //! features = ["max_level_debug", "release_max_level_warn"]
