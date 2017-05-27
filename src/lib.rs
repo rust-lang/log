@@ -530,6 +530,8 @@ impl LevelFilter {
 
 /// The "payload" of a log message.
 ///
+/// # Use
+///
 /// `Record` structures are passed as parameters to the [`log`] method of the
 /// [`Log`] trait. Logger implementors manipulate these structures in order to
 /// display log messages. `Record`s are automatically created by the [`log!`]
@@ -539,7 +541,7 @@ impl LevelFilter {
 /// `self.metadata().level()` and `self.metadata().target()` respectively.
 /// These methods are provided as a convenience for users of this structure.
 ///
-/// # Example
+/// ## Example
 ///
 /// The following example shows a simple logger that displays the level,
 /// module path, and message of any `Record` that is passed to it.
