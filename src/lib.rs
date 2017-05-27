@@ -568,6 +568,46 @@ impl<'a> Record<'a> {
 }
 
 /// Metadata about a log message.
+///
+/// # Use
+///
+/// `Metadata` structs are created when users of the library use
+/// logging macros.
+///
+/// They are consumed by implementations of the `Log` trait in the
+/// `enabled` method. 
+///
+/// `Record`s use `Metadata` to determine the log message's severity
+/// and target.
+///
+///
+/// Users should use the `log_enabled!` macro in their code to avoid
+/// constructing expensive log messages.
+///
+/// ## Examples
+///
+/// ```rust
+/// # #[macro_use] 
+/// # extern crate log;
+///
+/// use log::{Record, Level, Metadata};
+///
+/// struct MyLogger;
+/// 
+/// impl log::Log for MyLogger {
+///     fn enabled(&self, metadata: &Metadata) -> bool {
+///         metadata.level() <= Level::Info
+///     }
+///
+///     fn log(&self, record: &Record) {
+///         if self.enabled(record.metadata()) {
+///             println!("{} - {}", record.level(), record.args());
+///         }
+///     }
+/// }
+///
+/// # fn main(){}
+/// ```
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Metadata<'a> {
     level: Level,
