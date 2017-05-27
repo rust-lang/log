@@ -570,7 +570,7 @@ impl LevelFilter {
 ///
 /// [method.log]: trait.Log.html#method.log
 /// [`Log`]: trait.Log.html
-/// [`log!`]: macro.log!.html
+/// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
 /// [`target()`]: struct.Record.html#method.target
 #[derive(Debug)]
@@ -615,7 +615,7 @@ impl<'a> Record<'a> {
 /// logging macros.
 ///
 /// They are consumed by implementations of the `Log` trait in the
-/// `enabled` method. 
+/// `enabled` method.
 ///
 /// `Record`s use `Metadata` to determine the log message's severity
 /// and target.
@@ -626,13 +626,13 @@ impl<'a> Record<'a> {
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] 
+/// # #[macro_use]
 /// # extern crate log;
 /// #
 /// use log::{Record, Level, Metadata};
 ///
 /// struct MyLogger;
-/// 
+///
 /// impl log::Log for MyLogger {
 ///     fn enabled(&self, metadata: &Metadata) -> bool {
 ///         metadata.level() <= Level::Info
@@ -694,11 +694,50 @@ impl Log for NopLogger {
 
 /// The location of a log message.
 ///
+/// # Use
+///
+/// `Location` structs are created by the [`log!`] macro. They are attached to
+/// [`Record`] structs, which are used by loggers to display logging messages.
+/// `Location`s can be accessed using the [`location()`] method on [`Record`]s.
+/// Log users do not need to directly use this struct.
+///
+/// ## Example
+/// The below example shows a simple logger that prints the module path,
+/// file name, and line number of the location the [`log!`] macro was called.
+///
+/// ```rust
+/// # extern crate log;
+/// struct SimpleLogger;
+///
+/// impl log::Log for SimpleLogger {
+///     fn enabled(&self, metadata: &log::Metadata) -> bool {
+///         true
+///     }
+///
+///     fn log(&self, record: &log::Record) {
+///         if !self.enabled(record.metadata()) {
+///             return;
+///         }
+///
+///         let location = record.location();
+///         println!("{}:{}:{} -- {}",
+///                  location.module_path(),
+///                  location.file(),
+///                  location.line(),
+///                  record.args());
+///     }
+/// }
+/// ```
+///
 /// # Warning
 ///
 /// The fields of this struct are public so that they may be initialized by the
-/// `log!` macro. They are subject to change at any time and should never be
+/// [`log!`] macro. They are subject to change at any time and should never be
 /// accessed directly.
+///
+/// [`log!`]: macro.log.html
+/// [`Record`]: struct.Record.html
+/// [`location()`]: struct.Record.html#method.location
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Location {
     #[doc(hidden)]
