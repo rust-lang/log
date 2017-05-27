@@ -532,10 +532,10 @@ impl LevelFilter {
 ///
 /// # Use
 ///
-/// `Record` structures are passed as parameters to the [`log`] method of the
-/// [`Log`] trait. Logger implementors manipulate these structures in order to
-/// display log messages. `Record`s are automatically created by the [`log!`]
-/// macro and so are not seen by log users.
+/// `Record` structures are passed as parameters to the [`log`][method.log]
+/// method of the [`Log`] trait. Logger implementors manipulate these
+/// structures in order to display log messages. `Record`s are automatically
+/// created by the [`log!`] macro and so are not seen by log users.
 ///
 /// Note that the [`level()`] and [`target()`] accessors are equivalent to
 /// `self.metadata().level()` and `self.metadata().target()` respectively.
@@ -568,7 +568,7 @@ impl LevelFilter {
 /// }
 /// ```
 ///
-/// [`log`]: trait.Log.html#method.log
+/// [method.log]: trait.Log.html#method.log
 /// [`Log`]: trait.Log.html
 /// [`log!`]: macro.log!.html
 /// [`level()`]: struct.Record.html#method.level
