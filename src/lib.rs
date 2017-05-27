@@ -570,7 +570,7 @@ impl LevelFilter {
 ///
 /// [method.log]: trait.Log.html#method.log
 /// [`Log`]: trait.Log.html
-/// [`log!`]: macro.log!.html
+/// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
 /// [`target()`]: struct.Record.html#method.target
 #[derive(Debug)]
@@ -735,7 +735,7 @@ impl Log for NopLogger {
 /// [`log!`] macro. They are subject to change at any time and should never be
 /// accessed directly.
 ///
-/// [`log!`]: macro.log!.html
+/// [`log!`]: macro.log.html
 /// [`Record`]: struct.Record.html
 /// [`location()`]: struct.Record.html#method.location
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
