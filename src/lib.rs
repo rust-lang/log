@@ -528,11 +528,51 @@ impl LevelFilter {
     }
 }
 
-/// The "payload" of a log message. This structure is primarily used as a
-/// parameter in the [`log`] method of the [`Log`] trait.
+/// The "payload" of a log message.
 ///
-/// [`log`]: trait.Log.html#tymethod.log
+/// # Use
+///
+/// `Record` structures are passed as parameters to the [`log`][method.log]
+/// method of the [`Log`] trait. Logger implementors manipulate these
+/// structures in order to display log messages. `Record`s are automatically
+/// created by the [`log!`] macro and so are not seen by log users.
+///
+/// Note that the [`level()`] and [`target()`] accessors are equivalent to
+/// `self.metadata().level()` and `self.metadata().target()` respectively.
+/// These methods are provided as a convenience for users of this structure.
+///
+/// ## Example
+///
+/// The following example shows a simple logger that displays the level,
+/// module path, and message of any `Record` that is passed to it.
+///
+/// ```rust
+/// # extern crate log;
+/// struct SimpleLogger;
+///
+/// impl log::Log for SimpleLogger {
+///    fn enabled(&self, metadata: &log::Metadata) -> bool {
+///        true
+///    }
+///
+///    fn log(&self, record: &log::Record) {
+///        if !self.enabled(record.metadata()) {
+///            return;
+///        }
+///
+///        println!("{}:{} -- {}",
+///                 record.level(),
+///                 record.location().module_path(),
+///                 record.args());
+///    }
+/// }
+/// ```
+///
+/// [method.log]: trait.Log.html#method.log
 /// [`Log`]: trait.Log.html
+/// [`log!`]: macro.log!.html
+/// [`level()`]: struct.Record.html#method.level
+/// [`target()`]: struct.Record.html#method.target
 #[derive(Debug)]
 pub struct Record<'a> {
     metadata: Metadata<'a>,
