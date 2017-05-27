@@ -269,6 +269,8 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
 static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO",
                                              "DEBUG", "TRACE"];
+static LOG_LEVEL_EMOJIES: [&'static str; 6] = ["", "❤️", "💛", "💙",
+                                             "💚", "💜"];
 
 static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
                      was already initialized";
@@ -402,6 +404,11 @@ impl Level {
             5 => Some(Level::Trace),
             _ => None
         }
+    }
+
+    /// Returns emoji representation of logging level
+    pub fn emoji(&self) -> &'static str {
+        LOG_LEVEL_EMOJIES[*self as usize]
     }
 
     /// Returns the most verbose logging level.
