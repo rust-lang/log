@@ -580,16 +580,15 @@ impl<'a> Record<'a> {
 /// `Record`s use `Metadata` to determine the log message's severity
 /// and target.
 ///
-///
 /// Users should use the `log_enabled!` macro in their code to avoid
 /// constructing expensive log messages.
 ///
-/// ## Examples
+/// # Examples
 ///
 /// ```rust
 /// # #[macro_use] 
 /// # extern crate log;
-///
+/// #
 /// use log::{Record, Level, Metadata};
 ///
 /// struct MyLogger;
