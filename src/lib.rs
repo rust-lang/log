@@ -375,14 +375,14 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 }
 
 impl FromStr for Level {
-    type Err = LevelParseError;
+    type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<Level, Self::Err> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
                     .into_iter()
                     .filter(|&idx| idx != 0)
                     .map(|idx| Level::from_usize(idx).unwrap())
-                    .next(), LevelParseError(()))
+                    .next(), ParseLevelError(()))
     }
 }
 
@@ -487,11 +487,11 @@ impl Ord for LevelFilter {
 }
 
 impl FromStr for LevelFilter {
-    type Err = LevelParseError;
+    type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<LevelFilter, Self::Err> {
         ok_or(LOG_LEVEL_NAMES.iter()
                     .position(|&name| eq_ignore_ascii_case(name, level))
-                    .map(|p| LevelFilter::from_usize(p).unwrap()), LevelParseError(()))
+                    .map(|p| LevelFilter::from_usize(p).unwrap()), ParseLevelError(()))
     }
 }
 
@@ -954,9 +954,9 @@ impl error::Error for ShutdownLoggerError {
 /// The type returned by `from_str` when the string doesn't match any of the log levels.
 #[allow(missing_copy_implementations)]
 #[derive(Debug, PartialEq)]
-pub struct LevelParseError(());
+pub struct ParseLevelError(());
 
-impl fmt::Display for LevelParseError {
+impl fmt::Display for ParseLevelError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(LEVEL_PARSE_ERROR)
     }
@@ -964,7 +964,7 @@ impl fmt::Display for LevelParseError {
 
 // The Error trait is not available in libcore
 #[cfg(feature = "use_std")]
-impl error::Error for LevelParseError {
+impl error::Error for ParseLevelError {
     fn description(&self) -> &str {
         LEVEL_PARSE_ERROR
     }
@@ -1108,7 +1108,7 @@ pub fn __static_max_level() -> LevelFilter {
 mod tests {
      extern crate std;
      use tests::std::string::ToString;
-     use super::{Level, LevelFilter, LevelParseError};
+     use super::{Level, LevelFilter, ParseLevelError};
 
      #[test]
      fn test_levelfilter_from_str() {
@@ -1125,7 +1125,7 @@ mod tests {
              ("INFO",  Ok(LevelFilter::Info)),
              ("DEBUG", Ok(LevelFilter::Debug)),
              ("TRACE", Ok(LevelFilter::Trace)),
-             ("asdf",  Err(LevelParseError(()))),
+             ("asdf",  Err(ParseLevelError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
@@ -1135,7 +1135,7 @@ mod tests {
      #[test]
      fn test_level_from_str() {
          let tests = [
-             ("OFF",   Err(LevelParseError(()))),
+             ("OFF",   Err(ParseLevelError(()))),
              ("error", Ok(Level::Error)),
              ("warn",  Ok(Level::Warn)),
              ("info",  Ok(Level::Info)),
@@ -1146,7 +1146,7 @@ mod tests {
              ("INFO",  Ok(Level::Info)),
              ("DEBUG", Ok(Level::Debug)),
              ("TRACE", Ok(Level::Trace)),
-             ("asdf",  Err(LevelParseError(()))),
+             ("asdf",  Err(ParseLevelError(()))),
          ];
          for &(s, ref expected) in &tests {
              assert_eq!(expected, &s.parse());
