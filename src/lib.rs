@@ -237,6 +237,11 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 #[macro_use]
 mod macros;
 
+#[cfg(feature = "use_serde")]
+extern crate serde;
+#[cfg(feature = "use_serde")]
+use serde::{Serialize, Serializer, de, Deserialize, Deserializer};
+
 // The setup here is a bit weird to make shutdown_logger_raw work.
 //
 // There are four different states that we care about: the logger's
@@ -345,6 +350,33 @@ impl Ord for Level {
     #[inline]
     fn cmp(&self, other: &Level) -> cmp::Ordering {
         (*self as usize).cmp(&(*other as usize))
+    }
+}
+
+#[cfg(feature = "use_serde")]
+impl Serialize for Level {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match *self {
+            Level::Error => serializer.serialize_str("error"),
+            Level::Warn => serializer.serialize_str("warn"),
+            Level::Info => serializer.serialize_str("info"),
+            Level::Debug => serializer.serialize_str("debug"),
+            Level::Trace => serializer.serialize_str("trace"),
+        }
+    }
+}
+
+#[cfg(feature = "use_serde")]
+impl<'de> Deserialize<'de> for Level {
+    #[inline]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
     }
 }
 
@@ -498,6 +530,34 @@ impl FromStr for LevelFilter {
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
+    }
+}
+
+#[cfg(feature = "use_serde")]
+impl Serialize for LevelFilter {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        match *self {
+            LevelFilter::Off => serializer.serialize_str("off"),
+            LevelFilter::Error => serializer.serialize_str("error"),
+            LevelFilter::Warn => serializer.serialize_str("warn"),
+            LevelFilter::Info => serializer.serialize_str("info"),
+            LevelFilter::Debug => serializer.serialize_str("debug"),
+            LevelFilter::Trace => serializer.serialize_str("trace"),
+        }
+    }
+}
+
+#[cfg(feature = "use_serde")]
+impl<'de> Deserialize<'de> for LevelFilter {
+    #[inline]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
     }
 }
 
@@ -1110,6 +1170,11 @@ mod tests {
      use tests::std::string::ToString;
      use super::{Level, LevelFilter, LevelParseError};
 
+     #[cfg(feature = "use_serde")]
+     extern crate serde_test;
+     #[cfg(feature = "use_serde")]
+     use self::serde_test::{Token, assert_de_tokens, assert_tokens};
+
      #[test]
      fn test_levelfilter_from_str() {
          let tests = [
@@ -1201,4 +1266,84 @@ mod tests {
          assert_eq!(e.description(), "attempted to set a logger after the logging system \
                      was already initialized");
      }
+
+    #[cfg(feature = "use_serde")]
+    #[test]
+    fn test_serde_level_serialize_deserialize() {
+
+        let tests = [(Level::Error, [Token::Str("error")]),
+                     (Level::Warn, [Token::Str("warn")]),
+                     (Level::Info, [Token::Str("info")]),
+                     (Level::Debug, [Token::Str("debug")]),
+                     (Level::Trace, [Token::Str("trace")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_tokens(&s, &expected);
+        }
+
+        // case insentive deserialize
+        let tests = [(Level::Error, [Token::Str("ERROR")]),
+                     (Level::Warn, [Token::Str("WARN")]),
+                     (Level::Info, [Token::Str("INFO")]),
+                     (Level::Debug, [Token::Str("DEBUG")]),
+                     (Level::Trace, [Token::Str("TRACE")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_de_tokens(&s, &expected);
+        }
+    }
+
+    #[cfg(feature = "use_serde")]
+    #[should_panic]
+    #[test]
+    fn test_serde_level_deserialize_error() {
+
+        // Error case
+        let tests = [(Level::Error, [Token::Str("error1")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_de_tokens(&s, &expected);
+        }
+    }
+
+    #[cfg(feature = "use_serde")]
+    #[test]
+    fn test_serde_levelfilter_serialize_deserialize() {
+
+        let tests = [(LevelFilter::Off, [Token::Str("off")]),
+                     (LevelFilter::Error, [Token::Str("error")]),
+                     (LevelFilter::Warn, [Token::Str("warn")]),
+                     (LevelFilter::Info, [Token::Str("info")]),
+                     (LevelFilter::Debug, [Token::Str("debug")]),
+                     (LevelFilter::Trace, [Token::Str("trace")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_tokens(&s, &expected);
+        }
+
+        // case insentive deserialize
+        let tests = [(LevelFilter::Off, [Token::Str("OFF")]),
+                     (LevelFilter::Error, [Token::Str("ERROR")]),
+                     (LevelFilter::Warn, [Token::Str("WARN")]),
+                     (LevelFilter::Info, [Token::Str("INFO")]),
+                     (LevelFilter::Debug, [Token::Str("DEBUG")]),
+                     (LevelFilter::Trace, [Token::Str("TRACE")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_de_tokens(&s, &expected);
+        }
+    }
+
+    #[cfg(feature = "use_serde")]
+    #[should_panic]
+    #[test]
+    fn test_serde_levelfilter_deserialize_error() {
+
+        // Error case
+        let tests = [(LevelFilter::Error, [Token::Str("error1")])];
+
+        for &(s, expected) in tests.iter() {
+            assert_de_tokens(&s, &expected);
+        }
+    }
 }
