@@ -1,4 +1,5 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use std::sync::{Arc, Mutex};
 use log::{Level, LevelFilter, Log, Record, Metadata};
@@ -8,10 +9,9 @@ use log::MaxLevelFilter;
 use log::set_logger;
 #[cfg(not(feature = "use_std"))]
 fn set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> Box<Log> {
-    unsafe {
-        log::set_logger_raw(|x| std::mem::transmute(make_logger(x)))
-    }
+    where M: FnOnce(MaxLevelFilter) -> Box<Log>
+{
+    unsafe { log::set_logger_raw(|x| std::mem::transmute(make_logger(x))) }
 }
 
 struct State {
@@ -34,13 +34,14 @@ impl Log for Logger {
 fn main() {
     let mut a = None;
     set_logger(|max| {
-        let me = Arc::new(State {
-            last_log: Mutex::new(None),
-            filter: max,
-        });
-        a = Some(me.clone());
-        Box::new(Logger(me))
-    }).unwrap();
+                   let me = Arc::new(State {
+                                         last_log: Mutex::new(None),
+                                         filter: max,
+                                     });
+                   a = Some(me.clone());
+                   Box::new(Logger(me))
+               })
+            .unwrap();
     let a = a.unwrap();
 
     test(&a, LevelFilter::Off);
@@ -65,7 +66,7 @@ fn test(a: &State, filter: LevelFilter) {
     last(&a, t(Level::Trace, filter));
 
     fn t(lvl: Level, filter: LevelFilter) -> Option<Level> {
-        if lvl <= filter {Some(lvl)} else {None}
+        if lvl <= filter { Some(lvl) } else { None }
     }
 }
 
