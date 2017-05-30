@@ -8,9 +8,11 @@ before_script:
   - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
   - cargo build --verbose
+  - cargo build --verbose --features serde
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo build --verbose --no-default-features)
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo build --verbose --features nightly)
   - cargo test --verbose
+  - cargo test --verbose --features serde
   - ([ $TRAVIS_RUST_VERSION != nightly ] || cargo test --verbose --no-default-features)
   - cargo test --verbose --manifest-path env/Cargo.toml
   - cargo test --verbose --manifest-path env/Cargo.toml --no-default-features

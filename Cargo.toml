@@ -41,3 +41,9 @@ default = ["use_std"]
 [badges]
 travis-ci = { repository = "rust-lang-nursery/log" }
 appveyor = { repository = "alexcrichton/log" }
+
+[dependencies]
+serde = { version = "1.0", optional = true, default-features = false }
+
+[dev-dependencies]
+serde_test = "1.0"

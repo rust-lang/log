@@ -234,8 +234,10 @@ use std::mem;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+
 #[macro_use]
 mod macros;
+mod serde;
 
 // The setup here is a bit weird to make shutdown_logger_raw work.
 //
