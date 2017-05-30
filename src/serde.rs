@@ -156,33 +156,27 @@ mod tests {
 
     use {Level, LevelFilter};
 
+    fn level_token(variant: &'static str) -> Token {
+        Token::UnitVariant {
+            name: "Level",
+            variant: variant,
+        }
+    }
+
+    fn level_filter_token(variant: &'static str) -> Token {
+        Token::UnitVariant {
+            name: "LevelFilter",
+            variant: variant,
+        }
+    }
+
     #[test]
     fn test_level_ser_de() {
-        let cases = [(Level::Error,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "ERROR",
-                       }]),
-                     (Level::Warn,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "WARN",
-                       }]),
-                     (Level::Info,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "INFO",
-                       }]),
-                     (Level::Debug,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "DEBUG",
-                       }]),
-                     (Level::Trace,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "TRACE",
-                       }])];
+        let cases = [(Level::Error, [level_token("ERROR")]),
+                     (Level::Warn, [level_token("WARN")]),
+                     (Level::Info, [level_token("INFO")]),
+                     (Level::Debug, [level_token("DEBUG")]),
+                     (Level::Trace, [level_token("TRACE")])];
 
         for &(s, expected) in &cases {
             assert_tokens(&s, &expected);
@@ -191,31 +185,11 @@ mod tests {
 
     #[test]
     fn test_level_case_insensitive() {
-        let cases = [(Level::Error,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "error",
-                       }]),
-                     (Level::Warn,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "warn",
-                       }]),
-                     (Level::Info,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "info",
-                       }]),
-                     (Level::Debug,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "debug",
-                       }]),
-                     (Level::Trace,
-                      [Token::UnitVariant {
-                           name: "Level",
-                           variant: "trace",
-                       }])];
+        let cases = [(Level::Error, [level_token("error")]),
+                     (Level::Warn, [level_token("warn")]),
+                     (Level::Info, [level_token("info")]),
+                     (Level::Debug, [level_token("debug")]),
+                     (Level::Trace, [level_token("trace")])];
 
         for &(s, expected) in &cases {
             assert_de_tokens(&s, &expected);
@@ -224,45 +198,19 @@ mod tests {
 
     #[test]
     fn test_level_de_error() {
-        assert_de_tokens_error::<Level>(&[Token::UnitVariant {
-                                             name: "Level",
-                                             variant: "errorx",
-                                         }],
-                                        "unknown variant `errorx`, expected one of `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`");
+        let msg = "unknown variant `errorx`, expected one of \
+                   `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`";
+        assert_de_tokens_error::<Level>(&[level_token("errorx")], msg);
     }
 
     #[test]
     fn test_level_filter_ser_de() {
-        let cases = [(LevelFilter::Off,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "OFF",
-                       }]),
-                     (LevelFilter::Error,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "ERROR",
-                       }]),
-                     (LevelFilter::Warn,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "WARN",
-                       }]),
-                     (LevelFilter::Info,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "INFO",
-                       }]),
-                     (LevelFilter::Debug,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "DEBUG",
-                       }]),
-                     (LevelFilter::Trace,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "TRACE",
-                       }])];
+        let cases = [(LevelFilter::Off, [level_filter_token("OFF")]),
+                     (LevelFilter::Error, [level_filter_token("ERROR")]),
+                     (LevelFilter::Warn, [level_filter_token("WARN")]),
+                     (LevelFilter::Info, [level_filter_token("INFO")]),
+                     (LevelFilter::Debug, [level_filter_token("DEBUG")]),
+                     (LevelFilter::Trace, [level_filter_token("TRACE")])];
 
         for &(s, expected) in &cases {
             assert_tokens(&s, &expected);
@@ -271,36 +219,12 @@ mod tests {
 
     #[test]
     fn test_level_filter_case_insensitive() {
-        let cases = [(LevelFilter::Off,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "off",
-                       }]),
-                     (LevelFilter::Error,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "error",
-                       }]),
-                     (LevelFilter::Warn,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "warn",
-                       }]),
-                     (LevelFilter::Info,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "info",
-                       }]),
-                     (LevelFilter::Debug,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "debug",
-                       }]),
-                     (LevelFilter::Trace,
-                      [Token::UnitVariant {
-                           name: "LevelFilter",
-                           variant: "trace",
-                       }])];
+        let cases = [(LevelFilter::Off, [level_filter_token("off")]),
+                     (LevelFilter::Error, [level_filter_token("error")]),
+                     (LevelFilter::Warn, [level_filter_token("warn")]),
+                     (LevelFilter::Info, [level_filter_token("info")]),
+                     (LevelFilter::Debug, [level_filter_token("debug")]),
+                     (LevelFilter::Trace, [level_filter_token("trace")])];
 
         for &(s, expected) in &cases {
             assert_de_tokens(&s, &expected);
@@ -309,10 +233,8 @@ mod tests {
 
     #[test]
     fn test_level_filter_de_error() {
-        assert_de_tokens_error::<LevelFilter>(&[Token::UnitVariant {
-                                                   name: "LevelFilter",
-                                                   variant: "errorx",
-                                               }],
-                                              "unknown variant `errorx`, expected one of `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`");
+        let msg = "unknown variant `errorx`, expected one of \
+                   `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`";
+        assert_de_tokens_error::<LevelFilter>(&[level_filter_token("errorx")], msg);
     }
 }
