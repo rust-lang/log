@@ -803,9 +803,16 @@ impl MaxLevelFilter {
 
 /// Returns the current maximum log level.
 ///
-/// The `log!`, `error!`, `warn!`, `info!`, `debug!`, and `trace!` macros check
+/// The [`log!`], [`error!`], [`warn!`], [`info!`], [`debug!`], and [`trace!`] macros check
 /// this value and discard any message logged at a higher level. The maximum
 /// log level is set by the `MaxLevel` token passed to loggers.
+///
+/// [`log!`]: macro.log.html
+/// [`error!`]: macro.error.html
+/// [`warn!`]: macro.warn.html
+/// [`info!`]: macro.info.html
+/// [`debug!`]: macro.debug.html
+/// [`trace!`]: macro.trace.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
