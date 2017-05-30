@@ -225,6 +225,9 @@
 
 #[cfg(not(feature = "use_std"))]
 extern crate core as std;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
 
 use std::cmp;
 #[cfg(feature = "use_std")]
@@ -283,7 +286,7 @@ static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doe
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
-#[cfg_attr(serde, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Level {
     /// The "error" level.
     ///
@@ -428,7 +431,7 @@ impl Level {
 /// [`max_level()`](fn.max_level.html).
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
-#[cfg_attr(serde, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
@@ -1109,6 +1112,8 @@ pub fn __static_max_level() -> LevelFilter {
 #[cfg(test)]
 mod tests {
      extern crate std;
+     #[cfg(feature = "serde")]
+     extern crate serde_json;
      use tests::std::string::ToString;
      use super::{Level, LevelFilter, ParseLevelError};
 
@@ -1202,5 +1207,15 @@ mod tests {
          let e = SetLoggerError(());
          assert_eq!(e.description(), "attempted to set a logger after the logging system \
                      was already initialized");
+     }
+
+     #[test]
+     #[cfg(feature = "serde")]
+     fn test_serde_impls() {
+         let level = Level::Info;
+         let _ = serde_json::to_string(&level).unwrap();
+
+         let level_filter = LevelFilter::Info;
+         let _ = serde_json::to_string(&level_filter).unwrap();
      }
 }
