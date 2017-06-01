@@ -833,6 +833,49 @@ pub fn max_level() -> LevelFilter {
 /// `set_logger` internally.
 ///
 /// Requires the `use_std` feature (enabled by default).
+///
+/// ## Example
+///
+/// Implements a custom logger `ConsoleLogger` which prints to stdout.
+/// In order to use the logging macros, `ConsoleLogger` implements
+/// the [`Log`] trait and has to be installed via `set_logger`.
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// #
+/// use log::{Record, Level, Metadata, LevelFilter, SetLoggerError};
+///
+/// struct ConsoleLogger;
+///
+/// impl log::Log for ConsoleLogger {
+///     fn enabled(&self, metadata: &Metadata) -> bool {
+///         metadata.level() <= Level::Info
+///     }
+///
+///     fn log(&self, record: &Record) {
+///         if self.enabled(record.metadata()) {
+///             println!("Rust says: {} - {}", record.level(), record.args());
+///         }
+///     }
+/// }
+///
+/// fn init() -> Result<(), SetLoggerError> {
+///     log::set_logger(|max_log_level| {
+///                         max_log_level.set(LevelFilter::Info);
+///                         Box::new(ConsoleLogger)
+///                     })?;
+///
+///     info!("hello log");
+///     warn!("warning");
+///     error!("oops");
+///     Ok(())
+/// }
+/// #
+/// # fn main(){}
+/// ```
+///
+/// [`Log`]: trait.Log.html
 #[cfg(feature = "use_std")]
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
