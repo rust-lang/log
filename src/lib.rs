@@ -92,7 +92,27 @@
 //! }
 //! ```
 //!
-//! # Logger implementations
+//! # Available logging implementations
+//!
+//! In order to produce log output executables have to use
+//! a logger implementation compatible with the facade.
+//! There are many available implementations to chose from,
+//! here are some of the most popular ones:
+//!
+//! * Simple minimal loggers:
+//!     * [env_logger]
+//!     * [simple_logger]
+//!     * [simplelog]
+//!     * [stderrlog]
+//!     * [flexi_logger]
+//! * Complex configurable frameworks:
+//!     * [log4rs]
+//!     * [fern]
+//! * Adaptors for other facilities:
+//!     * [syslog]
+//!     * [slog-stdlog]
+//!
+//! # Implementing a Logger
 //!
 //! Loggers implement the [`Log`] trait. Here's a very basic example that simply
 //! logs all messages at the [`Error`][level_link], [`Warn`][level_link] or
@@ -208,6 +228,15 @@
 //! [`MaxLevelFilter`]: struct.MaxLevelFilter.html
 //! [`set_logger_raw`]: fn.set_logger_raw.html
 //! [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
+//! [env_logger]: https://docs.rs/env_logger/*/env_logger/
+//! [simple_logger]: https://github.com/borntyping/rust-simple_logger
+//! [simplelog]: https://github.com/drakulix/simplelog.rs
+//! [stderrlog]: https://docs.rs/stderrlog/*/stderrlog/
+//! [flexi_logger]: https://docs.rs/flexi_logger/*/flexi_logger/
+//! [syslog]: https://docs.rs/syslog/*/syslog/
+//! [slog-stdlog]: https://docs.rs/slog-stdlog/*/slog_stdlog/
+//! [log4rs]: https://docs.rs/log4rs/*/log4rs/
+//! [fern]: https://docs.rs/fern/*/fern/
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
