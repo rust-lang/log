@@ -1055,7 +1055,8 @@ impl error::Error for ShutdownLoggerError {
     }
 }
 
-/// The type returned by `from_str` when the string doesn't match any of the log levels.
+/// The type returned by [`from_str`] when the string doesn't match any of the log levels.
+/// [`from_str`]: https://doc.rust-lang.org/std/str/trait.FromStr.html#tymethod.from_str
 #[allow(missing_copy_implementations)]
 #[derive(Debug, PartialEq)]
 pub struct ParseLevelError(());
