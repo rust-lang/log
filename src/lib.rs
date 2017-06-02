@@ -885,7 +885,7 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 
 /// Sets the global logger from a raw pointer.
 ///
-/// This function is similar to `set_logger` except that it is usable in
+/// This function is similar to [`set_logger`] except that it is usable in
 /// `no_std` code.
 ///
 /// The `make_logger` closure is passed a `MaxLevel` object, which the
@@ -900,11 +900,58 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// implementations should provide an initialization method that calls
 /// `set_logger_raw` internally.
 ///
+/// # Errors
+///
+/// This function fails to set the global logger if [`set_logger`]
+/// has already been called.
+///
 /// # Safety
 ///
 /// The pointer returned by `make_logger` must remain valid for the entire
-/// duration of the program or until `shutdown_logger_raw` is called. In
-/// addition, `shutdown_logger` *must not* be called after this function.
+/// duration of the program or until [`shutdown_logger_raw`] is called. In
+/// addition, [`shutdown_logger`] *must not* be called after this function.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// #
+/// use log::{Record, Level, Metadata, LevelFilter};
+///
+/// struct MyLogger;
+///
+/// const MY_LOGGER: MyLogger = MyLogger;
+///
+/// impl log::Log for MyLogger {
+///     fn enabled(&self, metadata: &Metadata) -> bool {
+///         metadata.level() <= Level::Info
+///     }
+///
+///     fn log(&self, record: &Record) {
+///         if self.enabled(record.metadata()) {
+///             println!("{} - {}", record.level(), record.args());
+///         }
+///     }
+/// }
+///
+/// # fn main(){
+/// unsafe {
+/// 	log::set_logger_raw(|max_log_level| {
+///                         max_log_level.set(LevelFilter::Info);
+///                         &MY_LOGGER as *const MyLogger
+/// 					    })
+/// };
+///
+///    info!("hello log");
+///    warn!("warning");
+///    error!("oops");
+/// # }
+/// ```
+///
+/// [`set_logger`]: fn.set_logger.html
+/// [`shutdown_logger`]: fn.shutdown_logger.html
+/// [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> *const Log
 {
