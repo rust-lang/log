@@ -863,6 +863,11 @@ pub fn max_level() -> LevelFilter {
 ///
 /// Requires the `use_std` feature (enabled by default).
 ///
+/// # Errors
+///
+/// This function fails to set the global logger if it has already
+/// been called before.
+///
 /// ## Example
 ///
 /// Implements a custom logger `ConsoleLogger` which prints to stdout.
