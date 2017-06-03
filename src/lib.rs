@@ -575,7 +575,7 @@ impl LevelFilter {
 /// `self.metadata().level()` and `self.metadata().target()` respectively.
 /// These methods are provided as a convenience for users of this structure.
 ///
-/// ## Example
+/// # Example
 ///
 /// The following example shows a simple logger that displays the level,
 /// module path, and message of any `Record` that is passed to it.
@@ -737,7 +737,7 @@ impl Log for NopLogger {
 /// `Location`s can be accessed using the [`location()`] method on [`Record`]s.
 /// Log users do not need to directly use this struct.
 ///
-/// ## Example
+/// # Example
 /// The below example shows a simple logger that prints the module path,
 /// file name, and line number of the location the [`log!`] macro was called.
 ///
@@ -868,7 +868,7 @@ pub fn max_level() -> LevelFilter {
 /// This function fails to set the global logger if it has already
 /// been called before.
 ///
-/// ## Example
+/// # Example
 ///
 /// Implements a custom logger `ConsoleLogger` which prints to stdout.
 /// In order to use the logging macros, `ConsoleLogger` implements
