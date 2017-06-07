@@ -12,8 +12,14 @@
 /// This macro will generically log with the specified `Level` and `format!`
 /// based argument list.
 ///
-/// The `max_level_*` features can be used to statically disable logging at
-/// various levels.
+/// The `max_level_*` build features can be used to statically disable logging at
+/// various levels. For instance, `max_level_error` disables log messages below `Error`,
+/// `max_level_info` allows for `Error`, `Warn` and `Info` while `max_level_off` disables logging all together.
+///
+/// When building in release mode (i.e., without the `debug_assertions` option),
+/// the additional `release_max_level_*` build features with identical semantics take precedence.
+/// For instance, `release_max_level_debug` allows for all messages except for `Trace`
+/// while `release_max_level_trace` allows for all messages of logging levels.
 ///
 /// # Examples
 ///
