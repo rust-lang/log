@@ -83,7 +83,7 @@
 //! fn main() {
 //!     // Select env_logger, one possible logger implementation
 //!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
-//!     env_logger::init().unwrap();
+//!     env_logger::init();
 //!
 //!     info!("starting up");
 //!     error!("error: {}", 404);
@@ -141,11 +141,10 @@
 //! # }
 //! # fn main() {}
 //! # #[cfg(feature = "use_std")]
-//! pub fn init() -> Result<(), SetLoggerError> {
-//!     log::set_logger(|max_level| {
-//!         max_level.set(LevelFilter::Info);
-//!         Box::new(SimpleLogger)
-//!     })
+//! pub fn init() {
+//!     let filter = LevelFilter::Info;
+//!     let logger = Box::new(SimpleLogger);
+//!     log::set_logger(logger, filter);
 //! }
 //! ```
 //!
@@ -171,7 +170,7 @@
 //! #   fn flush(&self) {}
 //! # }
 //! # fn main() {}
-//! pub fn init() -> Result<(), SetLoggerError> {
+//! pub fn try_init() -> Result<(), SetLoggerError> {
 //!     unsafe {
 //!         log::set_logger_raw(|max_level| {
 //!             static LOGGER: SimpleLogger = SimpleLogger;
@@ -825,19 +824,44 @@ pub fn max_level() -> LevelFilter {
 /// highest log level that the logger will not ignore.
 ///
 /// This function may only be called once in the lifetime of a program. Any log
+/// events that occur before the call to `try_set_logger` completes will be
+/// ignored.
+///
+/// This function does not typically need to be called manually. Logger
+/// implementations should provide an initialization method that calls
+/// `try_set_logger` internally.
+///
+/// Requires the `use_std` feature (enabled by default).
+#[cfg(feature = "use_std")]
+pub fn try_set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
+    where M: FnOnce(MaxLevelFilter) -> Box<Log>
+{
+    unsafe { set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
+}
+
+/// Sets the global logger.
+///
+/// This function may only be called once in the lifetime of a program. Any log
 /// events that occur before the call to `set_logger` completes will be
 /// ignored.
+///
+/// This function will panic on future initialization attempts.
 ///
 /// This function does not typically need to be called manually. Logger
 /// implementations should provide an initialization method that calls
 /// `set_logger` internally.
 ///
 /// Requires the `use_std` feature (enabled by default).
+///
+/// # Panics
+///
+/// The function will panic if it is called more than once.
 #[cfg(feature = "use_std")]
-pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> Box<Log>
-{
-    unsafe { set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
+pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
+    match try_set_logger(|max| { max.set(filter); logger }) {
+        Ok(()) => {}
+        Err(_) => panic!("global logger is already initialized"),
+    }
 }
 
 /// Sets the global logger from a raw pointer.

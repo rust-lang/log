@@ -6,9 +6,9 @@ use log::{Level, LevelFilter, Log, Record, Metadata};
 use log::MaxLevelFilter;
 
 #[cfg(feature = "use_std")]
-use log::set_logger;
+use log::try_set_logger;
 #[cfg(not(feature = "use_std"))]
-fn set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
+fn try_set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
     unsafe { log::set_logger_raw(|x| std::mem::transmute(make_logger(x))) }
@@ -33,15 +33,14 @@ impl Log for Logger {
 
 fn main() {
     let mut a = None;
-    set_logger(|max| {
-                   let me = Arc::new(State {
-                                         last_log: Mutex::new(None),
-                                         filter: max,
-                                     });
-                   a = Some(me.clone());
-                   Box::new(Logger(me))
-               })
-            .unwrap();
+    try_set_logger(|max| {
+       let me = Arc::new(State {
+                            last_log: Mutex::new(None),
+                            filter: max,
+                         });
+       a = Some(me.clone());
+       Box::new(Logger(me))
+    }).unwrap();
     let a = a.unwrap();
 
     test(&a, LevelFilter::Off);
