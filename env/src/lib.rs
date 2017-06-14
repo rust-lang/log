@@ -20,7 +20,7 @@
 //! use log::Level;
 //!
 //! fn main() {
-//!     env_logger::init().unwrap();
+//!     env_logger::init();
 //!
 //!     debug!("this is a debug {}", "message");
 //!     error!("this is printed by default");
@@ -194,7 +194,7 @@ pub struct Logger {
 ///        builder.parse(&env::var("RUST_LOG").unwrap());
 ///     }
 ///
-///     builder.init().unwrap();
+///     builder.init();
 ///
 ///     error!("error message");
 ///     info!("info message");
@@ -273,13 +273,25 @@ impl Builder {
     ///
     /// This should be called early in the execution of a Rust program, and the
     /// global logger may only be initialized once. Future initialization
-    /// attempts will return an error.
-    pub fn init(&mut self) -> Result<(), SetLoggerError> {
-        log::set_logger(|max_level| {
+    /// attempts will return error.
+    pub fn try_init(&mut self) -> Result<(), SetLoggerError> {
+        log::try_set_logger(|max_level| {
             let logger = self.build();
             max_level.set(logger.filter());
             Box::new(logger)
         })
+    }
+
+    /// Initializes the global logger with an env logger.
+    ///
+    /// This should be called early in the execution of a Rust program, and the
+    /// global logger may only be initialized once. Future initialization
+    /// attempts will panic.
+    pub fn init(&mut self) {
+        let logger = self.build();
+        let filter = logger.filter();
+        let logger = Box::new(logger);
+        log::set_logger(logger, filter);
     }
 
     /// Build an env logger.
@@ -375,7 +387,22 @@ struct Directive {
 /// This should be called early in the execution of a Rust program, and the
 /// global logger may only be initialized once. Future initialization attempts
 /// will return an error.
-pub fn init() -> Result<(), SetLoggerError> {
+pub fn try_init() -> Result<(), SetLoggerError> {
+    let mut builder = Builder::new();
+
+    if let Ok(s) = env::var("RUST_LOG") {
+        builder.parse(&s);
+    }
+
+    builder.try_init()
+}
+
+/// Initializes the global logger with an env logger.
+///
+/// This should be called early in the execution of a Rust program, and the
+/// global logger may only be initialized once. Future initialization attempts
+/// will panic.
+pub fn init() {
     let mut builder = Builder::new();
 
     if let Ok(s) = env::var("RUST_LOG") {
