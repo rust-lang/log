@@ -72,7 +72,7 @@ extern crate log;
 extern crate env_logger;
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     info!("starting up");
 
@@ -185,5 +185,5 @@ builder.target(Target::Stdout);
 if env::var("RUST_LOG").is_ok() {
     builder.parse(&env::var("RUST_LOG").unwrap());
 }
-builder.init().unwrap();
+builder.init();
 ```
