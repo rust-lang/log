@@ -40,14 +40,9 @@
 #[macro_export]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        static _LOC: $crate::Location = $crate::Location {
-            __line: line!(),
-            __file: file!(),
-            __module_path: module_path!(),
-        };
         let lvl = $lvl;
         if lvl <= $crate::__static_max_level() && lvl <= $crate::max_level() {
-            $crate::__log(lvl, $target, &_LOC, format_args!($($arg)+))
+            $crate::__log(lvl, $target, line!(), file!(), module_path!(), format_args!($($arg)+))
         }
     });
     ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
