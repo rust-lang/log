@@ -375,6 +375,8 @@ impl Log for Logger {
             },
         };
     }
+
+    fn flush(&self) {}
 }
 
 struct Directive {

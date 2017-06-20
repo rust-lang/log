@@ -29,6 +29,7 @@ impl Log for Logger {
     fn log(&self, record: &Record) {
         *self.0.last_log.lock().unwrap() = Some(record.level());
     }
+    fn flush(&self) {}
 }
 
 fn main() {
