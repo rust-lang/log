@@ -30,11 +30,11 @@
 //! 
 //! This library makes use of the following methods:
 //! 
-//! - [error](https://github.com/jesusbv/log/blob/master/src/macros.rs#L73)
-//! - [warn](https://github.com/jesusbv/log/blob/master/src/macros.rs#L104)
-//! - [info](https://github.com/jesusbv/log/blob/master/src/macros.rs#L138)
-//! - [debug](https://github.com/jesusbv/log/blob/master/src/macros.rs#L172)
-//! - [trace](https://github.com/jesusbv/log/blob/master/src/macros.rs#L209)
+//! - [error](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L73)
+//! - [warn](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L104)
+//! - [info](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L138)
+//! - [debug](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L172)
+//! - [trace](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L209)
 //! 
 //! All of these macros accept formatting strings
 //! similarly to [println!](https://github.com/rust-lang/rust/blob/master/src/libstd/macros.rs#L127)
