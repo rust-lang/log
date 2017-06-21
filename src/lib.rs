@@ -28,7 +28,7 @@
 //!
 //! ## Logging levels
 //! 
-//! This library makes use of the following methods:
+//! This library makes use of the following macros:
 //! 
 //! - [error](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L73)
 //! - [warn](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L104)
