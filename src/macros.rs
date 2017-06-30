@@ -53,6 +53,31 @@ macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
 }
 
+/// Logs a request, using the request level.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+/// // In a HTTP handler.
+/// let (uri, status_code) = ("/some/page", 200);
+///
+/// request!("Request for: {}, return status code {}", uri, status_code);
+/// request!(target: "http_requests", "HTTP Request: {}, Status code: {}", uri, status_code);
+/// # }
+/// ```
+#[macro_export]
+macro_rules! request {
+    (target: $target:expr, $($arg:tt)*) => (
+        log!(target: $target, $crate::Level::Request, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        log!($crate::Level::Request, $($arg)*);
+    )
+}
+
 /// Logs a message at the error level.
 ///
 /// Logging at this level is disabled if the `max_level_off` feature is present.
