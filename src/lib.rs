@@ -300,7 +300,7 @@ const INITIALIZED: usize = 2;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+static LOG_LEVEL_NAMES: [&'static str; 7] = ["OFF", "REQUEST", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
                      was already initialized";
@@ -316,10 +316,14 @@ static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doe
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
 pub enum Level {
+    /// The "request" level.
+    ///
+    /// Used in logging requests.
+    Request = 1, // This way these line up with the discriminants for LevelFilter below
     /// The "error" level.
     ///
     /// Designates very serious errors.
-    Error = 1, // This way these line up with the discriminants for LevelFilter below
+    Error,
     /// The "warn" level.
     ///
     /// Designates hazardous situations.
@@ -429,11 +433,12 @@ impl fmt::Display for Level {
 impl Level {
     fn from_usize(u: usize) -> Option<Level> {
         match u {
-            1 => Some(Level::Error),
-            2 => Some(Level::Warn),
-            3 => Some(Level::Info),
-            4 => Some(Level::Debug),
-            5 => Some(Level::Trace),
+            1 => Some(Level::Request),
+            2 => Some(Level::Error),
+            3 => Some(Level::Warn),
+            4 => Some(Level::Info),
+            5 => Some(Level::Debug),
+            6 => Some(Level::Trace),
             _ => None,
         }
     }
@@ -463,6 +468,8 @@ impl Level {
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
+    /// Corresponds to the `Request` log level.
+    Request,
     /// Corresponds to the `Error` log level.
     Error,
     /// Corresponds to the `Warn` log level.
@@ -540,11 +547,12 @@ impl LevelFilter {
     fn from_usize(u: usize) -> Option<LevelFilter> {
         match u {
             0 => Some(LevelFilter::Off),
-            1 => Some(LevelFilter::Error),
-            2 => Some(LevelFilter::Warn),
-            3 => Some(LevelFilter::Info),
-            4 => Some(LevelFilter::Debug),
-            5 => Some(LevelFilter::Trace),
+            1 => Some(LevelFilter::Request),
+            2 => Some(LevelFilter::Error),
+            3 => Some(LevelFilter::Warn),
+            4 => Some(LevelFilter::Info),
+            5 => Some(LevelFilter::Debug),
+            6 => Some(LevelFilter::Trace),
             _ => None,
         }
     }
@@ -1257,12 +1265,14 @@ mod tests {
     #[test]
     fn test_levelfilter_from_str() {
         let tests = [("off", Ok(LevelFilter::Off)),
+                     ("request", Ok(LevelFilter::Request)),
                      ("error", Ok(LevelFilter::Error)),
                      ("warn", Ok(LevelFilter::Warn)),
                      ("info", Ok(LevelFilter::Info)),
                      ("debug", Ok(LevelFilter::Debug)),
                      ("trace", Ok(LevelFilter::Trace)),
                      ("OFF", Ok(LevelFilter::Off)),
+                     ("REQUEST", Ok(LevelFilter::Request)),
                      ("ERROR", Ok(LevelFilter::Error)),
                      ("WARN", Ok(LevelFilter::Warn)),
                      ("INFO", Ok(LevelFilter::Info)),
@@ -1277,11 +1287,13 @@ mod tests {
     #[test]
     fn test_level_from_str() {
         let tests = [("OFF", Err(ParseLevelError(()))),
+                     ("request", Ok(Level::Request)),
                      ("error", Ok(Level::Error)),
                      ("warn", Ok(Level::Warn)),
                      ("info", Ok(Level::Info)),
                      ("debug", Ok(Level::Debug)),
                      ("trace", Ok(Level::Trace)),
+                     ("REQUEST", Ok(Level::Request)),
                      ("ERROR", Ok(Level::Error)),
                      ("WARN", Ok(Level::Warn)),
                      ("INFO", Ok(Level::Info)),
@@ -1310,6 +1322,8 @@ mod tests {
         assert!(Level::Debug > LevelFilter::Error);
         assert!(LevelFilter::Warn < Level::Trace);
         assert!(LevelFilter::Off < Level::Error);
+        assert!(LevelFilter::Off < Level::Request);
+        assert!(LevelFilter::Error > Level::Request);
     }
 
     #[test]
