@@ -44,6 +44,7 @@ fn main() {
     let a = a.unwrap();
 
     test(&a, LevelFilter::Off);
+    test(&a, LevelFilter::Request);
     test(&a, LevelFilter::Error);
     test(&a, LevelFilter::Warn);
     test(&a, LevelFilter::Info);

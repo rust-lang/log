@@ -1342,6 +1342,7 @@ mod tests {
 
     #[test]
     fn test_to_level_filter() {
+        assert_eq!(LevelFilter::Request, Level::Request.to_level_filter());
         assert_eq!(LevelFilter::Error, Level::Error.to_level_filter());
         assert_eq!(LevelFilter::Trace, Level::Trace.to_level_filter());
     }
