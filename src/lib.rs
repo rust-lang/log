@@ -26,18 +26,19 @@
 //!
 //! # Use
 //!
-//! ## Logging levels
+//! The basic use of the log crate is through the five logging macros: [`error!`],   
+//! [`warn!`], [`info!`], [`debug!`] and [`trace!`] 
+//! where `error!` represents the highest-priority log level, and `trace!` the lowest.  
+//!
+//! Each of these macros accept format strings similarly to [`println!`].  
 //! 
-//! This library makes use of the following macros:
 //! 
-//! - [error](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L73)
-//! - [warn](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L104)
-//! - [info](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L138)
-//! - [debug](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L172)
-//! - [trace](https://github.com/rust-lang-nursery/log/blob/master/src/macros.rs#L209)
-//! 
-//! All of these macros accept formatting strings
-//! similarly to [println!](https://github.com/rust-lang/rust/blob/master/src/libstd/macros.rs#L127)
+//! [`error!`]: ./macro.error.html   
+//! [`warn!`]: ./macro.warn.html  
+//! [`info!`]: ./macro.info.html  
+//! [`debug!`]: ./macro.debug.html   
+//! [`trace!`]: ./macro.trace.html  
+//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html  
 //!
 //! ## In libraries
 //!
