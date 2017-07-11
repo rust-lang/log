@@ -13,7 +13,7 @@
 //! The `log` crate provides a single logging API that abstracts over the
 //! actual logging implementation. Libraries can use the logging API provided
 //! by this crate, and the consumer of those libraries can choose the logging
-//! implementation that is most suitable for its use case.
+//! framework that is most suitable for its use case.
 //!
 //! If no logging implementation is selected, the facade falls back to a "noop"
 //! implementation that ignores all log messages. The overhead in this case
@@ -25,6 +25,20 @@
 //! the target to filter requests based on some user configuration.
 //!
 //! # Use
+//!
+//! The basic use of the log crate is through the five logging macros: [`error!`],   
+//! [`warn!`], [`info!`], [`debug!`] and [`trace!`] 
+//! where `error!` represents the highest-priority log level, and `trace!` the lowest.  
+//!
+//! Each of these macros accept format strings similarly to [`println!`].  
+//! 
+//! 
+//! [`error!`]: ./macro.error.html   
+//! [`warn!`]: ./macro.warn.html  
+//! [`info!`]: ./macro.info.html  
+//! [`debug!`]: ./macro.debug.html   
+//! [`trace!`]: ./macro.trace.html  
+//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html  
 //!
 //! ## In libraries
 //!
@@ -62,10 +76,10 @@
 //!
 //! ## In executables
 //!
-//! Executables should choose a logging implementation and initialize it early in the
-//! runtime of the program. Logging implementations will typically include a
-//! function to do this. Any log messages generated before
-//! the implementation is initialized will be ignored.
+//! Executables should choose a logging framework and initialize it early in the
+//! runtime of the program. Logging frameworks will typically include a
+//! function to do this. Any log messages generated before the framework is
+//! initialized will be ignored.
 //!
 //! The executable itself may use the `log` crate to log as well.
 //!
@@ -103,7 +117,6 @@
 //!     * [env_logger]
 //!     * [simple_logger]
 //!     * [simplelog]
-//!     * [pretty_env_logger]
 //!     * [stderrlog]
 //!     * [flexi_logger]
 //! * Complex configurable frameworks:
@@ -148,8 +161,8 @@
 //! improve performance of log messages at levels that are disabled. In the
 //! case of our example logger, we'll want to set the maximum log level to
 //! [`Info`][level_link], since we ignore any [`Debug`][level_link] or
-//! [`Trace`][level_link] level log messages. A logging implementation
-//! should provide a function that wraps a call to [`set_logger`], handling
+//! [`Trace`][level_link] level log messages. A logging framework should
+//! provide a function that wraps a call to [`set_logger`], handling
 //! initialization of the logger:
 //!
 //! ```rust
@@ -231,7 +244,6 @@
 //! [env_logger]: https://docs.rs/env_logger/*/env_logger/
 //! [simple_logger]: https://github.com/borntyping/rust-simple_logger
 //! [simplelog]: https://github.com/drakulix/simplelog.rs
-//! [pretty_env_logger]: https://docs.rs/pretty_env_logger/*/pretty_env_logger/
 //! [stderrlog]: https://docs.rs/stderrlog/*/stderrlog/
 //! [flexi_logger]: https://docs.rs/flexi_logger/*/flexi_logger/
 //! [syslog]: https://docs.rs/syslog/*/syslog/
@@ -306,7 +318,7 @@ static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the log
 static SHUTDOWN_LOGGER_ERROR: &'static str = "attempted to shut down the logger without an active logger";
 static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doesn't match an existing log level";
 
-/// An enum representing the available verbosity levels of the logger.
+/// An enum representing the available verbosity levels of the logging framework.
 ///
 /// Typical usage includes: checking if a certain `Level` is enabled with
 /// [`log_enabled!`](macro.log_enabled.html), specifying the `Level` of
@@ -450,7 +462,8 @@ impl Level {
     }
 }
 
-/// An enum representing the available verbosity level filters of the logger.
+/// An enum representing the available verbosity level filters of the logging
+/// framework.
 ///
 /// A `LevelFilter` may be compared directly to a [`Level`](enum.Level.html).
 /// Use this type to [`get()`](struct.MaxLevelFilter.html#method.get) and
@@ -996,10 +1009,10 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 ///
 /// # fn main(){
 /// unsafe {
-/// 	log::set_logger_raw(|max_log_level| {
+///     log::set_logger_raw(|max_log_level| {
 ///                         max_log_level.set(LevelFilter::Info);
 ///                         &MY_LOGGER as *const MyLogger
-/// 					    })
+///                         })
 /// };
 ///
 ///    info!("hello log");
