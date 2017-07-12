@@ -26,6 +26,20 @@
 //!
 //! # Use
 //!
+//! The basic use of the log crate is through the five logging macros: [`error!`],   
+//! [`warn!`], [`info!`], [`debug!`] and [`trace!`]  
+//! where `error!` represents the highest-priority log level, and `trace!` the lowest.  
+//!
+//! Each of these macros accept format strings similarly to [`println!`].  
+//! 
+//! 
+//! [`error!`]: ./macro.error.html   
+//! [`warn!`]: ./macro.warn.html  
+//! [`info!`]: ./macro.info.html  
+//! [`debug!`]: ./macro.debug.html   
+//! [`trace!`]: ./macro.trace.html  
+//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html  
+//!
 //! ## In libraries
 //!
 //! Libraries should link only to the `log` crate, and use the provided
