@@ -2,8 +2,7 @@
 extern crate log;
 
 use std::sync::{Arc, Mutex};
-use log::{Level, LevelFilter, Log, Record, Metadata};
-use log::MaxLevelFilter;
+use log::{Level, LevelFilter, Log, Record, MaxLevelFilter, Metadata};
 
 #[cfg(feature = "use_std")]
 use log::try_set_logger;
@@ -44,6 +43,7 @@ fn main() {
     let a = a.unwrap();
 
     test(&a, LevelFilter::Off);
+    test(&a, LevelFilter::Request);
     test(&a, LevelFilter::Error);
     test(&a, LevelFilter::Warn);
     test(&a, LevelFilter::Info);
@@ -53,6 +53,8 @@ fn main() {
 
 fn test(a: &State, filter: LevelFilter) {
     a.filter.set(filter);
+    request!("");
+    last(&a, t(Level::Request, filter));
     error!("");
     last(&a, t(Level::Error, filter));
     warn!("");
