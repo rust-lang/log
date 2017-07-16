@@ -11,7 +11,7 @@ use log::try_set_logger;
 fn try_set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log> {
     unsafe {
-        log::set_logger_raw(|x| std::mem::transmute(make_logger(x)))
+        log::try_set_logger_raw(|x| std::mem::transmute(make_logger(x)))
     }
 }
 
