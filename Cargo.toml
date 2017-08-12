@@ -43,6 +43,7 @@ travis-ci = { repository = "rust-lang-nursery/log" }
 appveyor = { repository = "alexcrichton/log" }
 
 [dependencies]
+cfg-if = "0.1.2"
 serde = { version = "1.0", optional = true, default-features = false }
 
 [dev-dependencies]
