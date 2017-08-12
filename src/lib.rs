@@ -585,7 +585,7 @@ impl LevelFilter {
 ///
 ///        println!("{}:{} -- {}",
 ///                 record.level(),
-///                 record.location().module_path(),
+///                 record.module_path(),
 ///                 record.args());
 ///    }
 ///    fn flush(&self) {}
@@ -597,14 +597,20 @@ impl LevelFilter {
 /// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
 /// [`target()`]: struct.Record.html#method.target
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Record<'a> {
     metadata: Metadata<'a>,
-    location: &'a Location,
     args: fmt::Arguments<'a>,
+    module_path: &'static str,
+    file: &'static str,
+    line: u32,
 }
 
 impl<'a> Record<'a> {
+    /// Returns a new builder
+    pub fn builder() -> RecordBuilder<'a> {
+        RecordBuilder::new()
+    }
     /// The message body.
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
@@ -615,11 +621,6 @@ impl<'a> Record<'a> {
         &self.metadata
     }
 
-    /// The location of the log directive.
-    pub fn location(&self) -> &Location {
-        self.location
-    }
-
     /// The verbosity level of the message.
     pub fn level(&self) -> Level {
         self.metadata.level()
@@ -628,6 +629,138 @@ impl<'a> Record<'a> {
     /// The name of the target of the directive.
     pub fn target(&self) -> &str {
         self.metadata.target()
+    }
+
+    /// The module path of the message.
+    pub fn module_path(&self) -> &str {
+        self.module_path
+    }
+
+    /// The source file containing the message.
+    pub fn file(&self) -> &str {
+        self.file
+    }
+
+    /// The line containing the message.
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+}
+
+/// Builder for [`Record`](struct.Record.html).
+///
+/// Typically should only be used by log library creators or for testing and "shim loggers".
+/// The `RecordBuilder` can set the different parameters of `Record` object, and returns
+/// the created object when `build` is called.
+///
+/// # Examples
+///
+///
+/// ```rust
+/// use log::{Level, Record};
+///
+/// let record = Record::builder()
+///                 .args(format_args!("Error!"))
+///                 .level(Level::Error)
+///                 .target("myApp")
+///                 .file("server.rs")
+///                 .line(144)
+///                 .build();
+/// ```
+///
+/// Alternatively, use [`MetadataBuilder`](struct.Metadatabuilder.html):
+///
+/// ```rust
+/// use log::{Record, Level, MetadataBuilder};
+///
+/// let error_metadata = MetadataBuilder::new()
+///                         .target("myApp")
+///                         .level(Level::Error)
+///                         .build();
+///
+/// let record = Record::builder()
+///                 .metadata(error_metadata)
+///                 .args(format_args!("Error!"))
+///                 .line(433)
+///                 .file("app.rs")
+///                 .module_path("server/")
+///                 .build();
+/// ```
+
+#[derive(Debug)]
+pub struct RecordBuilder<'a> {
+    record: Record<'a>
+}
+
+impl<'a> RecordBuilder<'a> {
+    /// Construct new `RecordBuilder`.
+    ///
+    /// The default options are:
+    ///
+    /// - `args`: [`format_args!("")`]
+    /// - `metadata`: [`Metadata::builder().build()`]
+    /// - `module_path`: `""`
+    /// - `file`: `""`
+    /// - `line`: `0`
+    /// [`format_args!("")`]: https://doc.rust-lang.org/std/macro.format_args.html
+    /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
+    pub fn new() -> RecordBuilder<'a> {
+        RecordBuilder {
+            record: Record {
+                args: format_args!(""),
+                metadata: Metadata::builder().build(),
+                module_path: "",
+                file: "",
+                line: 0,
+            }
+        }
+    }
+
+    /// Set [`args`](struct.Record.html#method.args).
+    pub fn args(&mut self, args: fmt::Arguments<'a>) -> &mut RecordBuilder<'a> {
+        self.record.args = args;
+        self
+    }
+
+    /// Set [`metadata`](struct.Record.html#method.metadata). Construct a `Metadata` object with [`MetadataBuilder`](struct.MetadataBuilder.html).
+    pub fn metadata(&mut self, metadata: Metadata<'a>) -> &mut RecordBuilder<'a> {
+        self.record.metadata = metadata;
+        self
+    }
+
+    /// Set [`Metadata::level`](struct.Metadata.html#method.level).
+    pub fn level(&mut self, level: Level) -> &mut RecordBuilder<'a> {
+        self.record.metadata.level = level;
+        self
+    }
+
+    /// Set [`Metadata::target`](struct.Metadata.html#method.target)
+    pub fn target(&mut self, target: &'a str) -> &mut RecordBuilder<'a> {
+        self.record.metadata.target = target;
+        self
+    }
+
+    /// Set [`module_path`](struct.Record.html#method.module_path)
+    pub fn module_path(&mut self, path: &'static str) -> &mut RecordBuilder<'a> {
+        self.record.module_path = path;
+        self
+    }
+
+    /// Set [`file`](struct.Record.html#method.file)
+    pub fn file(&mut self, file: &'static str) -> &mut RecordBuilder<'a> {
+        self.record.file = file;
+        self
+    }
+
+    /// Set [`line`](struct.Record.html#method.line)
+    pub fn line(&mut self, line: u32) -> &mut RecordBuilder<'a> {
+        self.record.line = line;
+        self
+    }
+
+    /// Invoke the builder and return a `Record`
+    pub fn build(&self) -> Record<'a> {
+        self.record.clone()
     }
 }
 
@@ -672,13 +805,18 @@ impl<'a> Record<'a> {
 ///
 /// # fn main(){}
 /// ```
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Metadata<'a> {
     level: Level,
     target: &'a str,
 }
 
 impl<'a> Metadata<'a> {
+    /// Returns a new builder
+    pub fn builder() -> MetadataBuilder<'a> {
+        MetadataBuilder::new()
+    }
+
     /// The verbosity level of the message.
     pub fn level(&self) -> Level {
         self.level
@@ -687,6 +825,61 @@ impl<'a> Metadata<'a> {
     /// The name of the target of the directive.
     pub fn target(&self) -> &str {
         self.target
+    }
+}
+
+/// Builder for [`Metadata`](struct.Metadata.html).
+///
+/// Typically should only be used by log library creators or for testing and "shim loggers".
+/// The `MetadataBuilder` can set the different parameters of a `Metadata` object, and returns
+/// the created object when `build` is called.
+///
+/// # Example
+///
+/// ```rust
+/// let target = "myApp";
+/// use log::{Level, MetadataBuilder};
+/// let metadata = MetadataBuilder::new()
+///                     .level(Level::Debug)
+///                     .target(target)
+///                     .build();
+/// ```
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub struct MetadataBuilder<'a> {
+    metadata: Metadata<'a>
+}
+
+impl<'a> MetadataBuilder<'a> {
+    /// Construct a new `MetadataBuilder`.
+    ///
+    /// The default options are:
+    ///
+    /// - `level`: `Level::Info`
+    /// - `target`: `""`
+    pub fn new() -> MetadataBuilder<'a> {
+        MetadataBuilder {
+            metadata: Metadata {
+                level: Level::Info,
+                target: "",
+            }
+        }
+    }
+
+    /// Setter for [`level`](struct.Metadata.html#method.level).
+    pub fn level(&mut self, arg: Level) -> &mut MetadataBuilder<'a> {
+        self.metadata.level = arg;
+        self
+    }
+
+    /// Setter for [`target`](struct.Metadata.html#method.target).
+    pub fn target(&mut self, target: &'a str) -> &mut MetadataBuilder<'a> {
+        self.metadata.target = target;
+        self
+    }
+
+    /// Returns a `Metadata` object.
+    pub fn build(&self) -> Metadata<'a> {
+        self.metadata.clone()
     }
 }
 
@@ -721,80 +914,6 @@ impl Log for NopLogger {
 
     fn log(&self, _: &Record) {}
     fn flush(&self) {}
-}
-
-/// The location of a log message.
-///
-/// # Use
-///
-/// `Location` structs are created by the [`log!`] macro. They are attached to
-/// [`Record`] structs, which are used by loggers to display logging messages.
-/// `Location`s can be accessed using the [`location()`] method on [`Record`]s.
-/// Log users do not need to directly use this struct.
-///
-/// # Example
-/// The below example shows a simple logger that prints the module path,
-/// file name, and line number of the location the [`log!`] macro was called.
-///
-/// ```rust
-/// # extern crate log;
-/// struct SimpleLogger;
-///
-/// impl log::Log for SimpleLogger {
-///     fn enabled(&self, metadata: &log::Metadata) -> bool {
-///         true
-///     }
-///
-///     fn log(&self, record: &log::Record) {
-///         if !self.enabled(record.metadata()) {
-///             return;
-///         }
-///
-///         let location = record.location();
-///         println!("{}:{}:{} -- {}",
-///                  location.module_path(),
-///                  location.file(),
-///                  location.line(),
-///                  record.args());
-///     }
-///     fn flush(&self) {}
-/// }
-/// ```
-///
-/// # Warning
-///
-/// The fields of this struct are public so that they may be initialized by the
-/// [`log!`] macro. They are subject to change at any time and should never be
-/// accessed directly.
-///
-/// [`log!`]: macro.log.html
-/// [`Record`]: struct.Record.html
-/// [`location()`]: struct.Record.html#method.location
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Location {
-    #[doc(hidden)]
-    pub __module_path: &'static str,
-    #[doc(hidden)]
-    pub __file: &'static str,
-    #[doc(hidden)]
-    pub __line: u32,
-}
-
-impl Location {
-    /// The module path of the message.
-    pub fn module_path(&self) -> &str {
-        self.__module_path
-    }
-
-    /// The source file containing the message.
-    pub fn file(&self) -> &str {
-        self.__file
-    }
-
-    /// The line containing the message.
-    pub fn line(&self) -> u32 {
-        self.__line
-    }
 }
 
 /// A token providing read and write access to the global maximum log level
@@ -996,7 +1115,7 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 ///     log::set_logger_raw(|max_log_level| {
 ///                         max_log_level.set(LevelFilter::Info);
 ///                         &MY_LOGGER as *const MyLogger
-///                        })
+///                         })
 /// };
 ///
 ///    info!("hello log");
@@ -1127,15 +1246,23 @@ pub fn __enabled(level: Level, target: &str) -> bool {
 // This is not considered part of the crate's public API. It is subject to
 // change at any time.
 #[doc(hidden)]
-pub fn __log(level: Level, target: &str, loc: &Location, args: fmt::Arguments) {
+pub fn __log(level: Level,
+    target: &str,
+    line: u32,
+    file: &'static str,
+    module_path: &'static str,
+    args: fmt::Arguments
+) {
     if let Some(logger) = logger() {
         let record = Record {
             metadata: Metadata {
                 level: level,
                 target: target,
             },
-            location: loc,
             args: args,
+            line: line,
+            file: file,
+            module_path: module_path,
         };
         logger.log(&record)
     }
@@ -1271,5 +1398,89 @@ mod tests {
         assert_eq!(e.description(),
                    "attempted to set a logger after the logging system \
                      was already initialized");
+    }
+
+    #[test]
+    fn test_metadata_builder() {
+        use super::MetadataBuilder;
+        let target = "myApp";
+        let metadata_test = MetadataBuilder::new()
+                            .level(Level::Debug)
+                            .target(target)
+                            .build();
+        assert_eq!(metadata_test.level(), Level::Debug);
+        assert_eq!(metadata_test.target(), "myApp");
+    }
+
+    #[test]
+    fn test_metadata_convenience_builder() {
+        use super::Metadata;
+        let target = "myApp";
+        let metadata_test = Metadata::builder()
+                            .level(Level::Debug)
+                            .target(target)
+                            .build();
+        assert_eq!(metadata_test.level(), Level::Debug);
+        assert_eq!(metadata_test.target(), "myApp");
+    }
+
+    #[test]
+    fn test_record_builder() {
+        use super::{MetadataBuilder, RecordBuilder};
+        let target = "myApp";
+        let metadata = MetadataBuilder::new()
+                        .target(target)
+                        .build();
+        let fmt_args = format_args!("hello");
+        let record_test = RecordBuilder::new()
+                            .args(fmt_args)
+                            .metadata(metadata)
+                            .module_path("foo")
+                            .file("bar")
+                            .line(30)
+                            .build();
+        assert_eq!(record_test.metadata().target(), "myApp");
+        assert_eq!(record_test.module_path(), "foo");
+        assert_eq!(record_test.file(), "bar");
+        assert_eq!(record_test.line(), 30);
+    }
+
+    #[test]
+    fn test_record_convenience_builder() {
+        use super::{Metadata, Record};
+        let target = "myApp";
+        let metadata = Metadata::builder()
+                        .target(target)
+                        .build();
+        let fmt_args = format_args!("hello");
+        let record_test = Record::builder()
+                            .args(fmt_args)
+                            .metadata(metadata)
+                            .module_path("foo")
+                            .file("bar")
+                            .line(30)
+                            .build();
+        assert_eq!(record_test.target(), "myApp");
+        assert_eq!(record_test.module_path(), "foo");
+        assert_eq!(record_test.file(), "bar");
+        assert_eq!(record_test.line(), 30);
+    }
+
+    #[test]
+    fn test_record_complete_builder() {
+        use super::{Record, Level};
+        let target = "myApp";
+        let record_test = Record::builder()
+            .module_path("foo")
+            .file("bar")
+            .line(30)
+            .target(target)
+            .level(Level::Error)
+            .build();
+        assert_eq!(record_test.target(), "myApp");
+        assert_eq!(record_test.level(), Level::Error);
+        assert_eq!(record_test.module_path(), "foo");
+        assert_eq!(record_test.file(), "bar");
+        assert_eq!(record_test.line(), 30);
     }
 }

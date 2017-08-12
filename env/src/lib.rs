@@ -215,7 +215,7 @@ impl Builder {
             filter: None,
             format: Box::new(|record: &Record| {
                 format!("{}:{}: {}", record.level(),
-                        record.location().module_path(), record.args())
+                        record.module_path(), record.args())
             }),
             target: Target::Stderr,
         }
