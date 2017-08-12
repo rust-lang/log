@@ -42,7 +42,16 @@ macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::__static_max_level() && lvl <= $crate::max_level() {
-            $crate::__log(lvl, $target, line!(), file!(), module_path!(), format_args!($($arg)+))
+            $crate::log(
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
         }
     });
     ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
@@ -242,7 +251,12 @@ macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => ({
         let lvl = $lvl;
         lvl <= $crate::__static_max_level() && lvl <= $crate::max_level() &&
-            $crate::__enabled(lvl, $target)
+            $crate::enabled(
+                &$crate::MetadataBuilder::new()
+                    .level(lvl)
+                    .target($target)
+                    .build(),
+            )
     });
     ($lvl:expr) => (log_enabled!(target: module_path!(), $lvl))
 }
