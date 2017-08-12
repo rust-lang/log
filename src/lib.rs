@@ -26,19 +26,19 @@
 //!
 //! # Use
 //!
-//! The basic use of the log crate is through the five logging macros: [`error!`],   
-//! [`warn!`], [`info!`], [`debug!`] and [`trace!`]  
-//! where `error!` represents the highest-priority log level, and `trace!` the lowest.  
+//! The basic use of the log crate is through the five logging macros: [`error!`],
+//! [`warn!`], [`info!`], [`debug!`] and [`trace!`]
+//! where `error!` represents the highest-priority log level, and `trace!` the lowest.
 //!
-//! Each of these macros accept format strings similarly to [`println!`].  
-//! 
-//! 
-//! [`error!`]: ./macro.error.html   
-//! [`warn!`]: ./macro.warn.html  
-//! [`info!`]: ./macro.info.html  
-//! [`debug!`]: ./macro.debug.html   
-//! [`trace!`]: ./macro.trace.html  
-//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html  
+//! Each of these macros accept format strings similarly to [`println!`].
+//!
+//!
+//! [`error!`]: ./macro.error.html
+//! [`warn!`]: ./macro.warn.html
+//! [`info!`]: ./macro.info.html
+//! [`debug!`]: ./macro.debug.html
+//! [`trace!`]: ./macro.trace.html
+//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
 //!
 //! ## In libraries
 //!
@@ -608,40 +608,49 @@ pub struct Record<'a> {
 
 impl<'a> Record<'a> {
     /// Returns a new builder
+    #[inline]
     pub fn builder() -> RecordBuilder<'a> {
         RecordBuilder::new()
     }
+
     /// The message body.
+    #[inline]
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
     }
 
     /// Metadata about the log directive.
+    #[inline]
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
     /// The verbosity level of the message.
+    #[inline]
     pub fn level(&self) -> Level {
         self.metadata.level()
     }
 
     /// The name of the target of the directive.
+    #[inline]
     pub fn target(&self) -> &str {
         self.metadata.target()
     }
 
     /// The module path of the message.
+    #[inline]
     pub fn module_path(&self) -> &str {
         self.module_path
     }
 
     /// The source file containing the message.
+    #[inline]
     pub fn file(&self) -> &str {
         self.file
     }
 
     /// The line containing the message.
+    #[inline]
     pub fn line(&self) -> u32 {
         self.line
     }
@@ -704,6 +713,7 @@ impl<'a> RecordBuilder<'a> {
     /// - `line`: `0`
     /// [`format_args!("")`]: https://doc.rust-lang.org/std/macro.format_args.html
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
+    #[inline]
     pub fn new() -> RecordBuilder<'a> {
         RecordBuilder {
             record: Record {
@@ -717,48 +727,56 @@ impl<'a> RecordBuilder<'a> {
     }
 
     /// Set [`args`](struct.Record.html#method.args).
+    #[inline]
     pub fn args(&mut self, args: fmt::Arguments<'a>) -> &mut RecordBuilder<'a> {
         self.record.args = args;
         self
     }
 
     /// Set [`metadata`](struct.Record.html#method.metadata). Construct a `Metadata` object with [`MetadataBuilder`](struct.MetadataBuilder.html).
+    #[inline]
     pub fn metadata(&mut self, metadata: Metadata<'a>) -> &mut RecordBuilder<'a> {
         self.record.metadata = metadata;
         self
     }
 
     /// Set [`Metadata::level`](struct.Metadata.html#method.level).
+    #[inline]
     pub fn level(&mut self, level: Level) -> &mut RecordBuilder<'a> {
         self.record.metadata.level = level;
         self
     }
 
     /// Set [`Metadata::target`](struct.Metadata.html#method.target)
+    #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut RecordBuilder<'a> {
         self.record.metadata.target = target;
         self
     }
 
     /// Set [`module_path`](struct.Record.html#method.module_path)
+    #[inline]
     pub fn module_path(&mut self, path: &'static str) -> &mut RecordBuilder<'a> {
         self.record.module_path = path;
         self
     }
 
     /// Set [`file`](struct.Record.html#method.file)
+    #[inline]
     pub fn file(&mut self, file: &'static str) -> &mut RecordBuilder<'a> {
         self.record.file = file;
         self
     }
 
     /// Set [`line`](struct.Record.html#method.line)
+    #[inline]
     pub fn line(&mut self, line: u32) -> &mut RecordBuilder<'a> {
         self.record.line = line;
         self
     }
 
     /// Invoke the builder and return a `Record`
+    #[inline]
     pub fn build(&self) -> Record<'a> {
         self.record.clone()
     }
@@ -813,16 +831,19 @@ pub struct Metadata<'a> {
 
 impl<'a> Metadata<'a> {
     /// Returns a new builder
+    #[inline]
     pub fn builder() -> MetadataBuilder<'a> {
         MetadataBuilder::new()
     }
 
     /// The verbosity level of the message.
+    #[inline]
     pub fn level(&self) -> Level {
         self.level
     }
 
     /// The name of the target of the directive.
+    #[inline]
     pub fn target(&self) -> &str {
         self.target
     }
@@ -856,6 +877,7 @@ impl<'a> MetadataBuilder<'a> {
     ///
     /// - `level`: `Level::Info`
     /// - `target`: `""`
+    #[inline]
     pub fn new() -> MetadataBuilder<'a> {
         MetadataBuilder {
             metadata: Metadata {
@@ -866,18 +888,21 @@ impl<'a> MetadataBuilder<'a> {
     }
 
     /// Setter for [`level`](struct.Metadata.html#method.level).
+    #[inline]
     pub fn level(&mut self, arg: Level) -> &mut MetadataBuilder<'a> {
         self.metadata.level = arg;
         self
     }
 
     /// Setter for [`target`](struct.Metadata.html#method.target).
+    #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut MetadataBuilder<'a> {
         self.metadata.target = target;
         self
     }
 
     /// Returns a `Metadata` object.
+    #[inline]
     pub fn build(&self) -> Metadata<'a> {
         self.metadata.clone()
     }
@@ -1227,44 +1252,24 @@ fn logger() -> Option<&'static Log> {
     }
 }
 
-// WARNING
-// This is not considered part of the crate's public API. It is subject to
-// change at any time.
-#[doc(hidden)]
-pub fn __enabled(level: Level, target: &str) -> bool {
+/// Determines if `Record`s with the provided metadata would be logged or not.
+///
+/// This can be used to avoid expensive computation of log data that would just
+/// be discarded. It is called by the `log_enabled!()` macro.
+pub fn enabled(metadata: &Metadata) -> bool {
     if let Some(logger) = logger() {
-        logger.enabled(&Metadata {
-                           level: level,
-                           target: target,
-                       })
+        logger.enabled(metadata)
     } else {
         false
     }
 }
 
-// WARNING
-// This is not considered part of the crate's public API. It is subject to
-// change at any time.
-#[doc(hidden)]
-pub fn __log(level: Level,
-    target: &str,
-    line: u32,
-    file: &'static str,
-    module_path: &'static str,
-    args: fmt::Arguments
-) {
+/// Logs the `Record` with the registered logger.
+///
+/// It is called by the `log!`, `error!`, `warn!`, etc macros.
+pub fn log(record: &Record) {
     if let Some(logger) = logger() {
-        let record = Record {
-            metadata: Metadata {
-                level: level,
-                target: target,
-            },
-            args: args,
-            line: line,
-            file: file,
-            module_path: module_path,
-        };
-        logger.log(&record)
+        logger.log(record)
     }
 }
 
