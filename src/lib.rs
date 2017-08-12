@@ -260,6 +260,9 @@
 #[cfg(not(feature = "use_std"))]
 extern crate core as std;
 
+#[macro_use]
+extern crate cfg_if;
+
 use std::cmp;
 #[cfg(feature = "use_std")]
 use std::error;
@@ -1230,40 +1233,40 @@ pub fn log(record: &Record) {
     }
 }
 
-// WARNING
-// This is not considered part of the crate's public API. It is subject to
-// change at any time.
-#[inline(always)]
-#[doc(hidden)]
-pub fn __static_max_level() -> LevelFilter {
-    if !cfg!(debug_assertions) {
-        // This is a release build. Check `release_max_level_*` first.
-        if cfg!(feature = "release_max_level_off") {
-            return LevelFilter::Off;
-        } else if cfg!(feature = "release_max_level_error") {
-            return LevelFilter::Error;
-        } else if cfg!(feature = "release_max_level_warn") {
-            return LevelFilter::Warn;
-        } else if cfg!(feature = "release_max_level_info") {
-            return LevelFilter::Info;
-        } else if cfg!(feature = "release_max_level_debug") {
-            return LevelFilter::Debug;
-        } else if cfg!(feature = "release_max_level_trace") {
-            return LevelFilter::Trace;
-        }
-    }
-    if cfg!(feature = "max_level_off") {
-        LevelFilter::Off
-    } else if cfg!(feature = "max_level_error") {
-        LevelFilter::Error
-    } else if cfg!(feature = "max_level_warn") {
-        LevelFilter::Warn
-    } else if cfg!(feature = "max_level_info") {
-        LevelFilter::Info
-    } else if cfg!(feature = "max_level_debug") {
-        LevelFilter::Debug
+/// The statically resolved maximum log level.
+///
+/// See the crate level documentation for information on how to configure this.
+///
+/// This value is checked by the log macros, but not by the `log` and `enabled`
+/// functions. Code that manually calls those functions should compare the level
+/// against this value.
+pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
+
+cfg_if! {
+    if #[cfg(all(not(debug_assertions), feature = "release_max_level_off"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Off;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_error"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Error;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_warn"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Warn;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_info"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Info;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_debug"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Debug;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_trace"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Trace;
+    } else if #[cfg(feature = "max_level_off")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Off;
+    } else if #[cfg(feature = "max_level_error")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Error;
+    } else if #[cfg(feature = "max_level_warn")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Warn;
+    } else if #[cfg(feature = "max_level_info")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Info;
+    } else if #[cfg(feature = "max_level_debug")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Debug;
     } else {
-        LevelFilter::Trace
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Trace;
     }
 }
 
