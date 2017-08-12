@@ -249,7 +249,6 @@
        html_root_url = "https://docs.rs/log/0.3.8")]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
-#![cfg_attr(feature = "nightly", feature(panic_handler))]
 
 #![cfg_attr(not(feature = "use_std"), no_std)]
 
@@ -1199,48 +1198,6 @@ impl fmt::Display for ParseLevelError {
 impl error::Error for ParseLevelError {
     fn description(&self) -> &str {
         LEVEL_PARSE_ERROR
-    }
-}
-
-
-/// Deprecated
-///
-/// Use https://crates.io/crates/log-panics instead.
-#[cfg(all(feature = "nightly", feature = "use_std"))]
-pub fn log_panics() {
-    std::panic::set_hook(Box::new(panic::log));
-}
-
-// inner module so that the reporting module is log::panic instead of log
-#[cfg(all(feature = "nightly", feature = "use_std"))]
-mod panic {
-    use std::panic::PanicInfo;
-    use std::thread;
-
-    pub fn log(info: &PanicInfo) {
-        let thread = thread::current();
-        let thread = thread.name().unwrap_or("<unnamed>");
-
-        let msg = match info.payload().downcast_ref::<&'static str>() {
-            Some(s) => *s,
-            None => {
-                match info.payload().downcast_ref::<String>() {
-                    Some(s) => &s[..],
-                    None => "Box<Any>",
-                }
-            }
-        };
-
-        match info.location() {
-            Some(location) => {
-                error!("thread '{}' panicked at '{}': {}:{}",
-                       thread,
-                       msg,
-                       location.file(),
-                       location.line())
-            }
-            None => error!("thread '{}' panicked at '{}'", thread, msg),
-        }
     }
 }
 
