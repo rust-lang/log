@@ -42,7 +42,8 @@ macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::log(
+            $crate::Log::log(
+                $crate::logger(),
                 &$crate::RecordBuilder::new()
                     .args(format_args!($($arg)+))
                     .level(lvl)
@@ -251,7 +252,8 @@ macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => ({
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() &&
-            $crate::enabled(
+            $crate::Log::enabled(
+                $crate::logger(),
                 &$crate::MetadataBuilder::new()
                     .level(lvl)
                     .target($target)

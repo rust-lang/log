@@ -1211,32 +1211,17 @@ impl error::Error for ParseLevelError {
     }
 }
 
-fn logger() -> Option<&'static Log> {
-    if STATE.load(Ordering::SeqCst) != INITIALIZED {
-        None
-    } else {
-        Some(unsafe { &*LOGGER })
-    }
-}
-
-/// Determines if `Record`s with the provided metadata would be logged or not.
+/// Returns a reference to the logger.
 ///
-/// This can be used to avoid expensive computation of log data that would just
-/// be discarded. It is called by the `log_enabled!()` macro.
-pub fn enabled(metadata: &Metadata) -> bool {
-    if let Some(logger) = logger() {
-        logger.enabled(metadata)
-    } else {
-        false
-    }
-}
-
-/// Logs the `Record` with the registered logger.
-///
-/// It is called by the `log!`, `error!`, `warn!`, etc macros.
-pub fn log(record: &Record) {
-    if let Some(logger) = logger() {
-        logger.log(record)
+/// If a logger has not been set, a no-op implementation is returned.
+pub fn logger() -> &'static Log {
+    unsafe {
+        if STATE.load(Ordering::SeqCst) != INITIALIZED {
+            static NOP: NopLogger = NopLogger;
+            &NOP
+        } else {
+            &*LOGGER
+        }
     }
 }
 
