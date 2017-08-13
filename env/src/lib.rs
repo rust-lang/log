@@ -157,6 +157,7 @@ mod filter;
 pub enum Target {
     Stdout,
     Stderr,
+    Silent,
 }
 
 /// The logger.
@@ -338,6 +339,20 @@ impl Logger {
             .unwrap_or(LevelFilter::Off)
     }
 
+    pub fn matches(&self, record: &Record) -> bool {
+        if !Log::enabled(self, record.metadata()) {
+            return false;
+        }
+
+        if let Some(filter) = self.filter.as_ref() {
+            if !filter.is_match(&*record.args().to_string()) {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn enabled(&self, level: Level, target: &str) -> bool {
         // Search for the longest match, the vector is assumed to be pre-sorted.
         for directive in self.directives.iter().rev() {
@@ -358,21 +373,12 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &Record) {
-        if !Log::enabled(self, record.metadata()) {
-            return;
-        }
-
-        if let Some(filter) = self.filter.as_ref() {
-            if !filter.is_match(&*record.args().to_string()) {
-                return;
-            }
-        }
-
         match self.target {
-            Target::Stdout => println!("{}", (self.format)(record)),
-            Target::Stderr => {
+            Target::Stdout if self.matches(record) => println!("{}", (self.format)(record)),
+            Target::Stderr if self.matches(record) => {
                 let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
             },
+            _ => (),
         };
     }
 
