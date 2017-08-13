@@ -275,6 +275,13 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 mod macros;
 mod serde;
 
+// The 0.3.x shim uses this to figure out if it can assume that the file and module_path strings
+// are 'static
+//
+// If you use this, I will hunt you down. >:(
+#[doc(hidden)]
+pub const __SUPER_SECRET_STRINGS_ARE_STATIC: bool = true;
+
 // There are three different states that we care about: the logger's
 // uninitialized, the logger's initializing (set_logger's been called but
 // LOGGER hasn't actually been set yet), or the logger's active.
