@@ -371,7 +371,8 @@ impl Log for Logger {
         match self.target {
             Target::Stdout => println!("{}", (self.format)(record)),
             Target::Stderr => {
-                let _ = writeln!(&mut io::stderr(), "{}", (self.format)(record));
+                let value = (self.format)(record) + "\n";
+                let _ = io::stderr().write_all(value.as_bytes());
             },
         };
     }
