@@ -1,0 +1,11 @@
+[package]
+name = "log-test"
+version = "0.1.0"
+authors = ["Steven Fackler <sfackler@gmail.com>"]
+
+[dependencies]
+log = { path = ".." }
+
+[[test]]
+name = "filters"
+harness = false
