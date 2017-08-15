@@ -13,9 +13,8 @@ A lightweight logging facade for Rust
 """
 categories = ["development-tools::debugging"]
 
-[[test]]
-name = "filters"
-harness = false
+[lib]
+doctest = false
 
 [features]
 max_level_off   = ["log/max_level_off"]
