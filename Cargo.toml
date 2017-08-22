@@ -19,6 +19,9 @@ publish = false # this branch contains breaking changes
 name = "filters"
 harness = false
 
+[[test]]
+name = "macro_use"
+
 [features]
 max_level_off   = []
 max_level_error = []
