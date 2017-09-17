@@ -7,7 +7,6 @@ A Rust library providing a lightweight logging *facade*.
 [![Build status](https://ci.appveyor.com/api/projects/status/nopdjmmjt45xcrki?svg=true)](https://ci.appveyor.com/project/alexcrichton/log)
 
 * [`log` documentation](https://docs.rs/log)
-* [`env_logger` documentation](https://docs.rs/env_logger)
 
 A logging facade provides a single logging API that abstracts over the actual
 logging implementation. Libraries can use the logging API provided by this
@@ -50,6 +49,23 @@ pub fn shave_the_yak(yak: &Yak) {
 
 ## In executables
 
+In order to produce log output executables have to use a logger implementation compatible with the facade.
+There are many available implementations to chose from, here are some of the most popular ones:
+
+* Simple minimal loggers:
+    * [`env_logger`](https://docs.rs/env_logger/*/env_logger/)
+    * [`simple_logger`](https://github.com/borntyping/rust-simple_logger)
+    * [`simplelog`](https://github.com/drakulix/simplelog.rs)
+    * [`pretty_env_logger`](https://docs.rs/pretty_env_logger/*/pretty_env_logger/)
+    * [`stderrlog`](https://docs.rs/stderrlog/*/stderrlog/)
+    * [`flexi_logger`](https://docs.rs/flexi_logger/*/flexi_logger/)
+* Complex configurable frameworks:
+    * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
+    * [`fern`](https://docs.rs/fern/*/fern/)
+* Adaptors for other facilities:
+    * [`syslog`](https://docs.rs/syslog/*/syslog/)
+    * [`slog-stdlog`](https://docs.rs/slog-stdlog/*/slog_stdlog/)
+
 Executables should choose a logger implementation and initialize it early in the
 runtime of the program. Logger implementations will typically include a
 function to do this. Any log messages generated before the logger is
@@ -88,7 +104,7 @@ $ RUST_LOG=info ./main
 starting up
 ```
 
-See the [`env_logger` documentation](http://rust-lang-nursery.github.io/log/env_logger/)
+See the [`env_logger` documentation](https://docs.rs/env_logger)
 for the `RUST_LOG` values that can be used to get log messages with different
 levels or filtered to different modules.
 
