@@ -171,8 +171,9 @@
 //! To use the `log` crate without depending on `libstd`, you need to specify
 //! `default-features = false` when specifying the dependency in `Cargo.toml`.
 //! This makes no difference to libraries using `log` since the logging API
-//! remains the same. However executables will need to use the [`set_logger_raw`]
-//! function to initialize a logger.
+//! remains the same. However executables will need to use the [`try_set_logger_raw`]
+//! function to initialize a logger and the [`shutdown_logger_raw`] function to
+//! shut down the global logger before exiting:
 //!
 //! ```rust
 //! # extern crate log;
@@ -186,7 +187,7 @@
 //! # fn main() {}
 //! pub fn try_init() -> Result<(), SetLoggerError> {
 //!     unsafe {
-//!         log::set_logger_raw(|max_level| {
+//!         log::try_set_logger_raw(|max_level| {
 //!             static LOGGER: SimpleLogger = SimpleLogger;
 //!             max_level.set(LevelFilter::Info);
 //!             &SimpleLogger
@@ -213,7 +214,8 @@
 //! [level_link]: enum.Level.html
 //! [`set_logger`]: fn.set_logger.html
 //! [`MaxLevelFilter`]: struct.MaxLevelFilter.html
-//! [`set_logger_raw`]: fn.set_logger_raw.html
+//! [`try_set_logger_raw`]: fn.try_set_logger_raw.html
+//! [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 //! [env_logger]: https://docs.rs/env_logger/*/env_logger/
 //! [simple_logger]: https://github.com/borntyping/rust-simple_logger
 //! [simplelog]: https://github.com/drakulix/simplelog.rs
@@ -1045,7 +1047,7 @@ pub fn max_level() -> LevelFilter {
 pub fn try_set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
-    unsafe { set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
+    unsafe { try_set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
 }
 
 /// Sets the global logger.
@@ -1083,12 +1085,12 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// highest log level that the logger will not ignore.
 ///
 /// This function may only be called once in the lifetime of a program. Any log
-/// events that occur before the call to `set_logger_raw` completes will be
+/// events that occur before the call to `try_set_logger_raw` completes will be
 /// ignored.
 ///
 /// This function does not typically need to be called manually. Logger
 /// implementations should provide an initialization method that calls
-/// `set_logger_raw` internally.
+/// `try_set_logger_raw` internally.
 ///
 /// # Errors
 ///
@@ -1127,7 +1129,7 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 ///
 /// # fn main(){
 /// unsafe {
-///     log::set_logger_raw(|max_log_level| {
+/// 	 log::try_set_logger_raw(|max_log_level| {
 ///                         max_log_level.set(LevelFilter::Info);
 ///                         &MY_LOGGER as *const MyLogger
 ///                         })
@@ -1140,7 +1142,9 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// ```
 ///
 /// [`set_logger`]: fn.set_logger.html
-pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
+/// [`shutdown_logger`]: fn.shutdown_logger.html
+/// [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
+pub unsafe fn try_set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> *const Log
 {
     if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
