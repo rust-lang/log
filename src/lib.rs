@@ -87,25 +87,6 @@
 //!
 //! The logging system may only be initialized once.
 //!
-//! ### Examples
-//!
-//! ```rust,ignore
-//! #[macro_use]
-//! extern crate log;
-//! extern crate env_logger;
-//!
-//! fn main() {
-//!     // Select env_logger, one possible logger implementation
-//!     // (see https://doc.rust-lang.org/log/env_logger/index.html)
-//!     env_logger::init();
-//!
-//!     info!("starting up");
-//!     error!("error: {}", 404);
-//!
-//!     // ...
-//! }
-//! ```
-//!
 //! # Available logging implementations
 //!
 //! In order to produce log output executables have to use
