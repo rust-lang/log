@@ -258,13 +258,6 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 mod macros;
 mod serde;
 
-// The 0.3.x shim uses this to figure out if it can assume that the file and module_path strings
-// are 'static
-//
-// If you use this, I will hunt you down. >:(
-#[doc(hidden)]
-pub const __SUPER_SECRET_STRINGS_ARE_STATIC: bool = true;
-
 // There are three different states that we care about: the logger's
 // uninitialized, the logger's initializing (set_logger's been called but
 // LOGGER hasn't actually been set yet), or the logger's active.
@@ -593,8 +586,8 @@ impl LevelFilter {
 pub struct Record<'a> {
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
-    module_path: &'static str,
-    file: &'static str,
+    module_path: &'a str,
+    file: &'a str,
     line: u32,
 }
 
@@ -748,14 +741,14 @@ impl<'a> RecordBuilder<'a> {
 
     /// Set [`module_path`](struct.Record.html#method.module_path)
     #[inline]
-    pub fn module_path(&mut self, path: &'static str) -> &mut RecordBuilder<'a> {
+    pub fn module_path(&mut self, path: &'a str) -> &mut RecordBuilder<'a> {
         self.record.module_path = path;
         self
     }
 
     /// Set [`file`](struct.Record.html#method.file)
     #[inline]
-    pub fn file(&mut self, file: &'static str) -> &mut RecordBuilder<'a> {
+    pub fn file(&mut self, file: &'a str) -> &mut RecordBuilder<'a> {
         self.record.file = file;
         self
     }
