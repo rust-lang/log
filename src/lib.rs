@@ -727,7 +727,7 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// addition, `shutdown_logger` *must not* be called after this function.
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> *const Log {
-    log::set_logger_raw(|filter| {
+    log::try_set_logger_raw(|filter| {
         LOGGER = make_logger(MaxLogLevelFilter(filter));
         STATE.store(INITIALIZED, Ordering::SeqCst);
         &LoggerAdaptor
@@ -886,26 +886,17 @@ struct LoggerAdaptor;
 
 impl log::Log for LoggerAdaptor {
     fn log(&self, record: &log::Record) {
-        let (file, module_path) = unsafe {
-            if log::__SUPER_SECRET_STRINGS_ARE_STATIC {
-                (
-                    &*(record.file() as *const str),
-                    &*(record.module_path() as *const str),
-                )
-            } else {
-                ("", "")
-            }
-        };
         if let Some(logger) = logger() {
             let record = LogRecord {
                 metadata: LogMetadata {
                     level: LogLevel::from_new(record.level()),
                     target: record.target(),
                 },
+                // file and module path aren't static in 0.4 so we can't forward them.
                 location: &LogLocation {
-                    __file: file,
+                    __file: "<unknown>",
                     __line: record.line(),
-                    __module_path: module_path,
+                    __module_path: "<unknown>",
                 },
                 args: *record.args(),
             };
