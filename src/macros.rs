@@ -41,6 +41,9 @@
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/... -
+        // see discussion in #54. Once rust-lang/rust#25003 is fixed, this may
+        // no longer be necessary.
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::Log::log(
                 $crate::logger(),
@@ -77,10 +80,24 @@ macro_rules! log {
 #[macro_export]
 macro_rules! error {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Error, $($arg)*);
+        let lvl = $crate::Level::Error;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/...
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::Log::log(
+                $crate::logger(),
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
+        }
     );
     ($($arg:tt)*) => (
-        log!($crate::Level::Error, $($arg)*);
+        error!(target: module_path!(), $($arg)*);
     )
 }
 
@@ -108,10 +125,24 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Warn, $($arg)*);
+        let lvl = $crate::Level::Warn;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/...
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::Log::log(
+                $crate::logger(),
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
+        }
     );
     ($($arg:tt)*) => (
-        log!($crate::Level::Warn, $($arg)*);
+        warn!(target: module_path!(), $($arg)*);
     )
 }
 
@@ -142,10 +173,24 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Info, $($arg)*);
+        let lvl = $crate::Level::Info;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/...
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::Log::log(
+                $crate::logger(),
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
+        }
     );
     ($($arg:tt)*) => (
-        log!($crate::Level::Info, $($arg)*);
+        info!(target: module_path!(), $($arg)*);
     )
 }
 
@@ -176,10 +221,24 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Debug, $($arg)*);
+        let lvl = $crate::Level::Debug;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/...
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::Log::log(
+                $crate::logger(),
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
+        }
     );
     ($($arg:tt)*) => (
-        log!($crate::Level::Debug, $($arg)*);
+        debug!(target: module_path!(), $($arg)*);
     )
 }
 
@@ -213,10 +272,24 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Trace, $($arg)*);
+        let lvl = $crate::Level::Trace;
+        // Warning: This code is duplicated in `log!`/`error!`/`warn!`/...
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::Log::log(
+                $crate::logger(),
+                &$crate::RecordBuilder::new()
+                    .args(format_args!($($arg)+))
+                    .level(lvl)
+                    .target($target)
+                    .module_path(module_path!())
+                    .file(file!())
+                    .line(line!())
+                    .build()
+            )
+        }
     );
     ($($arg:tt)*) => (
-        log!($crate::Level::Trace, $($arg)*);
+        trace!(target: module_path!(), $($arg)*);
     )
 }
 
