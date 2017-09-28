@@ -190,7 +190,7 @@
 //!         log::try_set_logger_raw(|max_level| {
 //!             static LOGGER: SimpleLogger = SimpleLogger;
 //!             max_level.set(LevelFilter::Info);
-//!             &SimpleLogger
+//!             &LOGGER
 //!         })
 //!     }
 //! }
@@ -265,7 +265,7 @@ mod serde;
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
 
-static mut LOGGER: *const Log = &NopLogger;
+static mut LOGGER: &'static Log = &NopLogger;
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
 
 const UNINITIALIZED: usize = 0;
@@ -1040,7 +1040,7 @@ pub fn max_level() -> LevelFilter {
 pub fn try_set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
-    unsafe { try_set_logger_raw(|max_level| mem::transmute(make_logger(max_level))) }
+    unsafe { try_set_logger_raw(|max_level| &*Box::into_raw(make_logger(max_level))) }
 }
 
 /// Sets the global logger.
@@ -1090,11 +1090,6 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// This function fails to set the global logger if [`set_logger`]
 /// has already been called.
 ///
-/// # Safety
-///
-/// The pointer returned by `make_logger` must remain valid for the entire
-/// duration of the program.
-///
 /// # Examples
 ///
 /// ```rust
@@ -1105,7 +1100,7 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 ///
 /// struct MyLogger;
 ///
-/// const MY_LOGGER: MyLogger = MyLogger;
+/// static MY_LOGGER: MyLogger = MyLogger;
 ///
 /// impl log::Log for MyLogger {
 ///     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -1121,32 +1116,32 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// }
 ///
 /// # fn main(){
-/// unsafe {
-/// 	 log::try_set_logger_raw(|max_log_level| {
-///                         max_log_level.set(LevelFilter::Info);
-///                         &MY_LOGGER as *const MyLogger
-///                         })
-/// };
+/// log::try_set_logger_raw(|max_log_level| {
+///     max_log_level.set(LevelFilter::Info);
+///     &MY_LOGGER
+/// });
 ///
-///    info!("hello log");
-///    warn!("warning");
-///    error!("oops");
+/// info!("hello log");
+/// warn!("warning");
+/// error!("oops");
 /// # }
 /// ```
 ///
 /// [`set_logger`]: fn.set_logger.html
 /// [`shutdown_logger`]: fn.shutdown_logger.html
 /// [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
-pub unsafe fn try_set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> *const Log
+pub fn try_set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
+    where M: FnOnce(MaxLevelFilter) -> &'static Log
 {
-    if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
-        return Err(SetLoggerError(()));
-    }
+    unsafe {
+        if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
+            return Err(SetLoggerError(()));
+        }
 
-    LOGGER = make_logger(MaxLevelFilter(()));
-    STATE.store(INITIALIZED, Ordering::SeqCst);
-    Ok(())
+        LOGGER = make_logger(MaxLevelFilter(()));
+        STATE.store(INITIALIZED, Ordering::SeqCst);
+        Ok(())
+    }
 }
 
 /// The type returned by [`set_logger`] if [`set_logger`] has already been called.
@@ -1198,7 +1193,7 @@ pub fn logger() -> &'static Log {
             static NOP: NopLogger = NopLogger;
             &NOP
         } else {
-            &*LOGGER
+            LOGGER
         }
     }
 }
