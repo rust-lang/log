@@ -9,10 +9,10 @@ before_script:
 script:
   - cargo build --verbose
   - cargo build --verbose --features serde
-  - cargo build --verbose --no-default-features
+  - cargo build --verbose --features use_std
   - cargo test --verbose
   - cargo test --verbose --features serde
-  - cargo test --verbose --no-default-features
+  - cargo test --verbose --features use_std
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
 after_success:

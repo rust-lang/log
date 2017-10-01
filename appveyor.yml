@@ -16,3 +16,4 @@ build: false
 test_script:
   - cargo test --verbose
   - cargo test --verbose --features serde
+  - cargo test --verbose --features use_std
