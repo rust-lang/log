@@ -4,8 +4,6 @@ rust:
   - stable
   - beta
   - nightly
-before_script:
-  - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
   - cargo build --verbose
   - cargo build --verbose --features serde
@@ -15,11 +13,6 @@ script:
   - cargo test --verbose --features use_std
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
-after_success:
-  - travis-cargo --only nightly doc-upload
-env:
-  global:
-    secure: "VPHgnszydMudYTY8cthHj/Dmxqp7OmTiu4Sa/705Udsx+tYblTv+8WdThkClo3C/asStVcxlaRWAp91UX32/k4SfkPz17XId3Wadyt03r73ANm6ZOWY+qty+3/LINm54kuTxYUDDTbD6NaFNPFQLIE0xCpJeiXUQTlaMk6z0W3M="
 
 notifications:
   email:

@@ -15,6 +15,9 @@ categories = ["development-tools::debugging"]
 keywords = ["logging"]
 publish = false # this branch contains breaking changes
 
+[package.metadata.docs.rs]
+features = ["use_std"]
+
 [[test]]
 name = "filters"
 harness = false
