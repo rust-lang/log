@@ -6,12 +6,12 @@ use log::{Level, LevelFilter, Log, Record, Metadata};
 use log::MaxLevelFilter;
 
 #[cfg(feature = "use_std")]
-use log::try_set_logger;
+use log::set_boxed_logger;
 #[cfg(not(feature = "use_std"))]
-fn try_set_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
+fn set_boxed_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
-    unsafe { log::try_set_logger_raw(|x| std::mem::transmute(make_logger(x))) }
+    log::set_logger(|x| unsafe { &*Box::into_raw(make_logger(x)) })
 }
 
 struct State {
@@ -34,7 +34,7 @@ impl Log for Logger {
 
 fn main() {
     let mut a = None;
-    try_set_logger(|max| {
+    set_boxed_logger(|max| {
        let me = Arc::new(State {
                             last_log: Mutex::new(None),
                             filter: max,

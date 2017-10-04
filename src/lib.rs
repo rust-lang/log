@@ -150,7 +150,7 @@
 //!
 //! ```rust
 //! # extern crate log;
-//! # use log::{Level, LevelFilter, SetLoggerError, Metadata};
+//! # use log::{Level, Metadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
 //! #   fn enabled(&self, _: &Metadata) -> bool { false }
@@ -158,22 +158,25 @@
 //! #   fn flush(&self) {}
 //! # }
 //! # fn main() {}
-//! # #[cfg(feature = "use_std")]
-//! pub fn init() {
-//!     let filter = LevelFilter::Info;
-//!     let logger = Box::new(SimpleLogger);
-//!     log::set_logger(logger, filter);
+//! use log::{SetLoggerError, LevelFilter};
+//!
+//! static LOGGER: SimpleLogger = SimpleLogger;
+//!
+//! pub fn init() -> Result<(), SetLoggerError> {
+//!     log::set_logger(|max_level| {
+//!        max_level.set(LevelFilter::Info);
+//!        &LOGGER
+//!     })
 //! }
 //! ```
 //!
-//! # Use with `no_std`
+//! # Use with `use_std`
 //!
-//! To use the `log` crate without depending on `libstd`, you need to specify
-//! `default-features = false` when specifying the dependency in `Cargo.toml`.
-//! This makes no difference to libraries using `log` since the logging API
-//! remains the same. However executables will need to use the [`try_set_logger_raw`]
-//! function to initialize a logger and the [`shutdown_logger_raw`] function to
-//! shut down the global logger before exiting:
+//! `set_logger` requires you to provide a `&'static Log`, which can be hard if
+//! your logger depends on some runtime configuration. The `set_boxed_logger`
+//! function is available with the `use_std` Cargo feature. It is identical to
+//! `set_logger` except that it requires you to provide a `Box<Log>` rather than
+//! a `&'static Log`:
 //!
 //! ```rust
 //! # extern crate log;
@@ -185,14 +188,12 @@
 //! #   fn flush(&self) {}
 //! # }
 //! # fn main() {}
-//! pub fn try_init() -> Result<(), SetLoggerError> {
-//!     unsafe {
-//!         log::try_set_logger_raw(|max_level| {
-//!             static LOGGER: SimpleLogger = SimpleLogger;
-//!             max_level.set(LevelFilter::Info);
-//!             &LOGGER
-//!         })
-//!     }
+//! # #[cfg(feature = "use_std")]
+//! pub fn init() -> Result<(), SetLoggerError> {
+//!     log::set_boxed_logger(|max_level| {
+//!         max_level.set(LevelFilter::Info);
+//!         Box::new(SimpleLogger)
+//!     })
 //! }
 //! ```
 //!
@@ -206,7 +207,7 @@
 //!
 //! ```toml
 //! [dependencies.log]
-//! version = "^0.3.7"
+//! version = "0.4"
 //! features = ["max_level_debug", "release_max_level_warn"]
 //! ```
 //!
@@ -972,123 +973,42 @@ pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
 }
 
-/// Sets the global logger.
+/// Sets the global logger to a `Box<Log>`.
 ///
-/// The `make_logger` closure is passed a `MaxLevel` object, which the
-/// logger should use to keep the global maximum log level in sync with the
-/// highest log level that the logger will not ignore.
+/// This is a simple convenience wrapper over `set_logger`, which takes a
+/// `Box<Log>` rather than a `&'static Log`. See the documentation for
+/// [`set_logger`] for more details.
 ///
-/// This function may only be called once in the lifetime of a program. Any log
-/// events that occur before the call to `try_set_logger` completes will be
-/// ignored.
-///
-/// This function does not typically need to be called manually. Logger
-/// implementations should provide an initialization method that calls
-/// `try_set_logger` internally.
-///
-/// Requires the `use_std` feature (enabled by default).
+/// Requires the `use_std` feature.
 ///
 /// # Errors
 ///
-/// This function fails to set the global logger if it has already
-/// been called before.
+/// An error is returned if a logger has already been set.
 ///
-/// # Example
-///
-/// Implements a custom logger `ConsoleLogger` which prints to stdout.
-/// In order to use the logging macros, `ConsoleLogger` implements
-/// the [`Log`] trait and has to be installed via `set_logger`.
-///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
-/// #
-/// use log::{Record, Level, Metadata, LevelFilter, SetLoggerError};
-///
-/// struct ConsoleLogger;
-///
-/// impl log::Log for ConsoleLogger {
-///     fn enabled(&self, metadata: &Metadata) -> bool {
-///         metadata.level() <= Level::Info
-///     }
-///
-///     fn log(&self, record: &Record) {
-///         if self.enabled(record.metadata()) {
-///             println!("Rust says: {} - {}", record.level(), record.args());
-///         }
-///     }
-///     fn flush(&self) {}
-/// }
-///
-/// fn try_init() -> Result<(), SetLoggerError> {
-///     log::try_set_logger(|max_log_level| {
-///                         max_log_level.set(LevelFilter::Info);
-///                         Box::new(ConsoleLogger)
-///                     });
-///
-///     info!("hello log");
-///     warn!("warning");
-///     error!("oops");
-///     Ok(())
-/// }
-/// #
-/// # fn main(){}
-/// ```
-///
-/// [`Log`]: trait.Log.html
+/// [`set_logger`]: fn.set_logger.html
 #[cfg(feature = "use_std")]
-pub fn try_set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
+pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
-    unsafe { try_set_logger_raw(|max_level| &*Box::into_raw(make_logger(max_level))) }
+    unsafe { set_logger(|max_level| &*Box::into_raw(make_logger(max_level))) }
 }
 
-/// Sets the global logger.
-///
-/// This function may only be called once in the lifetime of a program. Any log
-/// events that occur before the call to `set_logger` completes will be
-/// ignored.
-///
-/// This function will panic on future initialization attempts.
-///
-/// This function does not typically need to be called manually. Logger
-/// implementations should provide an initialization method that calls
-/// `set_logger` internally.
-///
-/// Requires the `use_std` feature (enabled by default).
-///
-/// # Panics
-///
-/// The function will panic if it is called more than once.
-#[cfg(feature = "use_std")]
-pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
-    match try_set_logger(|max| { max.set(filter); logger }) {
-        Ok(()) => {}
-        Err(_) => panic!("global logger is already initialized"),
-    }
-}
-
-/// Sets the global logger from a raw pointer.
-///
-/// This function is similar to [`set_logger`] except that it is usable in
-/// `no_std` code.
+/// Sets the global logger to a `&'static Log`.
 ///
 /// The `make_logger` closure is passed a `MaxLevel` object, which the
 /// logger should use to keep the global maximum log level in sync with the
 /// highest log level that the logger will not ignore.
 ///
 /// This function may only be called once in the lifetime of a program. Any log
-/// events that occur before the call to `try_set_logger_raw` completes will be
-/// ignored.
+/// events that occur before the call to `set_logger` completes will be ignored.
 ///
 /// This function does not typically need to be called manually. Logger
-/// implementations should provide an initialization method that calls
-/// `try_set_logger_raw` internally.
+/// implementations should provide an initialization method that installs the
+/// logger internally.
 ///
 /// # Errors
 ///
-/// This function fails to set the global logger if [`set_logger`]
-/// has already been called.
+/// An error is returned if a logger has already been set.
 ///
 /// # Examples
 ///
@@ -1098,9 +1018,9 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// #
 /// use log::{Record, Level, Metadata, LevelFilter};
 ///
-/// struct MyLogger;
-///
 /// static MY_LOGGER: MyLogger = MyLogger;
+///
+/// struct MyLogger;
 ///
 /// impl log::Log for MyLogger {
 ///     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -1116,21 +1036,17 @@ pub fn set_logger(logger: Box<Log>, filter: LevelFilter) {
 /// }
 ///
 /// # fn main(){
-/// log::try_set_logger_raw(|max_log_level| {
+/// log::set_logger(|max_log_level| {
 ///     max_log_level.set(LevelFilter::Info);
 ///     &MY_LOGGER
-/// });
+/// }).unwrap();
 ///
 /// info!("hello log");
 /// warn!("warning");
 /// error!("oops");
 /// # }
 /// ```
-///
-/// [`set_logger`]: fn.set_logger.html
-/// [`shutdown_logger`]: fn.shutdown_logger.html
-/// [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
-pub fn try_set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
+pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> &'static Log
 {
     unsafe {
