@@ -727,10 +727,11 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// addition, `shutdown_logger` *must not* be called after this function.
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> *const Log {
-    log::try_set_logger_raw(|filter| {
+    log::set_logger(|filter| {
+        static ADAPTOR: LoggerAdaptor = LoggerAdaptor;
         LOGGER = make_logger(MaxLogLevelFilter(filter));
         STATE.store(INITIALIZED, Ordering::SeqCst);
-        &LoggerAdaptor
+        &ADAPTOR
     }).map_err(|_| SetLoggerError(()))
 }
 
