@@ -131,6 +131,7 @@
 //!             println!("{} - {}", record.level(), record.args());
 //!         }
 //!     }
+//!
 //!     fn flush(&self) {}
 //! }
 //!
@@ -607,7 +608,7 @@ impl<'a> Record<'a> {
 
     /// Metadata about the log directive.
     #[inline]
-    pub fn metadata(&self) -> &Metadata {
+    pub fn metadata(&self) -> &Metadata<'a> {
         &self.metadata
     }
 
@@ -619,19 +620,19 @@ impl<'a> Record<'a> {
 
     /// The name of the target of the directive.
     #[inline]
-    pub fn target(&self) -> &str {
+    pub fn target(&self) -> &'a str {
         self.metadata.target()
     }
 
     /// The module path of the message.
     #[inline]
-    pub fn module_path(&self) -> &str {
+    pub fn module_path(&self) -> &'a str {
         self.module_path
     }
 
     /// The source file containing the message.
     #[inline]
-    pub fn file(&self) -> &str {
+    pub fn file(&self) -> &'a str {
         self.file
     }
 
@@ -678,7 +679,7 @@ impl<'a> Record<'a> {
 ///                 .args(format_args!("Error!"))
 ///                 .line(433)
 ///                 .file("app.rs")
-///                 .module_path("server/")
+///                 .module_path("server")
 ///                 .build();
 /// ```
 
@@ -830,7 +831,7 @@ impl<'a> Metadata<'a> {
 
     /// The name of the target of the directive.
     #[inline]
-    pub fn target(&self) -> &str {
+    pub fn target(&self) -> &'a str {
         self.target
     }
 }
@@ -960,7 +961,7 @@ impl MaxLevelFilter {
 ///
 /// The [`log!`], [`error!`], [`warn!`], [`info!`], [`debug!`], and [`trace!`] macros check
 /// this value and discard any message logged at a higher level. The maximum
-/// log level is set by the `MaxLevel` token passed to loggers.
+/// log level is set by the [`MaxLevelFilter`] token passed to loggers.
 ///
 /// [`log!`]: macro.log.html
 /// [`error!`]: macro.error.html
@@ -968,6 +969,7 @@ impl MaxLevelFilter {
 /// [`info!`]: macro.info.html
 /// [`debug!`]: macro.debug.html
 /// [`trace!`]: macro.trace.html
+/// [`MaxLevelFilter`]: struct.MaxLevelFilter.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
@@ -995,7 +997,7 @@ pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 
 /// Sets the global logger to a `&'static Log`.
 ///
-/// The `make_logger` closure is passed a `MaxLevel` object, which the
+/// The `make_logger` closure is passed a `MaxLevelFilter` object, which the
 /// logger should use to keep the global maximum log level in sync with the
 /// highest log level that the logger will not ignore.
 ///
@@ -1118,9 +1120,11 @@ pub fn logger() -> &'static Log {
 ///
 /// See the crate level documentation for information on how to configure this.
 ///
-/// This value is checked by the log macros, but not by the `log` and `enabled`
-/// functions. Code that manually calls those functions should compare the level
-/// against this value.
+/// This value is checked by the log macros, but not by the `Log`ger returned by
+/// the [`logger`] function. Code that manually calls functions on that value
+/// should compare the level against this value.
+///
+/// [`logger`]: fn.logger.html
 pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
 
 cfg_if! {
