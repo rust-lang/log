@@ -211,6 +211,13 @@
 //! features = ["max_level_debug", "release_max_level_warn"]
 //! ```
 //!
+//! # Version Compatibility
+//!
+//! The 0.3 and 0.4 versions of the `log` crate are almost entirely compatible. Log messages
+//! made using `log` 0.3 will forward transparently to a logger implementation using `log` 0.4. Log
+//! messages made using `log` 0.4 will forward to a logger implementation using `log` 0.3, but the
+//! module path and file name information associated with the message will unfortunately be lost.
+//!
 //! [`Log`]: trait.Log.html
 //! [level_link]: enum.Level.html
 //! [`set_logger`]: fn.set_logger.html
