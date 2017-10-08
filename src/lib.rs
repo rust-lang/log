@@ -926,13 +926,24 @@ impl log::Log for LoggerAdaptor {
 // change at any time.
 #[doc(hidden)]
 pub fn __enabled(level: LogLevel, target: &str) -> bool {
-    log::Log::enabled(
-        log::logger(),
-        &log::Metadata::builder()
-            .level(level.to_new())
-            .target(target)
-            .build()
-    )
+    match logger() {
+        Some(logger) => {
+            let metadata = LogMetadata {
+                level: level,
+                target: target,
+            };
+            logger.enabled(&metadata)
+        }
+        None => {
+            log::Log::enabled(
+                log::logger(),
+                &log::Metadata::builder()
+                    .level(level.to_new())
+                    .target(target)
+                    .build()
+            )
+        }
+    }
 }
 
 // WARNING
@@ -941,17 +952,32 @@ pub fn __enabled(level: LogLevel, target: &str) -> bool {
 #[doc(hidden)]
 pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
              args: fmt::Arguments) {
-    log::Log::log(
-        log::logger(),
-        &log::Record::builder()
-            .level(level.to_new())
-            .target(target)
-            .file(loc.__file)
-            .line(loc.__line)
-            .module_path(loc.__module_path)
-            .args(args)
-            .build()
-    )
+    match logger() {
+        Some(logger) => {
+            let record = LogRecord {
+                metadata: LogMetadata {
+                    level: level,
+                    target: target,
+                },
+                location: loc,
+                args: args,
+            };
+            logger.log(&record);
+        }
+        None => {
+            log::Log::log(
+                log::logger(),
+                &log::Record::builder()
+                    .level(level.to_new())
+                    .target(target)
+                    .file(loc.__file)
+                    .line(loc.__line)
+                    .module_path(loc.__module_path)
+                    .args(args)
+                    .build()
+            )
+        }
+    }
 }
 
 // WARNING
