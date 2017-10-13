@@ -7,10 +7,10 @@ rust:
 script:
   - cargo build --verbose
   - cargo build --verbose --features serde
-  - cargo build --verbose --features use_std
+  - cargo build --verbose --features std
   - cargo test --verbose
   - cargo test --verbose --features serde
-  - cargo test --verbose --features use_std
+  - cargo test --verbose --features std
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
   - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
 

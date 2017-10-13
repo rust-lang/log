@@ -171,11 +171,11 @@
 //! }
 //! ```
 //!
-//! # Use with `use_std`
+//! # Use with `std`
 //!
 //! `set_logger` requires you to provide a `&'static Log`, which can be hard if
 //! your logger depends on some runtime configuration. The `set_boxed_logger`
-//! function is available with the `use_std` Cargo feature. It is identical to
+//! function is available with the `std` Cargo feature. It is identical to
 //! `set_logger` except that it requires you to provide a `Box<Log>` rather than
 //! a `&'static Log`:
 //!
@@ -189,7 +189,7 @@
 //! #   fn flush(&self) {}
 //! # }
 //! # fn main() {}
-//! # #[cfg(feature = "use_std")]
+//! # #[cfg(feature = "std")]
 //! pub fn init() -> Result<(), SetLoggerError> {
 //!     log::set_boxed_logger(|max_level| {
 //!         max_level.set(LevelFilter::Info);
@@ -242,21 +242,21 @@
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
 
-#![cfg_attr(not(feature = "use_std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 // When compiled for the rustc compiler itself we want to make sure that this is
 // an unstable crate
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
-#[cfg(not(feature = "use_std"))]
+#[cfg(not(feature = "std"))]
 extern crate core as std;
 
 #[macro_use]
 extern crate cfg_if;
 
 use std::cmp;
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 use std::error;
 use std::fmt;
 use std::mem;
@@ -988,14 +988,14 @@ pub fn max_level() -> LevelFilter {
 /// `Box<Log>` rather than a `&'static Log`. See the documentation for
 /// [`set_logger`] for more details.
 ///
-/// Requires the `use_std` feature.
+/// Requires the `std` feature.
 ///
 /// # Errors
 ///
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
     where M: FnOnce(MaxLevelFilter) -> Box<Log>
 {
@@ -1082,7 +1082,7 @@ impl fmt::Display for SetLoggerError {
 }
 
 // The Error trait is not available in libcore
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 impl error::Error for SetLoggerError {
     fn description(&self) -> &str {
         SET_LOGGER_ERROR
@@ -1102,7 +1102,7 @@ impl fmt::Display for ParseLevelError {
 }
 
 // The Error trait is not available in libcore
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 impl error::Error for ParseLevelError {
     fn description(&self) -> &str {
         LEVEL_PARSE_ERROR
@@ -1247,7 +1247,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "use_std")]
+    #[cfg(feature = "std")]
     fn test_error_trait() {
         use std::error::Error;
         use super::SetLoggerError;
