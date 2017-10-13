@@ -16,7 +16,7 @@ keywords = ["logging"]
 publish = false # this branch contains breaking changes
 
 [package.metadata.docs.rs]
-features = ["use_std"]
+features = ["std", "serde"]
 
 [[test]]
 name = "filters"
