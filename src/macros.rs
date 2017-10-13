@@ -7,19 +7,11 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
+
 /// The standard logging macro.
 ///
 /// This macro will generically log with the specified `Level` and `format!`
 /// based argument list.
-///
-/// The `max_level_*` build features can be used to statically disable logging at
-/// various levels. For instance, `max_level_error` disables log messages below `Error`,
-/// `max_level_info` allows for `Error`, `Warn` and `Info` while `max_level_off` disables logging all together.
-///
-/// When building in release mode (i.e., without the `debug_assertions` option),
-/// the additional `release_max_level_*` build features with identical semantics take precedence.
-/// For instance, `release_max_level_debug` allows for all messages except for `Trace`
-/// while `release_max_level_trace` allows for all messages of logging levels.
 ///
 /// # Examples
 ///
@@ -60,8 +52,6 @@ macro_rules! log {
 
 /// Logs a message at the error level.
 ///
-/// Logging at this level is disabled if the `max_level_off` feature is present.
-///
 /// # Examples
 ///
 /// ```rust
@@ -86,13 +76,6 @@ macro_rules! error {
 
 /// Logs a message at the warn level.
 ///
-/// Logging at this level is disabled if any of the following features are
-/// present: `max_level_off` or `max_level_error`.
-///
-/// When building in release mode (i.e., without the `debug_assertions` option),
-/// logging at this level is also disabled if any of the following features are
-/// present: `release_max_level_off` or `max_level_error`.
-///
 /// # Examples
 ///
 /// ```rust
@@ -116,14 +99,6 @@ macro_rules! warn {
 }
 
 /// Logs a message at the info level.
-///
-/// Logging at this level is disabled if any of the following features are
-/// present: `max_level_off`, `max_level_error`, or `max_level_warn`.
-///
-/// When building in release mode (i.e., without the `debug_assertions` option),
-/// logging at this level is also disabled if any of the following features are
-/// present: `release_max_level_off`, `release_max_level_error`, or
-/// `release_max_level_warn`.
 ///
 /// # Examples
 ///
@@ -151,15 +126,6 @@ macro_rules! info {
 
 /// Logs a message at the debug level.
 ///
-/// Logging at this level is disabled if any of the following features are
-/// present: `max_level_off`, `max_level_error`, `max_level_warn`, or
-/// `max_level_info`.
-///
-/// When building in release mode (i.e., without the `debug_assertions` option),
-/// logging at this level is also disabled if any of the following features are
-/// present: `release_max_level_off`, `release_max_level_error`,
-/// `release_max_level_warn`, or `release_max_level_info`.
-///
 /// # Examples
 ///
 /// ```rust
@@ -184,16 +150,6 @@ macro_rules! debug {
 }
 
 /// Logs a message at the trace level.
-///
-/// Logging at this level is disabled if any of the following features are
-/// present: `max_level_off`, `max_level_error`, `max_level_warn`,
-/// `max_level_info`, or `max_level_debug`.
-///
-/// When building in release mode (i.e., without the `debug_assertions` option),
-/// logging at this level is also disabled if any of the following features are
-/// present: `release_max_level_off`, `release_max_level_error`,
-/// `release_max_level_warn`, `release_max_level_info`, or
-/// `release_max_level_debug`.
 ///
 /// # Examples
 ///
