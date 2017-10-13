@@ -397,9 +397,9 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
     }
 
     if a.len() == b.len() {
-        a.bytes()
-            .zip(b.bytes())
-            .all(|(a, b)| to_ascii_uppercase(a) == to_ascii_uppercase(b))
+        a.bytes().zip(b.bytes()).all(|(a, b)| {
+            to_ascii_uppercase(a) == to_ascii_uppercase(b)
+        })
     } else {
         false
     }
@@ -408,14 +408,16 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 impl FromStr for Level {
     type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<Level, Self::Err> {
-        ok_or(LOG_LEVEL_NAMES
-                  .iter()
-                  .position(|&name| eq_ignore_ascii_case(name, level))
-                  .into_iter()
-                  .filter(|&idx| idx != 0)
-                  .map(|idx| Level::from_usize(idx).unwrap())
-                  .next(),
-              ParseLevelError(()))
+        ok_or(
+            LOG_LEVEL_NAMES
+                .iter()
+                .position(|&name| eq_ignore_ascii_case(name, level))
+                .into_iter()
+                .filter(|&idx| idx != 0)
+                .map(|idx| Level::from_usize(idx).unwrap())
+                .next(),
+            ParseLevelError(()),
+        )
     }
 }
 
@@ -521,11 +523,13 @@ impl Ord for LevelFilter {
 impl FromStr for LevelFilter {
     type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<LevelFilter, Self::Err> {
-        ok_or(LOG_LEVEL_NAMES
-                  .iter()
-                  .position(|&name| eq_ignore_ascii_case(name, level))
-                  .map(|p| LevelFilter::from_usize(p).unwrap()),
-              ParseLevelError(()))
+        ok_or(
+            LOG_LEVEL_NAMES
+                .iter()
+                .position(|&name| eq_ignore_ascii_case(name, level))
+                .map(|p| LevelFilter::from_usize(p).unwrap()),
+            ParseLevelError(()),
+        )
     }
 }
 
@@ -706,10 +710,9 @@ impl<'a> Record<'a> {
 ///                 .module_path("server")
 ///                 .build();
 /// ```
-
 #[derive(Debug)]
 pub struct RecordBuilder<'a> {
-    record: Record<'a>
+    record: Record<'a>,
 }
 
 impl<'a> RecordBuilder<'a> {
@@ -733,7 +736,7 @@ impl<'a> RecordBuilder<'a> {
                 module_path: "",
                 file: "",
                 line: 0,
-            }
+            },
         }
     }
 
@@ -878,7 +881,7 @@ impl<'a> Metadata<'a> {
 /// ```
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct MetadataBuilder<'a> {
-    metadata: Metadata<'a>
+    metadata: Metadata<'a>,
 }
 
 impl<'a> MetadataBuilder<'a> {
@@ -894,7 +897,7 @@ impl<'a> MetadataBuilder<'a> {
             metadata: Metadata {
                 level: Level::Info,
                 target: "",
-            }
+            },
         }
     }
 
@@ -1014,7 +1017,8 @@ pub fn max_level() -> LevelFilter {
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(feature = "std")]
 pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> Box<Log>
+where
+    M: FnOnce(MaxLevelFilter) -> Box<Log>,
 {
     unsafe { set_logger(|max_level| &*Box::into_raw(make_logger(max_level))) }
 }
@@ -1073,7 +1077,8 @@ pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// # }
 /// ```
 pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> &'static Log
+where
+    M: FnOnce(MaxLevelFilter) -> &'static Log,
 {
     unsafe {
         if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
@@ -1187,19 +1192,21 @@ mod tests {
 
     #[test]
     fn test_levelfilter_from_str() {
-        let tests = [("off", Ok(LevelFilter::Off)),
-                     ("error", Ok(LevelFilter::Error)),
-                     ("warn", Ok(LevelFilter::Warn)),
-                     ("info", Ok(LevelFilter::Info)),
-                     ("debug", Ok(LevelFilter::Debug)),
-                     ("trace", Ok(LevelFilter::Trace)),
-                     ("OFF", Ok(LevelFilter::Off)),
-                     ("ERROR", Ok(LevelFilter::Error)),
-                     ("WARN", Ok(LevelFilter::Warn)),
-                     ("INFO", Ok(LevelFilter::Info)),
-                     ("DEBUG", Ok(LevelFilter::Debug)),
-                     ("TRACE", Ok(LevelFilter::Trace)),
-                     ("asdf", Err(ParseLevelError(())))];
+        let tests = [
+            ("off", Ok(LevelFilter::Off)),
+            ("error", Ok(LevelFilter::Error)),
+            ("warn", Ok(LevelFilter::Warn)),
+            ("info", Ok(LevelFilter::Info)),
+            ("debug", Ok(LevelFilter::Debug)),
+            ("trace", Ok(LevelFilter::Trace)),
+            ("OFF", Ok(LevelFilter::Off)),
+            ("ERROR", Ok(LevelFilter::Error)),
+            ("WARN", Ok(LevelFilter::Warn)),
+            ("INFO", Ok(LevelFilter::Info)),
+            ("DEBUG", Ok(LevelFilter::Debug)),
+            ("TRACE", Ok(LevelFilter::Trace)),
+            ("asdf", Err(ParseLevelError(()))),
+        ];
         for &(s, ref expected) in &tests {
             assert_eq!(expected, &s.parse());
         }
@@ -1207,18 +1214,20 @@ mod tests {
 
     #[test]
     fn test_level_from_str() {
-        let tests = [("OFF", Err(ParseLevelError(()))),
-                     ("error", Ok(Level::Error)),
-                     ("warn", Ok(Level::Warn)),
-                     ("info", Ok(Level::Info)),
-                     ("debug", Ok(Level::Debug)),
-                     ("trace", Ok(Level::Trace)),
-                     ("ERROR", Ok(Level::Error)),
-                     ("WARN", Ok(Level::Warn)),
-                     ("INFO", Ok(Level::Info)),
-                     ("DEBUG", Ok(Level::Debug)),
-                     ("TRACE", Ok(Level::Trace)),
-                     ("asdf", Err(ParseLevelError(())))];
+        let tests = [
+            ("OFF", Err(ParseLevelError(()))),
+            ("error", Ok(Level::Error)),
+            ("warn", Ok(Level::Warn)),
+            ("info", Ok(Level::Info)),
+            ("debug", Ok(Level::Debug)),
+            ("trace", Ok(Level::Trace)),
+            ("ERROR", Ok(Level::Error)),
+            ("WARN", Ok(Level::Warn)),
+            ("INFO", Ok(Level::Info)),
+            ("DEBUG", Ok(Level::Debug)),
+            ("TRACE", Ok(Level::Trace)),
+            ("asdf", Err(ParseLevelError(()))),
+        ];
         for &(s, ref expected) in &tests {
             assert_eq!(expected, &s.parse());
         }
@@ -1269,9 +1278,11 @@ mod tests {
         use std::error::Error;
         use super::SetLoggerError;
         let e = SetLoggerError(());
-        assert_eq!(e.description(),
-                   "attempted to set a logger after the logging system \
-                     was already initialized");
+        assert_eq!(
+            e.description(),
+            "attempted to set a logger after the logging system \
+                     was already initialized"
+        );
     }
 
     #[test]
@@ -1279,9 +1290,9 @@ mod tests {
         use super::MetadataBuilder;
         let target = "myApp";
         let metadata_test = MetadataBuilder::new()
-                            .level(Level::Debug)
-                            .target(target)
-                            .build();
+            .level(Level::Debug)
+            .target(target)
+            .build();
         assert_eq!(metadata_test.level(), Level::Debug);
         assert_eq!(metadata_test.target(), "myApp");
     }
@@ -1291,9 +1302,9 @@ mod tests {
         use super::Metadata;
         let target = "myApp";
         let metadata_test = Metadata::builder()
-                            .level(Level::Debug)
-                            .target(target)
-                            .build();
+            .level(Level::Debug)
+            .target(target)
+            .build();
         assert_eq!(metadata_test.level(), Level::Debug);
         assert_eq!(metadata_test.target(), "myApp");
     }
@@ -1302,17 +1313,15 @@ mod tests {
     fn test_record_builder() {
         use super::{MetadataBuilder, RecordBuilder};
         let target = "myApp";
-        let metadata = MetadataBuilder::new()
-                        .target(target)
-                        .build();
+        let metadata = MetadataBuilder::new().target(target).build();
         let fmt_args = format_args!("hello");
         let record_test = RecordBuilder::new()
-                            .args(fmt_args)
-                            .metadata(metadata)
-                            .module_path("foo")
-                            .file("bar")
-                            .line(30)
-                            .build();
+            .args(fmt_args)
+            .metadata(metadata)
+            .module_path("foo")
+            .file("bar")
+            .line(30)
+            .build();
         assert_eq!(record_test.metadata().target(), "myApp");
         assert_eq!(record_test.module_path(), "foo");
         assert_eq!(record_test.file(), "bar");
@@ -1323,17 +1332,15 @@ mod tests {
     fn test_record_convenience_builder() {
         use super::{Metadata, Record};
         let target = "myApp";
-        let metadata = Metadata::builder()
-                        .target(target)
-                        .build();
+        let metadata = Metadata::builder().target(target).build();
         let fmt_args = format_args!("hello");
         let record_test = Record::builder()
-                            .args(fmt_args)
-                            .metadata(metadata)
-                            .module_path("foo")
-                            .file("bar")
-                            .line(30)
-                            .build();
+            .args(fmt_args)
+            .metadata(metadata)
+            .module_path("foo")
+            .file("bar")
+            .line(30)
+            .build();
         assert_eq!(record_test.target(), "myApp");
         assert_eq!(record_test.module_path(), "foo");
         assert_eq!(record_test.file(), "bar");
