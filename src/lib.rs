@@ -198,21 +198,38 @@
 //! }
 //! ```
 //!
-//! # Features
+//! # Compile time filters
 //!
-//! Optionally, when defining a `Cargo.toml` file, additional parameters can be passed that affect
-//! the logger depending on the target of the build.  Effectively, `max_level_*` and
-//! `release_max_level_*` directives can be added as features of the log dependency.  When
-//! these are set, they override the behavior of the logging levels above the declared maximum
-//! preventing anything higher from logging.
+//! Log levels can be statically disabled at compile time via Cargo features. Log invocations at
+//! disabled levels will be skipped and will not even be present in the resulting binary unless the
+//! log level is specified dynamically. This level is configured separately for release and debug
+//! builds. The features are:
+//!
+//! * `max_level_off`
+//! * `max_level_error`
+//! * `max_level_warn`
+//! * `max_level_info`
+//! * `max_level_debug`
+//! * `max_level_trace`
+//! * `release_max_level_off`
+//! * `release_max_level_error`
+//! * `release_max_level_warn`
+//! * `release_max_level_info`
+//! * `release_max_level_debug`
+//! * `release_max_level_trace`
+//!
+//! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
+//! this value before logging a message. By default, no levels are disabled.
+//!
+//! For example, a crate can disable trace level logs in debug builds and trace, info, and warn
+//! level logs in release builds with the following configuration:
 //!
 //! ```toml
-//! [dependencies.log]
-//! version = "0.4"
-//! features = ["max_level_debug", "release_max_level_warn"]
+//! [dependencies]
+//! version = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 //! ```
 //!
-//! # Version Compatibility
+//! # Version compatibility
 //!
 //! The 0.3 and 0.4 versions of the `log` crate are almost entirely compatible. Log messages
 //! made using `log` 0.3 will forward transparently to a logger implementation using `log` 0.4. Log
