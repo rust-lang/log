@@ -37,7 +37,7 @@ release_max_level_info  = []
 release_max_level_debug = []
 release_max_level_trace = []
 
-use_std = []
+std = []
 
 [badges]
 travis-ci = { repository = "rust-lang-nursery/log" }
