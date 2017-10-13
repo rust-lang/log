@@ -32,7 +32,7 @@ release_max_level_debug = ["log/release_max_level_debug"]
 release_max_level_trace = ["log/release_max_level_trace"]
 
 nightly = []
-use_std = ["log/use_std"]
+use_std = ["log/std"]
 default = ["use_std"]
 
 [dependencies]
