@@ -91,7 +91,7 @@
 //!
 //! In order to produce log output executables have to use
 //! a logger implementation compatible with the facade.
-//! There are many available implementations to chose from,
+//! There are many available implementations to choose from,
 //! here are some of the most popular ones:
 //!
 //! * Simple minimal loggers:
@@ -226,7 +226,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! version = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+//! log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 //! ```
 //!
 //! # Version compatibility
@@ -284,16 +284,14 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 mod macros;
 mod serde;
 
-// There are three different states that we care about: the logger's
-// uninitialized, the logger's initializing (set_logger's been called but
-// LOGGER hasn't actually been set yet), or the logger's active.
-//
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
-
 static mut LOGGER: &'static Log = &NopLogger;
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
 
+// There are three different states that we care about: the logger's
+// uninitialized, the logger's initializing (set_logger's been called but
+// LOGGER hasn't actually been set yet), or the logger's active.
 const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
@@ -622,7 +620,7 @@ pub struct Record<'a> {
 }
 
 impl<'a> Record<'a> {
-    /// Returns a new builder
+    /// Returns a new builder.
     #[inline]
     pub fn builder() -> RecordBuilder<'a> {
         RecordBuilder::new()
@@ -844,7 +842,7 @@ pub struct Metadata<'a> {
 }
 
 impl<'a> Metadata<'a> {
-    /// Returns a new builder
+    /// Returns a new builder.
     #[inline]
     pub fn builder() -> MetadataBuilder<'a> {
         MetadataBuilder::new()
@@ -922,7 +920,7 @@ impl<'a> MetadataBuilder<'a> {
     }
 }
 
-/// A trait encapsulating the operations required of a logger
+/// A trait encapsulating the operations required of a logger.
 pub trait Log: Sync + Send {
     /// Determines if a log message with the specified metadata would be
     /// logged.
