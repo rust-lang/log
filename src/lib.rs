@@ -723,6 +723,7 @@ impl<'a> RecordBuilder<'a> {
     /// - `module_path`: `""`
     /// - `file`: `""`
     /// - `line`: `0`
+    ///
     /// [`format_args!("")`]: https://doc.rust-lang.org/std/macro.format_args.html
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
     #[inline]
@@ -1090,6 +1091,7 @@ where
 }
 
 /// The type returned by [`set_logger`] if [`set_logger`] has already been called.
+///
 /// [`set_logger`]: fn.set_logger.html
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
@@ -1110,6 +1112,7 @@ impl error::Error for SetLoggerError {
 }
 
 /// The type returned by [`from_str`] when the string doesn't match any of the log levels.
+///
 /// [`from_str`]: https://doc.rust-lang.org/std/str/trait.FromStr.html#tymethod.from_str
 #[allow(missing_copy_implementations)]
 #[derive(Debug, PartialEq)]
