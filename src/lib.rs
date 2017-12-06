@@ -164,10 +164,7 @@
 //! static LOGGER: SimpleLogger = SimpleLogger;
 //!
 //! pub fn init() -> Result<(), SetLoggerError> {
-//!     log::set_logger(|max_level| {
-//!        max_level.set(LevelFilter::Info);
-//!        &LOGGER
-//!     })
+//!     log::set_logger(&LOGGER)
 //! }
 //! ```
 //!
@@ -191,10 +188,7 @@
 //! # fn main() {}
 //! # #[cfg(feature = "std")]
 //! pub fn init() -> Result<(), SetLoggerError> {
-//!     log::set_boxed_logger(|max_level| {
-//!         max_level.set(LevelFilter::Info);
-//!         Box::new(SimpleLogger)
-//!     })
+//!     log::set_boxed_logger(Box::new(SimpleLogger))
 //! }
 //! ```
 //!
@@ -954,33 +948,12 @@ impl Log for NopLogger {
     fn flush(&self) {}
 }
 
-/// A token providing read and write access to the global maximum log level
-/// filter.
+/// Sets the global maximum log level.
 ///
-/// The maximum log level is used as an optimization to avoid evaluating log
-/// messages that will be ignored by the logger. Any message with a level
-/// higher than the maximum log level filter will be ignored. A logger should
-/// make sure to keep the maximum log level filter in sync with its current
-/// configuration.
-#[allow(missing_copy_implementations)]
-pub struct MaxLevelFilter(());
-
-impl fmt::Debug for MaxLevelFilter {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MaxLevelFilter")
-    }
-}
-
-impl MaxLevelFilter {
-    /// Gets the current maximum log level filter.
-    pub fn get(&self) -> LevelFilter {
-        max_level()
-    }
-
-    /// Sets the maximum log level.
-    pub fn set(&self, level: LevelFilter) {
-        MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
-    }
+/// Generally, this should only be called by the active logging implementation.
+#[inline]
+pub fn set_max_level(level: LevelFilter) {
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
 }
 
 /// Returns the current maximum log level.
@@ -1015,18 +988,11 @@ pub fn max_level() -> LevelFilter {
 ///
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(feature = "std")]
-pub fn set_boxed_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
-where
-    M: FnOnce(MaxLevelFilter) -> Box<Log>,
-{
-    unsafe { set_logger(|max_level| &*Box::into_raw(make_logger(max_level))) }
+pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
+    set_logger_inner(|| unsafe { &*Box::into_raw(logger) })
 }
 
 /// Sets the global logger to a `&'static Log`.
-///
-/// The `make_logger` closure is passed a `MaxLevelFilter` object, which the
-/// logger should use to keep the global maximum log level in sync with the
-/// highest log level that the logger will not ignore.
 ///
 /// This function may only be called once in the lifetime of a program. Any log
 /// events that occur before the call to `set_logger` completes will be ignored.
@@ -1065,26 +1031,28 @@ where
 /// }
 ///
 /// # fn main(){
-/// log::set_logger(|max_log_level| {
-///     max_log_level.set(LevelFilter::Info);
-///     &MY_LOGGER
-/// }).unwrap();
+/// log::set_logger(&MY_LOGGER).unwrap();
+/// log::set_max_level(LevelFilter::Info);
 ///
 /// info!("hello log");
 /// warn!("warning");
 /// error!("oops");
 /// # }
 /// ```
-pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
+pub fn set_logger(logger: &'static Log) -> Result<(), SetLoggerError> {
+    set_logger_inner(|| logger)
+}
+
+fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
-    M: FnOnce(MaxLevelFilter) -> &'static Log,
+    F: FnOnce() -> &'static Log
 {
     unsafe {
         if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
             return Err(SetLoggerError(()));
         }
 
-        LOGGER = make_logger(MaxLevelFilter(()));
+        LOGGER = make_logger();
         STATE.store(INITIALIZED, Ordering::SeqCst);
         Ok(())
     }

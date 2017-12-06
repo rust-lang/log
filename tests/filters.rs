@@ -3,20 +3,17 @@ extern crate log;
 
 use std::sync::{Arc, Mutex};
 use log::{Level, LevelFilter, Log, Record, Metadata};
-use log::MaxLevelFilter;
 
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 use log::set_boxed_logger;
-#[cfg(not(feature = "use_std"))]
-fn set_boxed_logger<M>(make_logger: M) -> Result<(), log::SetLoggerError>
-    where M: FnOnce(MaxLevelFilter) -> Box<Log>
-{
-    log::set_logger(|x| unsafe { &*Box::into_raw(make_logger(x)) })
+
+#[cfg(not(feature = "std"))]
+fn set_boxed_logger(logger: Box<Log>) -> Result<(), log::SetLoggerError> {
+    log::set_logger(unsafe { &*Box::into_raw(logger) })
 }
 
 struct State {
     last_log: Mutex<Option<Level>>,
-    filter: MaxLevelFilter,
 }
 
 struct Logger(Arc<State>);
@@ -33,16 +30,9 @@ impl Log for Logger {
 }
 
 fn main() {
-    let mut a = None;
-    set_boxed_logger(|max| {
-       let me = Arc::new(State {
-                            last_log: Mutex::new(None),
-                            filter: max,
-                         });
-       a = Some(me.clone());
-       Box::new(Logger(me))
-    }).unwrap();
-    let a = a.unwrap();
+    let me = Arc::new(State { last_log: Mutex::new(None) });
+    let a = me.clone();
+    set_boxed_logger(Box::new(Logger(me))).unwrap();
 
     test(&a, LevelFilter::Off);
     test(&a, LevelFilter::Error);
@@ -53,7 +43,7 @@ fn main() {
 }
 
 fn test(a: &State, filter: LevelFilter) {
-    a.filter.set(filter);
+    log::set_max_level(filter);
     error!("");
     last(&a, t(Level::Error, filter));
     warn!("");
@@ -71,7 +61,6 @@ fn test(a: &State, filter: LevelFilter) {
 }
 
 fn last(state: &State, expected: Option<Level>) {
-    let mut lvl = state.last_log.lock().unwrap();
-    assert_eq!(*lvl, expected);
-    *lvl = None;
+    let lvl = state.last_log.lock().unwrap().take();
+    assert_eq!(lvl, expected);
 }
