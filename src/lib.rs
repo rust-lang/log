@@ -598,7 +598,7 @@ impl LevelFilter {
 ///
 ///        println!("{}:{} -- {}",
 ///                 record.level(),
-///                 record.module_path(),
+///                 record.target(),
 ///                 record.args());
 ///    }
 ///    fn flush(&self) {}
@@ -614,9 +614,9 @@ impl LevelFilter {
 pub struct Record<'a> {
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
-    module_path: &'a str,
-    file: &'a str,
-    line: u32,
+    module_path: Option<&'a str>,
+    file: Option<&'a str>,
+    line: Option<u32>,
 }
 
 impl<'a> Record<'a> {
@@ -652,19 +652,19 @@ impl<'a> Record<'a> {
 
     /// The module path of the message.
     #[inline]
-    pub fn module_path(&self) -> &'a str {
+    pub fn module_path(&self) -> Option<&'a str> {
         self.module_path
     }
 
     /// The source file containing the message.
     #[inline]
-    pub fn file(&self) -> &'a str {
+    pub fn file(&self) -> Option<&'a str> {
         self.file
     }
 
     /// The line containing the message.
     #[inline]
-    pub fn line(&self) -> u32 {
+    pub fn line(&self) -> Option<u32> {
         self.line
     }
 }
@@ -685,8 +685,9 @@ impl<'a> Record<'a> {
 ///                 .args(format_args!("Error!"))
 ///                 .level(Level::Error)
 ///                 .target("myApp")
-///                 .file("server.rs")
-///                 .line(144)
+///                 .file(Some("server.rs"))
+///                 .line(Some(144))
+///                 .module_path(Some("server"))
 ///                 .build();
 /// ```
 ///
@@ -703,9 +704,9 @@ impl<'a> Record<'a> {
 /// let record = Record::builder()
 ///                 .metadata(error_metadata)
 ///                 .args(format_args!("Error!"))
-///                 .line(433)
-///                 .file("app.rs")
-///                 .module_path("server")
+///                 .line(Some(433))
+///                 .file(Some("app.rs"))
+///                 .module_path(Some("server"))
 ///                 .build();
 /// ```
 #[derive(Debug)]
@@ -720,9 +721,9 @@ impl<'a> RecordBuilder<'a> {
     ///
     /// - `args`: [`format_args!("")`]
     /// - `metadata`: [`Metadata::builder().build()`]
-    /// - `module_path`: `""`
-    /// - `file`: `""`
-    /// - `line`: `0`
+    /// - `module_path`: `None`
+    /// - `file`: `None`
+    /// - `line`: `None`
     ///
     /// [`format_args!("")`]: https://doc.rust-lang.org/std/macro.format_args.html
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
@@ -732,9 +733,9 @@ impl<'a> RecordBuilder<'a> {
             record: Record {
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
-                module_path: "",
-                file: "",
-                line: 0,
+                module_path: None,
+                file: None,
+                line: None,
             },
         }
     }
@@ -769,21 +770,21 @@ impl<'a> RecordBuilder<'a> {
 
     /// Set [`module_path`](struct.Record.html#method.module_path)
     #[inline]
-    pub fn module_path(&mut self, path: &'a str) -> &mut RecordBuilder<'a> {
+    pub fn module_path(&mut self, path: Option<&'a str>) -> &mut RecordBuilder<'a> {
         self.record.module_path = path;
         self
     }
 
     /// Set [`file`](struct.Record.html#method.file)
     #[inline]
-    pub fn file(&mut self, file: &'a str) -> &mut RecordBuilder<'a> {
+    pub fn file(&mut self, file: Option<&'a str>) -> &mut RecordBuilder<'a> {
         self.record.file = file;
         self
     }
 
     /// Set [`line`](struct.Record.html#method.line)
     #[inline]
-    pub fn line(&mut self, line: u32) -> &mut RecordBuilder<'a> {
+    pub fn line(&mut self, line: Option<u32>) -> &mut RecordBuilder<'a> {
         self.record.line = line;
         self
     }
@@ -1319,14 +1320,14 @@ mod tests {
         let record_test = RecordBuilder::new()
             .args(fmt_args)
             .metadata(metadata)
-            .module_path("foo")
-            .file("bar")
-            .line(30)
+            .module_path(Some("foo"))
+            .file(Some("bar"))
+            .line(Some(30))
             .build();
         assert_eq!(record_test.metadata().target(), "myApp");
-        assert_eq!(record_test.module_path(), "foo");
-        assert_eq!(record_test.file(), "bar");
-        assert_eq!(record_test.line(), 30);
+        assert_eq!(record_test.module_path(), Some("foo"));
+        assert_eq!(record_test.file(), Some("bar"));
+        assert_eq!(record_test.line(), Some(30));
     }
 
     #[test]
@@ -1338,14 +1339,14 @@ mod tests {
         let record_test = Record::builder()
             .args(fmt_args)
             .metadata(metadata)
-            .module_path("foo")
-            .file("bar")
-            .line(30)
+            .module_path(Some("foo"))
+            .file(Some("bar"))
+            .line(Some(30))
             .build();
         assert_eq!(record_test.target(), "myApp");
-        assert_eq!(record_test.module_path(), "foo");
-        assert_eq!(record_test.file(), "bar");
-        assert_eq!(record_test.line(), 30);
+        assert_eq!(record_test.module_path(), Some("foo"));
+        assert_eq!(record_test.file(), Some("bar"));
+        assert_eq!(record_test.line(), Some(30));
     }
 
     #[test]
@@ -1353,16 +1354,16 @@ mod tests {
         use super::{Record, Level};
         let target = "myApp";
         let record_test = Record::builder()
-            .module_path("foo")
-            .file("bar")
-            .line(30)
+            .module_path(Some("foo"))
+            .file(Some("bar"))
+            .line(Some(30))
             .target(target)
             .level(Level::Error)
             .build();
         assert_eq!(record_test.target(), "myApp");
         assert_eq!(record_test.level(), Level::Error);
-        assert_eq!(record_test.module_path(), "foo");
-        assert_eq!(record_test.file(), "bar");
-        assert_eq!(record_test.line(), 30);
+        assert_eq!(record_test.module_path(), Some("foo"));
+        assert_eq!(record_test.file(), Some("bar"));
+        assert_eq!(record_test.line(), Some(30));
     }
 }
