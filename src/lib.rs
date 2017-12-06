@@ -685,7 +685,7 @@ impl<'a> Record<'a> {
 ///                 .build();
 /// ```
 ///
-/// Alternatively, use [`MetadataBuilder`](struct.Metadatabuilder.html):
+/// Alternatively, use [`MetadataBuilder`](struct.MetadataBuilder.html):
 ///
 /// ```rust
 /// use log::{Record, Level, MetadataBuilder};
