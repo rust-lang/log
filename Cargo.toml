@@ -36,4 +36,4 @@ use_std = ["log/std"]
 default = ["use_std"]
 
 [dependencies]
-log = { git = "https://github.com/rust-lang-nursery/log", default_features = false }
+log = "0.4.0-rc.1"
