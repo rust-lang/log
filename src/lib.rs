@@ -652,7 +652,7 @@ impl LogLocation {
 /// higher than the maximum log level filter will be ignored. A logger should
 /// make sure to keep the maximum log level filter in sync with its current
 /// configuration.
-pub struct MaxLogLevelFilter(log::MaxLevelFilter);
+pub struct MaxLogLevelFilter(());
 
 impl fmt::Debug for MaxLogLevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -668,7 +668,7 @@ impl MaxLogLevelFilter {
 
     /// Sets the maximum log level.
     pub fn set(&self, level: LogLevelFilter) {
-        self.0.set(level.to_new())
+        log::set_max_level(level.to_new())
     }
 }
 
@@ -727,12 +727,15 @@ pub fn set_logger<M>(make_logger: M) -> Result<(), SetLoggerError>
 /// addition, `shutdown_logger` *must not* be called after this function.
 pub unsafe fn set_logger_raw<M>(make_logger: M) -> Result<(), SetLoggerError>
         where M: FnOnce(MaxLogLevelFilter) -> *const Log {
-    log::set_logger(|filter| {
-        static ADAPTOR: LoggerAdaptor = LoggerAdaptor;
-        LOGGER = make_logger(MaxLogLevelFilter(filter));
-        STATE.store(INITIALIZED, Ordering::SeqCst);
-        &ADAPTOR
-    }).map_err(|_| SetLoggerError(()))
+    static ADAPTOR: LoggerAdaptor = LoggerAdaptor;
+    match log::set_logger(&ADAPTOR) {
+        Ok(()) => {
+            LOGGER = make_logger(MaxLogLevelFilter(()));
+            STATE.store(INITIALIZED, Ordering::SeqCst);
+            Ok(())
+        }
+        Err(_) => Err(SetLoggerError(())),
+    }
 }
 
 /// Shuts down the global logger.
@@ -896,7 +899,7 @@ impl log::Log for LoggerAdaptor {
                 // file and module path aren't static in 0.4 so we can't forward them.
                 location: &LogLocation {
                     __file: "<unknown>",
-                    __line: record.line(),
+                    __line: record.line().unwrap_or(0),
                     __module_path: "<unknown>",
                 },
                 args: *record.args(),
@@ -970,9 +973,9 @@ pub fn __log(level: LogLevel, target: &str, loc: &LogLocation,
                 &log::Record::builder()
                     .level(level.to_new())
                     .target(target)
-                    .file(loc.__file)
-                    .line(loc.__line)
-                    .module_path(loc.__module_path)
+                    .file(Some(loc.__file))
+                    .line(Some(loc.__line))
+                    .module_path(Some(loc.__module_path))
                     .args(args)
                     .build()
             )
