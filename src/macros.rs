@@ -40,9 +40,9 @@ macro_rules! log {
                     .args(format_args!($($arg)+))
                     .level(lvl)
                     .target($target)
-                    .module_path(module_path!())
-                    .file(file!())
-                    .line(line!())
+                    .module_path(Some(module_path!()))
+                    .file(Some(file!()))
+                    .line(Some(line!()))
                     .build()
             )
         }
