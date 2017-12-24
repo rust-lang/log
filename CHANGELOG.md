@@ -75,6 +75,6 @@ other direction does not lose any information, fortunately!
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/r2d2/compare/0.4.0...HEAD
-[0.4.0]: https://github.com/sfackler/r2d2/compare/0.3.8...0.4.0
-[release tags]: https://github.com/sfackler/r2d2/releases
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/rust-lang-nursery/log/compare/0.3.8...0.4.0
+[release tags]: https://github.com/rust-lang-nursery/log/releases
