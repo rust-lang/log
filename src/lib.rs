@@ -294,9 +294,10 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
 static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
-static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
-                     was already initialized";
-static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doesn't match an existing log level";
+static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system was \
+    already initialized";
+static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doesn't match an \
+    existing log level";
 
 /// An enum representing the available verbosity levels of the logger.
 ///
@@ -961,7 +962,7 @@ pub fn set_max_level(level: LevelFilter) {
 ///
 /// The [`log!`], [`error!`], [`warn!`], [`info!`], [`debug!`], and [`trace!`] macros check
 /// this value and discard any message logged at a higher level. The maximum
-/// log level is set by the [`MaxLevelFilter`] token passed to loggers.
+/// log level is set by the [`set_max_level`] function.
 ///
 /// [`log!`]: macro.log.html
 /// [`error!`]: macro.error.html
@@ -969,7 +970,7 @@ pub fn set_max_level(level: LevelFilter) {
 /// [`info!`]: macro.info.html
 /// [`debug!`]: macro.debug.html
 /// [`trace!`]: macro.trace.html
-/// [`MaxLevelFilter`]: struct.MaxLevelFilter.html
+/// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
