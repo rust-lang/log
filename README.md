@@ -22,7 +22,7 @@ log whatever information will be useful to downstream consumers:
 
 ```toml
 [dependencies]
-log = "0.3"
+log = "0.4"
 ```
 
 ```rust
