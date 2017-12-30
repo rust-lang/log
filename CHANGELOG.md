@@ -2,9 +2,11 @@
 
 ## [Unreleased]
 
-## [0.4.1] - 2017-12-31
+## [0.4.1] - 2017-12-30
 
-Some doc links were fixed.
+### Fixed
+
+* Some doc links were fixed.
 
 ## [0.4.0] - 2017-12-24
 
