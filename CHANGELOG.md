@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2017-12-31
+
+Some doc links were fixed.
+
 ## [0.4.0] - 2017-12-24
 
 The changes in this release include cleanup of some obscure functionality and a more robust public
@@ -71,6 +75,7 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.1...HEAD
+[0.4.1]: https://github.com/rust-lang-nursery/log/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/rust-lang-nursery/log/compare/0.3.8...0.4.0
 [release tags]: https://github.com/rust-lang-nursery/log/releases
