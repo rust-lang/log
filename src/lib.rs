@@ -249,7 +249,7 @@
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "https://www.rust-lang.org/favicon.ico",
-       html_root_url = "https://docs.rs/log/0.4.0")]
+       html_root_url = "https://docs.rs/log/0.4.1")]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
 
@@ -447,11 +447,12 @@ impl Level {
 
 /// An enum representing the available verbosity level filters of the logger.
 ///
-/// A `LevelFilter` may be compared directly to a [`Level`](enum.Level.html).
-/// Use this type to [`get()`](struct.MaxLevelFilter.html#method.get) and
-/// [`set()`](struct.MaxLevelFilter.html#method.set) the
-/// [`MaxLevelFilter`](struct.MaxLevelFilter.html), or to match with the getter
-/// [`max_level()`](fn.max_level.html).
+/// A `LevelFilter` may be compared directly to a [`Level`]. Use this type
+/// to get and set the maximum log level with [`max_level()`] and [`set_max_level`].
+///
+/// [`Level`]: enum.Level.html
+/// [`max_level()`]: fn.max_level.html
+/// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
 pub enum LevelFilter {
@@ -600,7 +601,7 @@ impl LevelFilter {
 /// }
 /// ```
 ///
-/// [method.log]: trait.Log.html#method.log
+/// [method.log]: trait.Log.html#tymethod.log
 /// [`Log`]: trait.Log.html
 /// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
