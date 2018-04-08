@@ -48,6 +48,13 @@ impl<'de> Deserialize<'de> for Level {
                 // Case insensitive.
                 FromStr::from_str(s).map_err(|_| Error::unknown_variant(s, &LOG_LEVEL_NAMES[1..]))
             }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                self.visit_str(&*String::from_utf8_lossy(value))
+            }
         }
 
         impl<'de> DeserializeSeed<'de> for LevelIdentifier {
@@ -122,6 +129,13 @@ impl<'de> Deserialize<'de> for LevelFilter {
                 // Case insensitive.
                 FromStr::from_str(s).map_err(|_| Error::unknown_variant(s, &LOG_LEVEL_NAMES))
             }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                self.visit_str(&*String::from_utf8_lossy(value))
+            }
         }
 
         impl<'de> DeserializeSeed<'de> for LevelFilterIdentifier {
@@ -173,11 +187,29 @@ mod tests {
         }
     }
 
+    fn level_bytes_tokens(variant: &'static [u8]) -> [Token; 3] {
+        [
+            Token::Enum { name: "Level" },
+            Token::Bytes(variant),
+            Token::Unit,
+        ]
+    }
+
     fn level_filter_token(variant: &'static str) -> Token {
         Token::UnitVariant {
             name: "LevelFilter",
             variant: variant,
         }
+    }
+
+    fn level_filter_bytes_tokens(variant: &'static [u8]) -> [Token; 3] {
+        [
+            Token::Enum {
+                name: "LevelFilter",
+            },
+            Token::Bytes(variant),
+            Token::Unit,
+        ]
     }
 
     #[test]
@@ -207,6 +239,21 @@ mod tests {
 
         for &(s, expected) in &cases {
             assert_de_tokens(&s, &expected);
+        }
+    }
+
+    #[test]
+    fn test_level_de_bytes() {
+        let cases = [
+            (Level::Error, level_bytes_tokens(b"ERROR")),
+            (Level::Warn, level_bytes_tokens(b"WARN")),
+            (Level::Info, level_bytes_tokens(b"INFO")),
+            (Level::Debug, level_bytes_tokens(b"DEBUG")),
+            (Level::Trace, level_bytes_tokens(b"TRACE")),
+        ];
+
+        for &(value, tokens) in &cases {
+            assert_de_tokens(&value, &tokens);
         }
     }
 
@@ -246,6 +293,22 @@ mod tests {
 
         for &(s, expected) in &cases {
             assert_de_tokens(&s, &expected);
+        }
+    }
+
+    #[test]
+    fn test_level_filter_de_bytes() {
+        let cases = [
+            (LevelFilter::Off, level_filter_bytes_tokens(b"OFF")),
+            (LevelFilter::Error, level_filter_bytes_tokens(b"ERROR")),
+            (LevelFilter::Warn, level_filter_bytes_tokens(b"WARN")),
+            (LevelFilter::Info, level_filter_bytes_tokens(b"INFO")),
+            (LevelFilter::Debug, level_filter_bytes_tokens(b"DEBUG")),
+            (LevelFilter::Trace, level_filter_bytes_tokens(b"TRACE")),
+        ];
+
+        for &(value, tokens) in &cases {
+            assert_de_tokens(&value, &tokens);
         }
     }
 
