@@ -3,12 +3,12 @@
 extern crate serde;
 use self::serde::ser::{Serialize, Serializer};
 use self::serde::de::{Deserialize, DeserializeSeed, Deserializer, Visitor, EnumAccess,
-                      VariantAccess, Error};
+                      Unexpected, VariantAccess, Error};
 
 use {Level, LevelFilter, LOG_LEVEL_NAMES};
 
 use std::fmt;
-use std::str::FromStr;
+use std::str::{self, FromStr};
 
 // The Deserialize impls are handwritten to be case insensitive using FromStr.
 
@@ -53,7 +53,10 @@ impl<'de> Deserialize<'de> for Level {
             where
                 E: Error,
             {
-                self.visit_str(&*String::from_utf8_lossy(value))
+                let variant = str::from_utf8(value)
+                    .map_err(|_| Error::invalid_value(Unexpected::Bytes(value), &self))?;
+
+                self.visit_str(variant)
             }
         }
 
@@ -134,7 +137,10 @@ impl<'de> Deserialize<'de> for LevelFilter {
             where
                 E: Error,
             {
-                self.visit_str(&*String::from_utf8_lossy(value))
+                let variant = str::from_utf8(value)
+                    .map_err(|_| Error::invalid_value(Unexpected::Bytes(value), &self))?;
+
+                self.visit_str(variant)
             }
         }
 
@@ -176,7 +182,7 @@ impl<'de> Deserialize<'de> for LevelFilter {
 #[cfg(test)]
 mod tests {
     extern crate serde_test;
-    use self::serde_test::{Token, assert_tokens, assert_de_tokens, assert_de_tokens_error};
+    use self::serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
 
     use {Level, LevelFilter};
 
