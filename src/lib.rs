@@ -53,9 +53,9 @@
 //! extern crate log;
 //!
 //! # #[derive(Debug)] pub struct Yak(String);
-//! # impl Yak { fn shave(&self, _: u32) {} }
+//! # impl Yak { fn shave(&mut self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
-//! pub fn shave_the_yak(yak: &Yak) {
+//! pub fn shave_the_yak(yak: &mut Yak) {
 //!     info!(target: "yak_events", "Commencing yak shaving for {:?}", yak);
 //!
 //!     loop {
