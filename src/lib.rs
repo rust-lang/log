@@ -233,7 +233,7 @@
 //! configured in your `Cargo.toml`.
 //!
 //! * `std` allows use of `std` crate instead of the default `core`. Enables using `std::error` and
-//! set_boxed_logger functionality.
+//! `set_boxed_logger` functionality.
 //! * `serde` enables support for serialization and deserialization of `Level` and `LevelFilter`.
 //!
 //! ```toml
