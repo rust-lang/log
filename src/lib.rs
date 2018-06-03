@@ -227,6 +227,19 @@
 //! [dependencies]
 //! log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 //! ```
+//! # Crate Feature Flags
+//!
+//! The following crate feature flags are avaliable in addition to the filters. They are
+//! configured in your `Cargo.toml`.
+//!
+//! * `std` allows use of `std` crate instead of the default `core`. Enables using `std::error` and
+//! `set_boxed_logger` functionality.
+//! * `serde` enables support for serialization and deserialization of `Level` and `LevelFilter`.
+//!
+//! ```toml
+//! [dependencies]
+//! log = { version = "0.4", features = ["std", "serde"] }
+//! ```
 //!
 //! # Version compatibility
 //!
