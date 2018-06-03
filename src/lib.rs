@@ -253,9 +253,11 @@
 //! [log4rs]: https://docs.rs/log4rs/*/log4rs/
 //! [fern]: https://docs.rs/fern/*/fern/
 
-#![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
-       html_favicon_url = "https://www.rust-lang.org/favicon.ico",
-       html_root_url = "https://docs.rs/log/0.4.1")]
+#![doc(
+    html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
+    html_favicon_url = "https://www.rust-lang.org/favicon.ico",
+    html_root_url = "https://docs.rs/log/0.4.0-rc.1"
+)]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -298,10 +300,10 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
 static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
-static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system was \
-                                         already initialized";
-static LEVEL_PARSE_ERROR: &'static str = "attempted to convert a string that doesn't match an \
-                                          existing log level";
+static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
+                                         was already initialized";
+static LEVEL_PARSE_ERROR: &'static str =
+    "attempted to convert a string that doesn't match an existing log level";
 
 /// An enum representing the available verbosity levels of the logger.
 ///
@@ -1121,6 +1123,34 @@ pub fn logger() -> &'static Log {
     }
 }
 
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+pub fn __private_api_log(
+    args: fmt::Arguments,
+    level: Level,
+    target: &str,
+    module_path: &str,
+    file: &str,
+    line: u32,
+) {
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target(target)
+            .module_path(Some(module_path))
+            .file(Some(file))
+            .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+pub fn __private_api_enabled(level: Level, target: &str) -> bool {
+    logger().enabled(&Metadata::builder().level(level).target(target).build())
+}
+
 /// The statically resolved maximum log level.
 ///
 /// See the crate level documentation for information on how to configure this.
@@ -1163,8 +1193,8 @@ cfg_if! {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use tests::std::string::ToString;
     use super::{Level, LevelFilter, ParseLevelError};
+    use tests::std::string::ToString;
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1251,8 +1281,8 @@ mod tests {
     #[test]
     #[cfg(feature = "std")]
     fn test_error_trait() {
-        use std::error::Error;
         use super::SetLoggerError;
+        use std::error::Error;
         let e = SetLoggerError(());
         assert_eq!(
             e.description(),
