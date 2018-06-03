@@ -29,7 +29,7 @@ log = "0.4"
 #[macro_use]
 extern crate log;
 
-pub fn shave_the_yak(yak: &Yak) {
+pub fn shave_the_yak(yak: &mut Yak) {
     trace!("Commencing yak shaving");
 
     loop {
