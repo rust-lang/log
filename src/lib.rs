@@ -1221,10 +1221,7 @@ pub fn logger() -> &'static Log {
 pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
-    target: &str,
-    module_path: &str,
-    file: &str,
-    line: u32,
+    &(target, module_path, file, line): &(&str, &str, &str, u32),
 ) {
     logger().log(
         &Record::builder()
