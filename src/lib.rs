@@ -375,12 +375,52 @@ impl PartialOrd for Level {
     fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
+
+    #[inline]
+    fn lt(&self, other: &Level) -> bool {
+        (*self as usize) < *other as usize
+    }
+
+    #[inline]
+    fn le(&self, other: &Level) -> bool {
+        *self as usize <= *other as usize
+    }
+
+    #[inline]
+    fn gt(&self, other: &Level) -> bool {
+        *self as usize > *other as usize
+    }
+
+    #[inline]
+    fn ge(&self, other: &Level) -> bool {
+        *self as usize >= *other as usize
+    }
 }
 
 impl PartialOrd<LevelFilter> for Level {
     #[inline]
     fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
+    }
+
+    #[inline]
+    fn lt(&self, other: &LevelFilter) -> bool {
+        (*self as usize) < *other as usize
+    }
+
+    #[inline]
+    fn le(&self, other: &LevelFilter) -> bool {
+        *self as usize <= *other as usize
+    }
+
+    #[inline]
+    fn gt(&self, other: &LevelFilter) -> bool {
+        *self as usize > *other as usize
+    }
+
+    #[inline]
+    fn ge(&self, other: &LevelFilter) -> bool {
+        *self as usize >= *other as usize
     }
 }
 
@@ -517,12 +557,52 @@ impl PartialOrd for LevelFilter {
     fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
+
+    #[inline]
+    fn lt(&self, other: &LevelFilter) -> bool {
+        (*self as usize) < *other as usize
+    }
+
+    #[inline]
+    fn le(&self, other: &LevelFilter) -> bool {
+        *self as usize <= *other as usize
+    }
+
+    #[inline]
+    fn gt(&self, other: &LevelFilter) -> bool {
+        *self as usize > *other as usize
+    }
+
+    #[inline]
+    fn ge(&self, other: &LevelFilter) -> bool {
+        *self as usize >= *other as usize
+    }
 }
 
 impl PartialOrd<Level> for LevelFilter {
     #[inline]
     fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
-        other.partial_cmp(self).map(|x| x.reverse())
+        Some((*self as usize).cmp(&(*other as usize)))
+    }
+
+    #[inline]
+    fn lt(&self, other: &Level) -> bool {
+        (*self as usize) < *other as usize
+    }
+
+    #[inline]
+    fn le(&self, other: &Level) -> bool {
+        *self as usize <= *other as usize
+    }
+
+    #[inline]
+    fn gt(&self, other: &Level) -> bool {
+        *self as usize > *other as usize
+    }
+
+    #[inline]
+    fn ge(&self, other: &Level) -> bool {
+        *self as usize >= *other as usize
     }
 }
 
@@ -1141,10 +1221,7 @@ pub fn logger() -> &'static Log {
 pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
-    target: &str,
-    module_path: &str,
-    file: &str,
-    line: u32,
+    &(target, module_path, file, line): &(&str, &str, &str, u32),
 ) {
     logger().log(
         &Record::builder()

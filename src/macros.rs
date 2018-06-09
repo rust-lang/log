@@ -37,10 +37,7 @@ macro_rules! log {
             $crate::__private_api_log(
                 format_args!($($arg)+),
                 lvl,
-                $target,
-                module_path!(),
-                file!(),
-                line!(),
+                &($target, module_path!(), file!(), line!()),
             );
         }
     });
