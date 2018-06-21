@@ -21,6 +21,10 @@ features = ["std", "serde"]
 name = "filters"
 harness = false
 
+[[test]]
+name = "kv"
+harness = false
+
 [features]
 max_level_off   = []
 max_level_error = []

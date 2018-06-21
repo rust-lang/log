@@ -659,6 +659,32 @@ impl LevelFilter {
     }
 }
 
+/// The trait to represent key value pairs.
+pub trait KeyValue {
+    /// The key.
+    fn key(&self) -> &fmt::Display;
+    /// The value.
+    fn value(&self) -> &fmt::Display;
+}
+
+/// Implementation of the `KeyValue` trait used by the `log!` macro.
+#[allow(missing_debug_implementations)]
+#[doc(hidden)]
+pub struct KV<'a> {
+    pub key: &'static str,
+    pub value: &'a fmt::Display,
+}
+
+impl<'a> KeyValue for KV<'a> {
+    fn key(&self) -> &fmt::Display {
+        &self.key
+    }
+
+    fn value(&self) -> &fmt::Display {
+        &self.value
+    }
+}
+
 /// The "payload" of a log message.
 ///
 /// # Use
@@ -705,10 +731,11 @@ impl LevelFilter {
 /// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
 /// [`target()`]: struct.Record.html#method.target
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Record<'a> {
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
+    kvs: &'a [&'a KeyValue],
     module_path: Option<&'a str>,
     file: Option<&'a str>,
     line: Option<u32>,
@@ -725,6 +752,12 @@ impl<'a> Record<'a> {
     #[inline]
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
+    }
+
+    /// Supplied key value pairs.
+    #[inline]
+    pub fn kvs(&self) -> &'a [&'a KeyValue] {
+        &self.kvs
     }
 
     /// Metadata about the log directive.
@@ -761,6 +794,32 @@ impl<'a> Record<'a> {
     #[inline]
     pub fn line(&self) -> Option<u32> {
         self.line
+    }
+}
+
+/// Helper struct to allow debug printing of `KeyValue` pairs.
+struct KeyValueDebug<'a>(&'a [&'a KeyValue]);
+
+impl<'a> fmt::Debug for KeyValueDebug<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[ ")?;
+        for kv in self.0 {
+            write!(f, "{} = {}, ", kv.key(), kv.value())?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl<'a> fmt::Debug for Record<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Record")
+            .field("metadata", &self.metadata)
+            .field("args", &self.args)
+            .field("kvs", &KeyValueDebug(&self.kvs))
+            .field("module_path", &self.module_path)
+            .field("file", &self.file)
+            .field("line", &self.line)
+            .finish()
     }
 }
 
@@ -827,6 +886,7 @@ impl<'a> RecordBuilder<'a> {
         RecordBuilder {
             record: Record {
                 args: format_args!(""),
+                kvs: &[],
                 metadata: Metadata::builder().build(),
                 module_path: None,
                 file: None,
@@ -839,6 +899,13 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn args(&mut self, args: fmt::Arguments<'a>) -> &mut RecordBuilder<'a> {
         self.record.args = args;
+        self
+    }
+
+    /// Set [`kvs`](struct.Record.html#method.kvs).
+    #[inline]
+    pub fn kvs(&mut self, kvs: &'a [&'a KeyValue]) -> &mut RecordBuilder<'a> {
+        self.record.kvs = kvs;
         self
     }
 
@@ -1220,12 +1287,14 @@ pub fn logger() -> &'static Log {
 #[doc(hidden)]
 pub fn __private_api_log(
     args: fmt::Arguments,
+    kvs: &[&KeyValue],
     level: Level,
     &(target, module_path, file, line): &(&str, &str, &str, u32),
 ) {
     logger().log(
         &Record::builder()
             .args(args)
+            .kvs(kvs)
             .level(level)
             .target(target)
             .module_path(Some(module_path))

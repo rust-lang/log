@@ -23,25 +23,32 @@
 /// # fn main() {
 /// let data = (42, "Forty-two");
 /// let private_data = "private";
+/// let user = ("Bob", 123);
 ///
 /// log!(Level::Error, "Received errors: {}, {}", data.0, data.1);
 /// log!(target: "app_events", Level::Warn, "App warning: {}, {}, {}",
-///     data.0, data.1, private_data);
+///     data.0, data.1, private_data; user_name = user.0, user_id = user.1);
 /// # }
 /// ```
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+    (target: $target:expr, $lvl:expr, $($arg:expr),+; $($k:ident = $v:expr),*) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
-                format_args!($($arg)+),
+                format_args!($($arg),+),
+                &[$(&$crate::KV { key: stringify!($k), value: &$v }),*],
                 lvl,
                 &($target, module_path!(), file!(), line!()),
             );
         }
     });
-    ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
+    // No key value pairs.
+    (target: $target:expr, $lvl:expr, $($arg:expr),+) => (log!(target: $target, $lvl, $($arg),+; ));
+    // No target.
+    ($lvl:expr, $($arg:expr),+; $($k:ident = $v:expr),*) => (log!(target: module_path!(), $lvl, $($arg),+; $($k = $v),*));
+    // No target or key value pairs.
+    ($lvl:expr, $($arg:expr),+) => (log!($lvl, $($arg),+; ));
 }
 
 /// Logs a message at the error level.
@@ -60,11 +67,11 @@ macro_rules! log {
 /// ```
 #[macro_export]
 macro_rules! error {
-    (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Error, $($arg)*);
+    (target: $target:expr, $($arg:expr),+) => (
+        log!(target: $target, $crate::Level::Error, $($arg),+);
     );
-    ($($arg:tt)*) => (
-        log!($crate::Level::Error, $($arg)*);
+    ($($arg:expr),+) => (
+        log!($crate::Level::Error, $($arg),+);
     )
 }
 
@@ -84,11 +91,11 @@ macro_rules! error {
 /// ```
 #[macro_export]
 macro_rules! warn {
-    (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Warn, $($arg)*);
+    (target: $target:expr, $($arg:expr),+) => (
+        log!(target: $target, $crate::Level::Warn, $($arg),+);
     );
-    ($($arg:tt)*) => (
-        log!($crate::Level::Warn, $($arg)*);
+    ($($arg:expr),+) => (
+        log!($crate::Level::Warn, $($arg),+);
     )
 }
 
@@ -110,11 +117,11 @@ macro_rules! warn {
 /// ```
 #[macro_export]
 macro_rules! info {
-    (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Info, $($arg)*);
+    (target: $target:expr, $($arg:expr),+) => (
+        log!(target: $target, $crate::Level::Info, $($arg),+);
     );
-    ($($arg:tt)*) => (
-        log!($crate::Level::Info, $($arg)*);
+    ($($arg:expr),+) => (
+        log!($crate::Level::Info, $($arg),+);
     )
 }
 
@@ -135,11 +142,11 @@ macro_rules! info {
 /// ```
 #[macro_export]
 macro_rules! debug {
-    (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Debug, $($arg)*);
+    (target: $target:expr, $($arg:expr),+) => (
+        log!(target: $target, $crate::Level::Debug, $($arg),+);
     );
-    ($($arg:tt)*) => (
-        log!($crate::Level::Debug, $($arg)*);
+    ($($arg:expr),+) => (
+        log!($crate::Level::Debug, $($arg),+);
     )
 }
 
@@ -162,11 +169,11 @@ macro_rules! debug {
 /// ```
 #[macro_export]
 macro_rules! trace {
-    (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Trace, $($arg)*);
+    (target: $target:expr, $($arg:expr),+) => (
+        log!(target: $target, $crate::Level::Trace, $($arg),+);
     );
-    ($($arg:tt)*) => (
-        log!($crate::Level::Trace, $($arg)*);
+    ($($arg:expr),+) => (
+        log!($crate::Level::Trace, $($arg),+);
     )
 }
 
