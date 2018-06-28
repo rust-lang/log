@@ -28,8 +28,9 @@
 //!
 //! The basic use of the log crate is through the five logging macros: [`error!`],
 //! [`warn!`], [`info!`], [`debug!`] and [`trace!`]
-//! where `error!` represents the highest-priority log level, and `trace!` the lowest.
-//!
+//! where `error!` represents the highest-priority log messages
+//! and `trace!` the lowest. The log messages are filtered by configuring
+//! the log level to exclude messages with a lower priority.
 //! Each of these macros accept format strings similarly to [`println!`].
 //!
 //!
@@ -220,7 +221,7 @@
 //! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
 //! this value before logging a message. By default, no levels are disabled.
 //!
-//! For example, a crate can disable trace level logs in debug builds and trace, info, and warn
+//! For example, a crate can disable trace level logs in debug builds and trace, debug, and info
 //! level logs in release builds with the following configuration:
 //!
 //! ```toml
