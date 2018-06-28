@@ -29,11 +29,8 @@
 //! The basic use of the log crate is through the five logging macros: [`error!`],
 //! [`warn!`], [`info!`], [`debug!`] and [`trace!`]
 //! where `error!` represents the highest-priority log messages
-//! and `trace!` the lowest. The log messages are filtered by setting the log
-//! level which means the level of verbosity: the lowest level doesn't log
-//! at all and the higher ones log increasingly much, starting from
-//! the high-priority messages; the highest level logs everything
-//! from `error!` to `trace!`.
+//! and `trace!` the lowest. The log messages are filtered by configuring
+//! the log level to exclude messages with a lower priority.
 //! Each of these macros accept format strings similarly to [`println!`].
 //!
 //!
