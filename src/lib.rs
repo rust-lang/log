@@ -292,7 +292,7 @@ use std::error;
 use std::fmt;
 use std::mem;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT, spin_loop_hint};
+use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 #[macro_use]
 mod macros;
@@ -1158,9 +1158,7 @@ where
                 Ok(())
             }
             INITIALIZING => {
-                while STATE.load(Ordering::SeqCst) == INITIALIZING {
-                    spin_loop_hint();
-                }
+                while STATE.load(Ordering::SeqCst) == INITIALIZING {}
                 Err(SetLoggerError(()))
             }
             _ => Err(SetLoggerError(())),
