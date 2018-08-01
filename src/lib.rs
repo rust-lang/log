@@ -292,7 +292,7 @@ use std::error;
 use std::fmt;
 use std::mem;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT, spin_loop_hint};
 
 #[macro_use]
 mod macros;
@@ -1151,13 +1151,20 @@ where
     F: FnOnce() -> &'static Log,
 {
     unsafe {
-        if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
-            return Err(SetLoggerError(()));
+        match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
+            UNINITIALIZED => {
+                LOGGER = make_logger();
+                STATE.store(INITIALIZED, Ordering::SeqCst);
+                Ok(())
+            }
+            INITIALIZING => {
+                while STATE.load(Ordering::SeqCst) == INITIALIZING {
+                    spin_loop_hint();
+                }
+                Err(SetLoggerError(()))
+            }
+            _ => Err(SetLoggerError(())),
         }
-
-        LOGGER = make_logger();
-        STATE.store(INITIALIZED, Ordering::SeqCst);
-        Ok(())
     }
 }
 
