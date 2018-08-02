@@ -1151,13 +1151,18 @@ where
     F: FnOnce() -> &'static Log,
 {
     unsafe {
-        if STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) != UNINITIALIZED {
-            return Err(SetLoggerError(()));
+        match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
+            UNINITIALIZED => {
+                LOGGER = make_logger();
+                STATE.store(INITIALIZED, Ordering::SeqCst);
+                Ok(())
+            }
+            INITIALIZING => {
+                while STATE.load(Ordering::SeqCst) == INITIALIZING {}
+                Err(SetLoggerError(()))
+            }
+            _ => Err(SetLoggerError(())),
         }
-
-        LOGGER = make_logger();
-        STATE.store(INITIALIZED, Ordering::SeqCst);
-        Ok(())
     }
 }
 
