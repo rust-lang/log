@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.4.4] - 2018-08-17
+
+### Improved
+
+* Support 2018-style imports of the log macros.
+
 ## [0.4.3] - 2018-06-29
 
 ### Improved
@@ -93,7 +99,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.3...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.4...HEAD
+[0.4.4]: https://github.com/rust-lang-nursery/log/compare/0.4.3...0.4.4
 [0.4.3]: https://github.com/rust-lang-nursery/log/compare/0.4.2...0.4.3
 [0.4.2]: https://github.com/rust-lang-nursery/log/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/rust-lang-nursery/log/compare/0.4.0...0.4.1
