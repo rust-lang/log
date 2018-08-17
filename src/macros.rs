@@ -29,19 +29,19 @@
 ///     data.0, data.1, private_data);
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
-                format_args!($($arg)+),
+                log_format_args!($($arg)+),
                 lvl,
-                &($target, module_path!(), file!(), line!()),
+                &($target, log_module_path!(), log_file!(), log_line!()),
             );
         }
     });
-    ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => (log!(target: log_module_path!(), $lvl, $($arg)+))
 }
 
 /// Logs a message at the error level.
@@ -58,7 +58,7 @@ macro_rules! log {
 /// error!(target: "app_events", "App Error: {}, Port: {}", err_info, 22);
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! error {
     (target: $target:expr, $($arg:tt)*) => (
         log!(target: $target, $crate::Level::Error, $($arg)*);
@@ -82,7 +82,7 @@ macro_rules! error {
 /// warn!(target: "input_events", "App received warning: {}", warn_description);
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! warn {
     (target: $target:expr, $($arg:tt)*) => (
         log!(target: $target, $crate::Level::Warn, $($arg)*);
@@ -108,7 +108,7 @@ macro_rules! warn {
 ///       conn_info.port, conn_info.speed);
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)*) => (
         log!(target: $target, $crate::Level::Info, $($arg)*);
@@ -133,7 +133,7 @@ macro_rules! info {
 /// debug!(target: "app_events", "New position: x: {}, y: {}", pos.x, pos.y);
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! debug {
     (target: $target:expr, $($arg:tt)*) => (
         log!(target: $target, $crate::Level::Debug, $($arg)*);
@@ -160,7 +160,7 @@ macro_rules! debug {
 ///        if pos.y >= 0.0 { "positive" } else { "negative" });
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! trace {
     (target: $target:expr, $($arg:tt)*) => (
         log!(target: $target, $crate::Level::Trace, $($arg)*);
@@ -206,6 +206,48 @@ macro_rules! log_enabled {
             && $crate::__private_api_enabled(lvl, $target)
     }};
     ($lvl:expr) => {
-        log_enabled!(target: module_path!(), $lvl)
+        log_enabled!(target: log_module_path!(), $lvl)
+    };
+}
+
+// The log macro above cannot invoke format_args directly because it uses
+// local_inner_macros. A format_args invocation there would resolve to
+// $crate::format_args which does not exist. Instead invoke format_args here
+// outside of local_inner_macros so that it resolves (probably) to
+// core::format_args or std::format_args. Same for the several macros that
+// follow.
+//
+// This is a workaround until we drop support for pre-1.30 compilers. At that
+// point we can remove use of local_inner_macros, use $crate:: when invoking
+// local macros, and invoke format_args directly.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! log_format_args {
+    ($($args:tt)*) => {
+        format_args!($($args)*)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! log_module_path {
+    () => {
+        module_path!()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! log_file {
+    () => {
+        file!()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! log_line {
+    () => {
+        line!()
     };
 }
