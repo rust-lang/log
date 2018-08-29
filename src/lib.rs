@@ -682,6 +682,14 @@ pub fn max_log_level() -> LogLevelFilter {
     LogLevelFilter::from_new(log::max_level())
 }
 
+/// Sets the global maximum log level.
+///
+/// Generally, this should only be called by the active logging implementation.
+#[inline(always)]
+pub fn set_max_level(level: LogLevelFilter) {
+    log::set_max_level(level.to_new())
+}
+
 /// Sets the global logger.
 ///
 /// The `make_logger` closure is passed a `MaxLogLevel` object, which the
