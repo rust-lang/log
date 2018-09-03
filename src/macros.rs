@@ -35,13 +35,13 @@ macro_rules! log {
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
-                log_format_args!($($arg)+),
+                __log_format_args!($($arg)+),
                 lvl,
-                &($target, log_module_path!(), log_file!(), log_line!()),
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
             );
         }
     });
-    ($lvl:expr, $($arg:tt)+) => (log!(target: log_module_path!(), $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
 }
 
 /// Logs a message at the error level.
@@ -206,7 +206,7 @@ macro_rules! log_enabled {
             && $crate::__private_api_enabled(lvl, $target)
     }};
     ($lvl:expr) => {
-        log_enabled!(target: log_module_path!(), $lvl)
+        log_enabled!(target: __log_module_path!(), $lvl)
     };
 }
 
@@ -222,7 +222,7 @@ macro_rules! log_enabled {
 // local macros, and invoke format_args directly.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! log_format_args {
+macro_rules! __log_format_args {
     ($($args:tt)*) => {
         format_args!($($args)*)
     };
@@ -230,7 +230,7 @@ macro_rules! log_format_args {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! log_module_path {
+macro_rules! __log_module_path {
     () => {
         module_path!()
     };
@@ -238,7 +238,7 @@ macro_rules! log_module_path {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! log_file {
+macro_rules! __log_file {
     () => {
         file!()
     };
@@ -246,7 +246,7 @@ macro_rules! log_file {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! log_line {
+macro_rules! __log_line {
     () => {
         line!()
     };
