@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.4.5] - 2018-09-03
+
+### Improved
+
+* Make `log`'s internal helper macros less likely to conflict with user-defined
+  macros.
+
 ## [0.4.4] - 2018-08-17
 
 ### Improved
@@ -99,7 +106,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.4...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.5...HEAD
+[0.4.4]: https://github.com/rust-lang-nursery/log/compare/0.4.4...0.4.5
 [0.4.4]: https://github.com/rust-lang-nursery/log/compare/0.4.3...0.4.4
 [0.4.3]: https://github.com/rust-lang-nursery/log/compare/0.4.2...0.4.3
 [0.4.2]: https://github.com/rust-lang-nursery/log/compare/0.4.1...0.4.2
