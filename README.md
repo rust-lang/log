@@ -39,7 +39,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
         match find_a_razor() {
             Ok(razor) => {
                 info!("Razor located: {}", razor);
-                yak.shave(razor);
+                razor.shave(yak);
                 break;
             }
             Err(err) => {
