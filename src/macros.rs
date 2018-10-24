@@ -30,8 +30,9 @@
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $message:expr) => ({
+        let target = $target;
         let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+        if log_enabled!(target: target, lvl) {
             // ensure that $message is a valid format string literal
             let _ = __log_format_args!($message);
             $crate::__private_api_log_lit(
@@ -42,12 +43,13 @@ macro_rules! log {
         }
     });
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+        let target = $target;
         let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+        if log_enabled!(target: target, lvl) {
             $crate::__private_api_log(
                 __log_format_args!($($arg)+),
                 lvl,
-                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                &(target, __log_module_path!(), __log_file!(), __log_line!()),
             );
         }
     });
