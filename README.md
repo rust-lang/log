@@ -53,6 +53,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
 If you use Rust 2018, you can use instead the following code to import the crate macros:
 
 ```rust
+extern crate log;
 use log::{info, trace, warn};
 
 pub fn shave_the_yak(yak: &mut Yak) {
