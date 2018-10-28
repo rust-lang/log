@@ -3,7 +3,7 @@
 
 Add support for structured logging to the `log` crate in both `std` and `no_std` environments, allowing log records to carry typed data beyond a textual message. This document serves as an introduction to what structured logging is all about, and as an RFC for an implementation in the `log` crate.
 
-`log` will depend on `serde` for structured logging support, which will be enabled by default. See [the implications for `log` users](#implications-for-dependents) for some more details. The API is heavily inspired by the `slog` logging framework.
+`log` will provide a lightweight fundamental serialization API out-of-the-box that can be expanded to full `serde` support using crate features. It doesn't require crates implement any traits from `log` before their datastructures can be used in the `log!` macros. Instead, crates should implement `std::fmt::Debug` and `serde::Serialize`, which are traits they should by considering already. The API is heavily inspired by the `slog` logging framework. See [the implications for `log` users](#implications-for-dependents) for some more details.
 
 > NOTE: Code in this RFC uses recent language features like `impl Trait`, but can be implemented without them.
 
@@ -13,30 +13,25 @@ Add support for structured logging to the `log` crate in both `std` and `no_std`
   - [What is structured logging?](#what-is-structured-logging)
   - [Why do we need structured logging in `log`?](#why-do-we-need-structured-logging-in-log)
 - [Guide-level explanation](#guide-level-explanation)
-  - [Capturing structured logs](#capturing-structured-logs)
-  - [Consuming structured logs](#consuming-structured-logs)
+  - [Logging structured key-value pairs](#logging-structured-key-value-pairs)
+  - [Supporting key-value pairs in `Log` implementations](#supporting-key-value-pairs-in-log-implementations)
+  - [Integrating log frameworks with `log`](#integrating-log-frameworks-with-log)
+  - [Writing your own `value::Visitor`](#writing-your-own-valuevisitor)
 - [Reference-level explanation](#reference-level-explanation)
   - [Design considerations](#design-considerations)
   - [Implications for dependents](#implications-for-dependents)
   - [Cargo features](#cargo-features)
   - [Public API](#public-api)
     - [`Record` and `RecordBuilder`](#record-and-recordbuilder)
-    - [`ToValue`](#tovalue)
+    - [`Visit`](#Visit)
     - [`Value`](#value)
-    - [`ToKey`](#tokey)
     - [`Key`](#key)
-    - [`Visitor`](#visitor)
+    - [`value::Visitor`](#valuevisitor)
     - [`Error`](#error)
-    - [`KeyValueSource`](#keyvaluesource)
+    - [`Source`](#source)
+    - [`source::Visitor`](#sourcevisitor)
   - [The `log!` macros](#the-log-macros)
-- [Drawbacks](#drawbacks)
-  - [`Display + Serialize`](#display--serialize)
-  - [`serde`](#serde)
-- [Rationale and alternatives](#rationale-and-alternatives)
-  - [Just use `Display`](#just-use-display)
-  - [Don't use a blanket implementation](#dont-use-a-blanket-implementation)
-  - [Define our own serialization trait](#define-our-own-serialization-trait)
-  - [Don't enable structured logging by default](#dont-enable-structured-logging-by-default)
+- [Drawbacks, rationale, and alternatives](#drawbacks-rationale-and-alternatives)
 - [Prior art](#prior-art)
   - [Rust](#rust)
   - [Go](#go)
@@ -101,13 +96,9 @@ A healthy logging ecosystem needs both `log` and frameworks like `slog`. As a st
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
-## Capturing structured logs
+## Logging structured key-value pairs
 
-Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record.
-
-### Structured vs unstructured
-
-A `;` separates structured key-value pairs from values that are replaced into the message:
+Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record. A `;` separates structured key-value pairs from values that are replaced into the message:
 
 ```rust
 info!(
@@ -137,58 +128,62 @@ info!(
 );
 ```
 
-Any type that implements both `Display` and `serde::Serialize` can be used as the value in a structured key-value pair. In the previous example, the values used in the macro require the following trait bounds:
+### What can be logged?
 
-```
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-              ^^^^^^^^^
-              Display
+Anything that's `std::fmt::Debug + serde::Serialize` can be logged as a structured value. Using default crate features though, only a fixed set of types from the standard library are supported:
 
-    correlation = correlation_id,
-                  ^^^^^^^^^^^^^^
-                  Display + Serialize
+- Standard formats: `Arguments`
+- Primitives: `bool`, `char`
+- Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
+- Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
+- Strings: `&str`, `String`
+- Bytes: `&[u8]`, `Vec<u8>`
+- Paths: `Path`, `PathBuf`
+- Special types: `Option<T>` and `()`
 
-    user
-    ^^^^
-    Display + Serialize
-);
-```
-
-### Logging data that isn't `Display + Serialize`
-
-The `Display + Serialize` bounds we've been using thus far are mostly accurate, but don't tell the whole story. Structured values don't _technically_ require `Display + Serialize`. They require a trait for capturing structured values, `ToValue`, which we implement for any type that also implements `Display + Serialize`. So in truth the trait bounds required by the macro look like this:
-
-```
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-              ^^^^^^^^^
-              Display
-
-    correlation = correlation_id,
-                  ^^^^^^^^^^^^^^
-                  ToValue
-
-    user
-    ^^^^
-    ToValue
-);
-```
-
-The `ToValue` trait makes it possible for types to be logged even if they don't implement `Display + Serialize`; they only need to implement `ToValue`. One of the goals of this RFC is to avoid creating another fundamental trait that needs to be implemented throughout the ecosystem though. So instead of implementing `ToValue` directly, we provide a few helper macros to wrap a value satisfying one set of trait bounds into a value that satisfies `ToValue`. The following example uses these helper macros to change the trait bounds required by `correlation_id` and `user`:
+This keeps the `log` crate lightweight by default. In the example from before, `correlation_id` and `user` can be used as structured values if they're in that set of types:
 
 ```rust
+let user = "a user id";
+let correlation_id = "some correlation id";
+
 info!(
     "This is the rendered {message}. It is not structured",
     message = "message";
-    correlation = log_fmt!(correlation_id, Debug::fmt),
-    user = log_serde!(user)
+    correlation = correlation_id,
+    user
 );
 ```
 
-They now look like this:
+What if the `correlation_id` is a `uuid::Uuid` instead of a string? What if the `user` is some other datastructure containing an id along with some other metadata? We still want to be able to log these values. The set of loggable values above can be expanded to also include any other type that implements both `std::fmt::Debug` and `serde::Serialize` using a crate feature:
+
+```toml
+[dependencies.log]
+features = ["kv_serde"]
+
+[dependencies.uuid]
+features = ["serde"]
+```
+
+```rust
+#[derive(Debug, Serialize)]
+struct User {
+    id: Uuid,
+    ..
+}
+
+let user = User { id, .. };
+let correlation_id = Uuid::new_v4();
+
+info!(
+    "This is the rendered {message}. It is not structured",
+    message = "message";
+    correlation = correlation_id,
+    user
+);
+```
+
+So the effective trait bounds for structured values are `Debug + Serialize`:
 
 ```
 info!(
@@ -197,29 +192,21 @@ info!(
               ^^^^^^^^^
               Display
 
-    correlation = log_fmt!(correlation_id, Debug::fmt),
-                           ^^^^^^^^^^^^^^
-                           Debug
+    correlation = correlation_id,
+                  ^^^^^^^^^^^^^^
+                  Debug + Serialize
 
-    user = log_serde!(user)
-                      ^^^^
-                      Serialize
+    user
+    ^^^^
+    Debug + Serialize
 );
 ```
 
-This same pattern can be applied to other types in the standard library and wider ecosystem that are likely to be logged, but don't typically satisfy `Display + Serialize`. Some examples are `Path`, and implementations of `Error` or `Fail`.
+If you come across a data type in the Rust ecosystem that you can't log, then try looking for a `serde` feature on the crate that data type comes from. If there isn't one already then adding it will be useful not just for you, but for anyone that might want to serialize those types for other reasons.
 
-So why do we use `Display + Serialize` as the effective bounds in the first place? Practically, it's required to keep a consistent API in `no_std` environments, where an object-safe wrapper over `serde` requires standard library features. `Display` is a natural trait to lean on when `Serialize` isn't available, so requiring both means there's no change in the trait bounds when records can be captured using `serde` and when they can't (later on we'll see how we can still use `serde` for primitive types in `no_std` environments).
+## Supporting key-value pairs in `Log` implementations
 
-`Display` also suggests the data we are logging should have some canonical representation that's useful for someone to look at. Finding small but sufficient representations of potentially large pieces of state to log will make those logs easier to ingest and analyze later.
-
-## Consuming structured logs
-
-Capturing structured logs is only half the story. Implementors of the `Log` trait also need to be able to work with any key-value pairs associated with a log record.
-
-### Using `Visitor` to print or serialize key-value pairs
-
-Structured key-value pairs can be inspected using the `Visitor` trait. Take the terminal log format from before:
+Capturing structured logs is only half the story. Implementors of the `Log` trait also need to be able to work with any key-value pairs associated with a log record. Take the terminal log format from before:
 
 ```
 [INF 2018-09-27T09:32:03Z] Operation completed successfully in 18ms
@@ -229,43 +216,24 @@ correlation: 123
 took: 18
 ```
 
-Each key-value pair, shown as `$key: $value`, can be written using a `Visitor` that hands values to a `serde::Serializer`. The implementation of that `Visitor` could look like this:
+Each key-value pair, shown as `$key: $value`, can be formatted using the `std::fmt` machinery:
 
 ```rust
+use log::kv::Source;
+
 fn write_pretty(w: impl Write, r: &Record) -> io::Result<()> {
     // Write the first line of the log record
     ...
 
-    // Write each key-value pair using the `WriteKeyValues` visitor
+    // Write each key-value pair on a new line
     record
         .key_values()
-        .visit(&mut WriteKeyValues(w))
+        .try_for_each(|k, v| writeln!("{}: {}", k, v))
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.into_error()))
-}
-
-struct WriteKeyValues<W>(W);
-
-impl<'kvs, W> Visitor<'kvs> for WriteKeyValues<W>
-where
-    W: Write,
-{
-    fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error> {
-        // Write the key
-        // `Key` is a wrapper around a string
-        // It can be formatted directly
-        write!(&mut self.0, "{}: ", k)?;
-
-        // Write the value
-        // `Value` is a wrapper around `serde::Serialize`
-        // It can't be formatted directly
-        v.serialize(&mut Serializer::new(&mut self.0))?;
-
-        Ok(())
-    }
 }
 ```
 
-Needing `serde` for the human-centric format above seems a bit unnecessary. The value becomes clearer when using a machine-centric format for the entire log record, like json. Take the following json format:
+Now take the following json format:
 
 ```json
 {
@@ -279,9 +247,18 @@ Needing `serde` for the human-centric format above seems a bit unnecessary. The 
 }
 ```
 
-Defining a serializable structure for this format could be done using `serde_derive`, and then written using `serde_json`:
+Defining a serializable structure based on a log record for this format could be done using `serde_derive`, and then written using `serde_json`. This requires the `kv_serde` feature:
+
+```toml
+[dependencies.log]
+features = ["kv_serde"]
+```
+
+The structured key-value pairs can then be naturally serialized as a map:
 
 ```rust
+use log::kv::Source;
+
 fn write_json(w: impl Write, r: &Record) -> io::Result<()> {
     let r = SerializeRecord {
         lvl: r.level(),
@@ -305,34 +282,109 @@ struct SerializeRecord<KVS> {
 }
 ```
 
-There's no explicit `Visitor` in this case, because the `serialize_as_map` method wraps one up internally so all key-value pairs are serializable as a map using `serde`.
+The crate that produces log records might not be the same crate that consumes them. A producer can depend on the `kv_serde` feature to log more types, but still have those types handled by a consumer that doesn't use the `kv_serde` feature.
 
-### Using `KeyValueSource` to capture key-value pairs
+## Integrating log frameworks with `log`
 
-What exactly are the key-value pairs on a record? The previous examples used a `key_values()` method on `Record` to get _something_ that could be visited or serialized using a `Visitor`. That something is an implementation of a trait, `KeyValueSource`, which holds the actual `Key` and `Value` pairs:
+The `Source` trait describes some container for structured key-value pairs. Other log frameworks that want to integrate with `log::Log` should build `Record`s that contain some implementation of `Source`.
 
-```
-fn write_pretty(w: impl Write, r: &Record) -> io::Result<()> {
-    ...
+```rust
+use log::kv::source::{self, Source};
 
-    record
-        .key_values()
-        ^^^^^^^^^^^^^
-        `Record::key_values` returns `impl KeyValueSource`
+struct MySource {
+    data: BTreeMap<String, serde_json::Value>,
+}
 
-        .visit(&mut WriteKeyValues(w))
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        `KeyValueSource::visit` takes `&mut Visitor` 
+impl Source for MySource {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+        self.data.visit(visitor)
+    }
 }
 ```
 
-As an example of a `KeyValueSource`, the `log!` macros can capture key-value pairs into an array of `(&str, &dyn ToValue)` tuples that can be visited in sequence:
+`BTreeMap<String, serde_json::Value>` happens to already implement the `Source` trait. Let's assume `BTreeMap<String, serde_json::Value>` didn't implement `Source`. A manual implementation converting the `(String, serde_json::Value)` pairs into types that can be visited could look like this:
 
 ```rust
-impl<'a> KeyValueSource for [(&'a str, &'a dyn ToValue)] {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) {
-        for &(k, v) in self {
-            visitor.visit_pair(k.to_key(), v.to_value())?;
+use log::kv::{
+    source::{self, Source},
+    value,
+};
+
+struct MySource {
+    data: BTreeMap<String, serde_json::Value>,
+}
+
+impl Source for MySource {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+        for (k, v) in self.data {
+            visitor.visit_pair(source::Key::new(k), source::Value::new(v))
+        }
+    }
+}
+```
+
+The `Key::new` method accepts any `T: Borrow<str>`. The `Value::new` accepts any `T: std::fmt::Debug + serde::Serialize`. Values that can't implement `Debug + Serialize` can still be visited using the `source::Value::any` method. This method lets us provide an inline function that will visit the value:
+
+```rust
+use log::kv::{
+    source::{self, Source},
+    value,
+};
+
+struct MySource {
+    data: BTreeMap<String, MyValue>,
+}
+
+impl Source for MySource {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+        for (k, v) in self.data {
+            let key = source::Key::new(k);
+
+            // Let's assume `MyValue` doesn't implement `Serialize`
+            // Instead it implements `Display`.
+            let value = source::Value::any(v, |v, visitor| {
+                // Let's assume `MyValue` implements `Display`
+                visitor.visit_fmt(format_args!("{}", v))
+            });
+
+            visitor.visit_pair(key, value)
+    }
+}
+```
+
+A `Source` doesn't have to just contain key-value pairs directly like `BTreeMap<String, Value>` though. It could also act like an adapter, like we have for iterators in the standard library. As another example, the following `Source` doesn't store any key-value pairs of its own, it will sort and de-duplicate pairs read from another source by first reading them into a map before forwarding them on:
+
+```rust
+use log::kv::source::{self, Source, Visitor};
+
+pub struct SortRetainLast<KVS>(KVS);
+
+impl<KVS> Source for SortRetainLast<KVS>
+where
+    KVS: Source,
+{
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+        // `Seen` is a visitor that will capture key-value pairs
+        // in a `BTreeMap`. We use it internally to sort and de-duplicate
+        // the key-value pairs that `SortRetainLast` is wrapping.
+        struct Seen<'kvs>(BTreeMap<source::Key<'kvs>, source::Value<'kvs>>);
+
+        impl<'kvs> Visitor<'kvs> for Seen<'kvs> {
+            fn visit_pair<'vis>(&'vis mut self, k: source::Key<'kvs>, v: source::Value<'kvs>) -> Result<(), source::Error> {
+                self.0.insert(k, v);
+
+                Ok(())
+            }
+        }
+
+        // Visit the inner source and collect its key-value pairs into `seen`
+        let mut seen = Seen(BTreeMap::new());
+        self.0.visit(&mut seen)?;
+
+        // Iterate through the seen key-value pairs in order
+        // and pass them to the `visitor`.
+        for (k, v) in seen.0 {
+            visitor.visit_pair(k, v)?;
         }
 
         Ok(())
@@ -340,41 +392,30 @@ impl<'a> KeyValueSource for [(&'a str, &'a dyn ToValue)] {
 }
 ```
 
-A `KeyValueSource` doesn't have to just contain key-value pairs directly like this though. It could also act like an adapter, like we have for iterators in the standard library. As another example, the following `KeyValueSource` doesn't store any key-value pairs of its own, it will sort and de-duplicate pairs read from another source by first reading them into a map before forwarding them on:
+This API is similar to `serde` and `slog`, and is very flexible. Other structured logging concepts like contextual logging, where a record is enriched with information from its envirnment, can be built on top of `Source` and `Visitor`.
+
+## Writing your own `value::Visitor`
+
+Consumers of key-value pairs can visit structured values without needing a `serde::Serializer`. Instead they can implement a `value::Visitor`. A `Visitor` can always visit any structured value by formatting it using its `Debug` implementation:
 
 ```rust
-pub struct SortRetainLast<KVS>(KVS);
+use log::kv::value::{self, Value};
 
-impl<KVS> KeyValueSource for SortRetainLast<KVS>
+struct WriteVisitor<W>(W);
+
+impl<W> value::Visitor for WriteVisitor<W>
 where
-    KVS: KeyValueSource,
+    W: Write,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) {
-        // `Seen` is a visitor that will capture key-value pairs
-        // in a `BTreeMap`. We use it internally to sort and de-duplicate
-        // the key-value pairs that `SortRetainLast` is wrapping.
-        struct Seen<'kvs>(BTreeMap<Key<'kvs>, Value<'kvs>>);
+    fn visit_any(&mut self, v: Value) -> Result<(), value::Error> {
+        write!(&mut self.0, "{:?}", v)?;
 
-        impl<'kvs> Visitor<'kvs> for Seen<'kvs> {
-            fn visit_pair<'vis>(&'vis mut self, k: Key<'kvs>, v: Value<'kvs>) {
-                self.0.insert(k, v);
-            }
-        }
-
-        // Visit the inner source and collect its key-value pairs into `seen`
-        let mut seen = Seen(BTreeMap::new());
-        self.0.visit(&mut seen);
-
-        // Iterate through the seen key-value pairs in order
-        // and pass them to the `visitor`.
-        for (k, v) in seen.0 {
-            visitor.visit_pair(k, v);
-        }
+        Ok(())
     }
 }
 ```
 
-This API is similar to `serde` and `slog`, and is very flexible. Other structured logging concepts like contextual logging, where a record is enriched with information from its envirnment, can be built on top of `KeyValueSource` and `Visitor`.
+There are other methods besides `visit_any` that can be implemented. By default they all forward to `visit_any`.
 
 # Reference-level explanation
 [reference-level-explanation]: #reference-level-explanation
@@ -383,11 +424,11 @@ This API is similar to `serde` and `slog`, and is very flexible. Other structure
 
 ### Don't break anything
 
-Allow structured logging to be added in the current `0.4.x` series of `log`.
+Allow structured logging to be added in the current `0.4.x` series of `log`. This gives us the option of including structured logging in an `0.4.x` release, or bumping the minor crate version without introducing any actual breaking changes.
 
-### Leverage the ecosystem
+### Don't create a public dependency
 
-Rather than trying to define our own serialization trait and require libraries in the ecosystem implement it, we leverage `serde`. Any new types that emerge in the ecosystem don't have another fundamental trait they need to think about.
+Don't create a new serialization framework that causes `log` to become a public dependency of any library that wants their data types to be loggable. Logging is a truly cross-cutting concern, so if `log` was a public dependency it would probably be at least as pervasive as `serde` is now.
 
 ### Object safety
 
@@ -397,21 +438,7 @@ Rather than trying to define our own serialization trait and require libraries i
 
 `Record` borrows all data from the call-site so records need to be handled directly on-thread as they're produced. On the one hand that means that log records need to be serialized before they can be sent across threads. On the other hand it means callers don't need to make assumptions about whether records need to be owned or borrowed.
 
-## Implications for dependents
-
-Dependents of `log` will notice the following:
-
-In `no_std` environments (which is the default for `log`):
-
-- `serde` will enter the `Cargo.lock` if it wasn't there already. This will impact compile-times.
-- Artifact size of `log` will increase.
-
-In `std` environments (which is common when using `env_logger` and other crates that implement `log`):
-
-- `serde` and `erased-serde` will enter the `Cargo.lock` if it wasn't there already. This will impact compile-times.
-- Artifact size of `log` will increase.
-
-In either case, `serde` will become a public dependency of the `log` crate, so any breaking changes to `serde` will result in breaking changes to `log`.
+A scheme for more efficient conversion from borrowed to owned sources of key-value pairs can be added later.
 
 ## Cargo features
 
@@ -419,18 +446,33 @@ Structured logging will be supported in either `std` or `no_std` contexts using 
 
 ```toml
 [features]
-# support structured logging by default
-default = ["structured"]
-
-# semantic name for the structured logging feature
-structured = ["serde"]
-
-# when `std` is available, always support structured logging
-# with `erased-serde`
-std = ["structured", "erased-serde"]
+# optional serde-support requires `std`
+kv_serde = ["std", "serde", "erased-serde"]
 ```
 
-Using default features, structured logging will be supported by `log` in `no_std` environments. Structured logging will always be available when using the `std` feature (usually pulled in by libraries that implement the `Log` trait).
+Using default features, structured logging will be supported by `log` in `no_std` environments for a fixed set of types from the standard library. Using the `kv_serde` feature, any type that implements `Debug + Serialize` can be logged, and its potentially complex structure will be retained.
+
+## Implications for dependents
+
+Dependents of `log` will notice the following:
+
+### Default crate features
+
+The API that's available with default features doesn't add any extra dependencies to the `log` crate, and shouldn't impact compile times or artifact size much.
+
+### After opting in to `kv_serde`
+
+In `no_std` environments (which is the default for `log`):
+
+- `serde` will enter the `Cargo.lock` if it wasn't there already. This will impact compile-times.
+- Artifact size of `log` will increase.
+
+In `std` environments (which is common when using `env_logger` and other crates that implement `Log`):
+
+- `serde` and `erased-serde` will enter the `Cargo.lock` if it wasn't there already. This will impact compile-times.
+- Artifact size of `log` will increase.
+
+In either case, `serde` will become a public dependency of the `log` crate, so any breaking changes to `serde` will result in breaking changes to `log`.
 
 ## Public API
 
@@ -439,206 +481,295 @@ For context, ignoring the `log!` macros, this is roughly the additional public A
 ```rust
 impl<'a> RecordBuilder<'a> {
     /// Set the key-value pairs on a log record.
-    #[cfg(feature = "serde")]
-    pub fn key_values(&mut self, kvs: ErasedKeyValues<'a>) -> &mut RecordBuilder<'a>;
+    pub fn key_values(&mut self, kvs: ErasedSource<'a>) -> &mut RecordBuilder<'a>;
 }
 
 impl<'a> Record<'a> {
     /// Get the key-value pairs.
-    #[cfg(feature = "serde")]
-    pub fn key_values(&self) -> ErasedKeyValues;
+    pub fn key_values(&self) -> ErasedSource;
 
     /// Get a builder that's preconfigured from this record.
     pub fn to_builder(&self) -> RecordBuilder;
 }
 
-#[cfg(features = "serde")]
-pub mod key_values {
-    /// A visitor for a set of key-value pairs.
-    /// 
-    /// The visitor is driven by an implementation of `KeyValueSource`.
-    /// The visitor expects keys and values that satisfy a given lifetime.
-    pub trait Visitor<'kvs> {
-        /// Visit a single key-value pair.
-        fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error>;
-    }
+pub mod kv {
+    pub mod source {
+        pub use kv::Error;
 
-    /// A source for key-value pairs.
-    pub trait KeyValueSource {
-        /// Serialize the key value pairs.
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
+        /// A source for key-value pairs.
+        pub trait Source {
+            /// Serialize the key value pairs.
+            fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
 
-        /// Erase this `KeyValueSource` so it can be used without
-        /// requiring generic type parameters.
-        fn erase(&self) -> ErasedKeyValueSource
-        where
-            Self: Sized {}
+            /// Erase this `Source` so it can be used without
+            /// requiring generic type parameters.
+            fn erase(&self) -> ErasedSource
+            where
+                Self: Sized {}
 
-        /// Find the value for a given key.
+            /// Find the value for a given key.
+            /// 
+            /// If the key is present multiple times, this method will
+            /// return the *last* value for the given key.
+            fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
+            where
+                Q: Borrow<str> {}
+
+            /// An adapter to borrow self.
+            fn by_ref(&self) -> &Self {}
+
+            /// Chain two `Source`s together.
+            fn chain<KVS>(self, other: KVS) -> Chain<Self, KVS>
+            where
+                Self: Sized {}
+
+            /// Apply a function to each key-value pair.
+            fn try_for_each<F, E>(self, f: F) -> Result<(), Error>
+            where
+                Self: Sized,
+                F: FnMut(Key, Value) -> Result<(), E>,
+                E: Into<Error> {}
+
+            /// Serialize the key-value pairs as a map.
+            fn serialize_as_map(self) -> SerializeAsMap<Self>
+            where
+                Self: Sized {}
+
+            /// Serialize the key-value pairs as a sequence of tuples.
+            fn serialize_as_seq(self) -> SerializeAsSeq<Self>
+            where
+                Self: Sized {}
+        }
+
+        /// A visitor for a set of key-value pairs.
         /// 
-        /// If the key is present multiple times, this method will
-        /// return the *last* value for the given key.
-        fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
-        where
-            Q: ToKey {}
+        /// The visitor is driven by an implementation of `Source`.
+        /// The visitor expects keys and values that satisfy a given lifetime.
+        pub trait Visitor<'kvs> {
+            /// Visit a single key-value pair.
+            fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error>;
+        }
 
-        /// An adapter to borrow self.
-        fn by_ref(&self) -> &Self {}
+        /// An erased `Source`.
+        pub struct ErasedSource<'a> {}
 
-        /// Chain two `KeyValueSource`s together.
-        fn chain<KVS>(self, other: KVS) -> Chain<Self, KVS>
-        where
-            Self: Sized {}
+        impl<'a> ErasedSource<'a> {
+            /// Capture a `Source` and erase its concrete type.
+            pub fn new(kvs: &'a impl Source) -> Self {}
+        }
 
-        /// Apply a function to each key-value pair.
-        fn try_for_each<F, E>(self, f: F) -> Result<(), Error>
-        where
-            Self: Sized,
-            F: FnMut(Key, Value) -> Result<(), E>,
-            E: Into<Error> {}
+        impl<'a> Clone for ErasedSource<'a> {}
+        impl<'a> Default for ErasedSource<'a> {}
+        impl<'a> Source for ErasedSource<'a> {}
 
-        /// Serialize the key-value pairs as a map.
-        fn serialize_as_map(self) -> SerializeAsMap<Self>
-        where
-            Self: Sized {}
-    }
-
-    /// An erased `KeyValueSource`.
-    pub struct ErasedKeyValueSource<'a> {}
-
-    impl<'a> ErasedKeyValueSource<'a> {
-        /// Capture a `KeyValueSource` and erase its concrete type.
-        pub fn new(kvs: &'a impl KeyValueSource) -> Self {}
-    }
-
-    impl<'a> Clone for ErasedKeyValueSource<'a> {}
-    impl<'a> Default for ErasedKeyValueSource<'a> {}
-    impl<'a> KeyValueSource for ErasedKeyValueSource<'a> {}
-
-    /// A `KeyValueSource` adapter that visits key-value pairs
-    /// in sequence.
-    /// 
-    /// This is the result of calling `chain` on a `KeyValueSource`.
-    pub struct Chain<A, B> {}
-
-    impl<A, B> KeyValueSource for Chain<A, B>
-    where
-        A: KeyValueSource,
-        B: KeyValueSource {}
-
-    /// A `KeyValueSource` adapter that can be serialized as
-    /// a map using `serde`.
-    /// 
-    /// This is the result of calling `serialize_as_map` on
-    /// a `KeyValueSource`.
-    pub struct SerializeAsMap<KVS> {}
-
-    impl<KVS> Serialize for SerializeAsMap<KVS>
-    where
-        KVS: KeyValueSource {}
-
-    impl<K, V> KeyValueSource for (K, V)
-    where
-        K: ToKey,
-        V: ToValue {}
-
-    impl<KVS> KeyValueSource for [KVS]
-    where
-        KVS: KeyValueSource {}
-
-    #[cfg(feature = "std")]
-    impl<KVS> KeyValueSource for Vec<KVS>
-    where
-        KVS: KeyValueSource {}
-
-    #[cfg(feature = "std")]
-    impl<K, V> KeyValueSource for BTreeMap<K, V>
-    where
-        K: Borrow<str> + Ord,
-        V: ToValue {}
-
-    #[cfg(feature = "std")]
-    impl<K, V> KeyValueSource for HashMap<K, V>
-    where
-        K: Borrow<str> + Eq + Hash,
-        V: ToValue {}
-
-    /// A type that can be converted into a borrowed key.
-    pub trait ToKey {
-        /// Perform the conversion.
-        fn to_key(&self) -> Key;
-    }
-
-    impl ToKey for str {}
-
-    #[cfg(feature = "std")]
-    impl ToKey for String {}
-
-    #[cfg(feature = "std")]
-    impl<'a> ToKey for Cow<'a, str> {}
-
-    /// A key in a key-value pair.
-    /// 
-    /// The key can be treated like `&str`.
-    pub struct Key<'kvs> {}
-
-    impl<'kvs> Key<'kvs> {
-        /// Get a key from a borrowed string.
-        pub fn from_str(key: &'a (impl AsRef<str> + ?Sized)) -> Self;
-
-        /// Get a reference to the key as a string.
-        pub fn as_str(&self) -> &str;
-    }
-
-    impl<'kvs> Serialize for Key<'kvs> {}
-    impl<'kvs> PartialEq for Key<'kvs> {}
-    impl<'kvs> Eq for Key<'kvs> {}
-    impl<'kvs> PartialOrd for Key<'kvs> {}
-    impl<'kvs> Ord for Key<'kvs> {}
-    impl<'kvs> Hash for Key<'kvs> {}
-    impl<'kvs> AsRef<str> for Key<'kvs> {}
-
-    #[cfg(feature = "std")]
-    impl<'kvs> Borrow<str> for Key<'kvs> {}
-
-    /// A type that can be converted into a borrowed value.
-    pub trait ToValue {
-        /// Perform the conversion.
-        fn to_value(&self) -> Value;
-    }
-
-    impl<T> ToValue for T
-    where
-        T: Display + Serialize {}
-
-    /// A value in a key-value pair.
-    /// 
-    /// The value can be treated like `serde::Serialize`.
-    pub struct Value<'kvs> {}
-
-    impl<'kvs> Value<'kvs> {
-        /// Get a value that will choose either the `Display`
-        /// or `Serialize` implementation based on the platform.
+        /// A `Source` adapter that visits key-value pairs
+        /// in sequence.
         /// 
-        /// If the standard library is available, the `Serialize`
-        /// implementation will be used. If the standard library
-        /// is not available, the `Display` implementation will
-        /// probably be used.
-        pub fn new(v: &'kvs (impl Display + Serialize)) -> Self;
+        /// This is the result of calling `chain` on a `Source`.
+        pub struct Chain<A, B> {}
 
-        /// Get a value that can be serialized as a string using
-        /// its `Display` implementation.
-        pub fn from_display(v: &'kvs impl Display) -> Self;
+        impl<A, B> Source for Chain<A, B>
+        where
+            A: Source,
+            B: Source {}
 
-        /// Get a value that can be serialized as structured
-        /// data using its `Serialize` implementation.
+        /// A `Source` adapter that can be serialized as
+        /// a map using `serde`.
+        /// 
+        /// This is the result of calling `serialize_as_map` on
+        /// a `Source`.
+        pub struct SerializeAsMap<KVS> {}
+
+        impl<KVS> Serialize for SerializeAsMap<KVS>
+        where
+            KVS: Source {}
+
+        /// A `Source` adapter that can be serialized as
+        /// a sequence of tuples using `serde`.
+        /// 
+        /// This is the result of calling `serialize_as_seq` on
+        /// a `Source`.
+        pub struct SerializeAsSeq<KVS> {}
+
+        impl<KVS> Serialize for SerializeAsSeq<KVS>
+        where
+            KVS: Source {}
+
+        impl<K, V> Source for (K, V)
+        where
+            K: Borrow<str>,
+            V: kv::value::Visit {}
+
+        impl<KVS> Source for [KVS]
+        where
+            KVS: Source {}
+
         #[cfg(feature = "std")]
-        pub fn from_serde(v: &'kvs impl Serialize) -> Self;
+        impl<KVS: ?Sized> Source for Box<KVS> where KVS: Source {}
+        #[cfg(feature = "std")]
+        impl<KVS: ?Sized> Source for Arc<KVS> where KVS: Source {}
+        #[cfg(feature = "std")]
+        impl<KVS: ?Sized> Source for Rc<KVS> where KVS: Source {}
+
+        #[cfg(feature = "std")]
+        impl<KVS> Source for Vec<KVS>
+        where
+            KVS: Source {}
+
+        #[cfg(feature = "std")]
+        impl<K, V> Source for BTreeMap<K, V>
+        where
+            K: Borrow<str> + Ord,
+            V: kv::value::Visit {}
+
+        #[cfg(feature = "std")]
+        impl<K, V> Source for HashMap<K, V>
+        where
+            K: Borrow<str> + Eq + Hash,
+            V: kv::value::Visit {}
+
+        /// The key in a key-value pair.
+        pub struct Key<'kvs> {}
+
+        /// The value in a key-value pair.
+        pub use kv::value::Value;
     }
 
-    impl<'kvs> Serialize for Value<'kvs> {}
-    impl<'kvs> ToValue for Value<'kvs> {}
-    impl<'a, 'kvs> ToValue for &'a Value<'kvs> {}
+    pub mod value {
+        pub use kv::Error;
+
+        /// An arbitrary structured value.
+        pub struct Value<'v> {
+            /// Create a new borrowed value.
+            pub fn new(v: &'v impl Visit) -> Self {}
+
+            /// Create a new borrowed value from an arbitrary type.
+            pub fn any<T>(&'v T, fn(&T, &mut dyn Visitor) -> Result<(), Error>) -> Self {}
+
+            /// Visit the value with the given serializer.
+            pub fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {}
+        }
+
+        impl<'v> Debug for Value<'v> {}
+        impl<'v> Display for Value<'v> {}
+
+        /// A serializer for primitive values.
+        pub trait Visitor {
+            /// Visit an arbitrary value.
+            fn visit_any(&mut self, v: Value) -> Result<(), Error>;
+
+            /// Visit a signed integer.
+            fn visit_i64(&mut self, v: i64) -> Result<(), Error> {}
+
+            /// Visit an unsigned integer.
+            fn visit_u64(&mut self, v: u64) -> Result<(), Error> {}
+
+            /// Visit a floating point number.
+            fn visit_f64(&mut self, v: f64) -> Result<(), Error> {}
+
+            /// Visit a boolean.
+            fn visit_bool(&mut self, v: bool) -> Result<(), Error> {}
+
+            /// Visit a single character.
+            fn visit_char(&mut self, v: char) -> Result<(), Error> {}
+
+            /// Visit a UTF8 string.
+            fn visit_str(&mut self, v: &str) -> Result<(), Error> {}
+
+            /// Visit a raw byte buffer.
+            fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {}
+
+            /// Visit an empty value.
+            fn visit_none(&mut self) -> Result<(), Error> {}
+
+            /// Visit standard arguments.
+            fn visit_fmt(&mut self, v: &fmt::Arguments) -> Result<(), Error> {}
+        }
+
+        impl<'a, T: ?Sized> Visitor for &'a mut T
+        where
+            T: Visitor {}
+
+        /// Covnert a type into a value.
+        /// 
+        /// ** This trait can't be implemented manually **
+        pub trait Visit: private::Sealed {
+            /// Visit this value.
+            fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error>;
+
+            /// Convert a reference to this value into an erased `Value`.
+            fn to_value(&self) -> Value
+            where
+                Self: Sized,
+            {
+                Value::new(self)
+            }
+        }
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for u8 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for u16 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for u32 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for u64 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for u128 {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for i8 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for i16 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for i32 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for i64 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for i128 {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for f32 {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for f64 {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for char {}
+        #[cfg(not(feature = "kv_serde"))]
+        impl Visit for bool {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl<T> Visit for Option<T>
+        where
+            T: Visit {}
+
+        #[cfg(all(not(feature = "kv_serde"), feature = "std"))]
+        impl<T: ?Sized> Visit for Box<T>
+        where
+            T: Visit {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl<'a> Visit for &'a str {}
+        #[cfg(all(not(feature = "kv_serde"), feature = "std"))]
+        impl Visit for String {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl<'a> Visit for &'a [u8] {}
+        #[cfg(all(not(feature = "kv_serde"), feature = "std"))]
+        impl Visit for Vec<u8> {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl<'a, T> Visit for &'a T
+        where
+            T: Visit {}
+
+        #[cfg(feature = "kv_serde")]
+        impl<T> Visit for T
+        where
+            T: Debug + Serialize {}
+    }
+
+    pub use source::Source;
 
     /// An error encountered while visiting key-value pairs.
     pub struct Error {}
@@ -656,16 +787,24 @@ pub mod key_values {
         pub fn into_error(self) -> Box<dyn std::error::Error + Send + Sync> {}
 
         /// Convert into a `serde` error.
+        #[cfg(feature = "kv_serde")]
         pub fn into_serde<E>(self) -> E
         where
             E: serde::ser::Error {}
     }
 
+    #[cfg(not(feature = "std"))]
+    impl From<std::fmt::Error> for Error {}
+
+    #[cfg(feature = "std")]
     impl<E> From<E> for Error
     where
         E: std::error::Error {}
 
+    #[cfg(feature = "std")]
     impl From<Error> for Box<dyn std::error::Error + Send + Sync> {}
+
+    #[cfg(feature = "std")]
     impl AsRef<dyn std::error::Error + Send + Sync + 'static> for Error {}
 }
 ```
@@ -677,8 +816,7 @@ Structured key-value pairs can be set on a `RecordBuilder`:
 ```rust
 impl<'a> RecordBuilder<'a> {
     /// Set key values
-    #[cfg(feature = "serde")]
-    pub fn key_values(&mut self, kvs: ErasedKeyValueSource<'a>) -> &mut RecordBuilder<'a> {
+    pub fn key_values(&mut self, kvs: ErasedSource<'a>) -> &mut RecordBuilder<'a> {
         self.record.kvs = kvs;
         self
     }
@@ -692,229 +830,638 @@ These key-value pairs can then be accessed on the built `Record`:
 pub struct Record<'a> {
     ...
 
-    #[cfg(feature = "serde")]
-    kvs: ErasedKeyValueSource<'a>,
+    kvs: ErasedSource<'a>,
 }
 
 impl<'a> Record<'a> {
     /// The key value pairs attached to this record.
     /// 
     /// Pairs aren't guaranteed to be unique (the same key may be repeated with different values).
-    #[cfg(feature = "serde")]
-    pub fn key_values(&self) -> ErasedKeyValueSource {
+    pub fn key_values(&self) -> ErasedSource {
         self.kvs.clone()
     }
 }
 ```
 
-### `ToValue`
+### `Error`
 
-A `ToValue` is a potentially long-lived structure that can be converted into a `Value`:
+Just about the only things you can do with a structured value are format it or serialize it. Serialization and writing might fail, so to allow errors to get carried back to callers there needs to be a general error type that they can early return with:
+
+```rust
+pub struct Error(Inner);
+
+enum Inner {
+    Static(&'static str),
+    #[cfg(feature = "std")]
+    Owned(String),
+}
+
+impl Error {
+    pub fn msg(msg: &'static str) -> Self {
+        Error(Inner::Static(msg))
+    }
+
+    #[cfg(feature = "std")]
+    pub fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
+        &self.0
+    }
+
+    #[cfg(feature = "std")]
+    pub fn into_error(self) -> Box<dyn std::error::Error + Send + Sync> {
+        Box::new(self.0)
+    }
+
+    #[cfg(feature = "kv_serde")]
+    pub fn into_serde<E>(self) -> E
+    where
+        E: serde::ser::Error,
+    {
+        E::custom(self)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E> From<E> for Error
+where
+    E: std::error::Error,
+{
+    fn from(err: E) -> Self {
+        Error(Inner::Owned(err.to_string()))
+    }
+}
+
+#[cfg(feature = "std")]
+impl From<Error> for Box<dyn std::error::Error + Send + Sync> {
+    fn from(err: Error) -> Self {
+        err.into_error()
+    }
+}
+
+impl AsRef<dyn std::error::Error + Send + Sync + 'static> for Error {
+    fn as_ref(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
+        self.as_error()
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Inner {
+    fn description(&self) -> &str {
+        match self {
+            Inner::Static(msg) => msg,
+            Inner::Owned(msg) => msg,
+        }
+    }
+}
+```
+
+There's no really universal way to handle errors in a logging pipeline. Knowing that some error occurred, and knowing where, should be enough for implementations of `Log` to decide how to handle it. The `Error` type doesn't try to be a general-purpose error management tool, it tries to make it easy to early-return with other errors.
+
+To make it possible to carry any arbitrary `S::Error` type, where we don't know how long the value can live for and whether it's `Send` or `Sync`, without extra work, the `Error` type does not attempt to store the error value itself. It just converts it into a `String`.
+
+### `value::Visit`
+
+The `Visit` trait can be treated like a lightweight subset of `serde::Serialize` that can interoperate with `serde` without necessarily depending on it:
 
 ```rust
 /// A type that can be converted into a borrowed value.
-pub trait ToValue {
-    /// Perform the conversion.
-    fn to_value(&self) -> Value;
-}
+pub trait Visit: private::Sealed {
+    /// Visit this value.
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error>;
 
-impl<'a> ToValue for &'a dyn ToValue {
-    fn to_value(&self) -> Value {
-        (*self).to_value()
-    }
-}
-```
-
-#### Implementors
-
-`ToValue` requires a blanket implementation to be most useful. This covers any `V: Display + Serialize`:
-
-```rust
-impl<T: serde::Serialize + fmt::Display> ToValue for T {
-    fn to_value(&self) -> Value {
+    /// Convert a reference to this value into an erased `Value`.
+    fn to_value(&self) -> Value
+    where
+        Self: Sized,
+    {
         Value::new(self)
     }
 }
+
+mod private {
+    #[cfg(not(feature = "kv_serde"))]
+    pub trait Sealed: Debug {}
+
+    #[cfg(feature = "kv_serde")]
+    pub trait Sealed: Debug + Serialize {}
+}
 ```
 
-### `Value`
+We'll look at the `Visitor` trait shortly. It's like `serde::Serializer`.
 
-A `Value` is a short-lived structure that can be serialized using `serde`. This might require losing some type information about the underlying value and serializing it as a string:
+`Visit` is the trait bound that structured values need to satisfy before they can be logged. The trait can't be implemented outside of the `log` crate, because it uses blanket implementations depending on Cargo features. If a crate defines a datastructure that users might want to log, instead of trying to implement `Visit`, it should implement the `serde::Serialize` and `std::fmt::Debug` traits. This means that `Visit` can piggyback off `serde::Serialize` as the pervasive public dependency, so that `Visit` itself doesn't need to be one.
+
+The trait bounds on `private::Sealed` ensure that any generic `T: Visit` carries some additional traits that are needed for the blanket implementation of `Serialize`. As an example, any `Option<T: Visit>` can also be treated as `Option<T: Serialize>` and therefore implement `Serialize` itself. The `Visit` trait is responsible for a lot of type system mischief.
+
+With default features, the types that implement `Visit` are a subset of `T: Debug + Serialize`:
+
+```
+-------- feature = "kv_serde" --------
+|                                    |
+|        T: Debug + Serialize        |
+|                                    |
+|                                    |
+|   - not(feature = "kv_serde") -    |
+|   |                           |    |
+|   | u8, i8, &str, &[u8], bool |    |
+|   | etc...                    |    |
+|   |                           |    |
+|   -----------------------------    |
+|                                    |
+|                                    |
+--------------------------------------
+```
+
+Enabling the `kv_serde` feature expands the set of types that implement `Visit` from this subset to all `T: Debug + Serialize`.
+
+#### Object safety
+
+The `Visit` trait is not object-safe, but has a simple object-safe wrapper used by `Value`.
+
+#### Without `serde`
+
+Without the `kv_serde` feature, the `Visit` trait is implemented for a fixed set of fundamental types from the standard library:
 
 ```rust
-/// A value in a key-value pair.
-/// 
-/// The value can be treated like `serde::Serialize`.
-pub struct Value<'kvs> {
-    inner: ValueInner<'kvs>,
-}
-
-#[derive(Clone, Copy)]
-enum ValueInner<'kvs> {
-    /// The value will be serialized as a string
-    /// using its `Display` implementation.
-    Display(&'kvs dyn fmt::Display),
-    /// The value will be serialized as a structured
-    /// type using its `Serialize` implementation.
-    #[cfg(feature = "erased-serde")]
-    Serde(&'kvs dyn erased_serde::Serialize),
-    /// The value will be serialized as a structured
-    /// type using its primitive `Serialize` implementation.
-    #[cfg(not(feature = "erased-serde"))]
-    Primitive(&'kvs dyn ToPrimitive),
-}
-
-impl<'kvs> ToValue for Value<'kvs> {
-    fn to_value(&self) -> Value {
-        Value { inner: self.inner }
+impl Visit for u8 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_u64(*self as u64)
     }
 }
 
-impl<'a, 'kvs> ToValue for &'a Value<'kvs> {
-    fn to_value(&self) -> Value {
-        Value { inner: self.inner }
+impl Visit for u16 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_u64(*self as u64)
     }
 }
 
-impl<'kvs> Serialize for Value<'kvs> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self.inner {
-            ValueInner::Display(v) => serializer.collect_str(&v),
+impl Visit for u32 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_u64(*self as u64)
+    }
+}
 
-            #[cfg(feature = "erased-serde")]
-            ValueInner::Serde(v) => v.serialize(serializer),
+impl Visit for u64 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_u64(*self)
+    }
+}
 
-            #[cfg(not(feature = "erased-serde"))]
-            ValueInner::Primitive(v) => {
-                // We expect `Value::new` to correctly determine
-                // whether or not a value is a simple primitive
-                let v = v
-                    .to_primitive()
-                    .ok_or_else(|| S::Error::custom("captured value is not primitive"))?;
+impl Visit for i8 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_i64(*self as i64)
+    }
+}
 
-                v.serialize(serializer)
-            },
+impl Visit for i16 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_i64(*self as i64)
+    }
+}
+
+impl Visit for i32 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_i64(*self as i64)
+    }
+}
+
+impl Visit for i64 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_i64(*self)
+    }
+}
+
+impl Visit for f32 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_f64(*self as f64)
+    }
+}
+
+impl Visit for f64 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_f64(*self)
+    }
+}
+
+impl Visit for char {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_char(*self)
+    }
+}
+
+impl Visit for bool {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_bool(*self)
+    }
+}
+
+impl Visit for () {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_none()
+    }
+}
+
+#[cfg(feature = "i128")]
+impl Visit for u128 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_u128(*self)
+    }
+}
+
+#[cfg(feature = "i128")]
+impl Visit for i128 {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_i128(*self)
+    }
+}
+
+impl<T> Visit for Option<T>
+where
+    T: Visit,
+{
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        match self {
+            Some(v) => v.visit(visitor),
+            None => visitor.visit_none(),
         }
     }
 }
+
+impl<'a> Visit for fmt::Arguments<'a> {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_fmt(self)
+    }
+}
+
+impl<'a> Visit for &'a str {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_str(self)
+    }
+}
+
+impl<'a> Visit for &'a [u8] {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_bytes(self)
+    }
+}
+
+impl<'v> Visit for Value<'v> {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        self.visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: ?Sized> Visit for Box<T>
+where
+    T: Visit
+{
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        (**self).visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'a> Visit for &'a Path {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        match self.to_str() {
+            Some(s) => visitor.visit_str(s),
+            None => visitor.visit_fmt(&format_args!("{:?}", self)),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl Visit for String {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_str(&*self)
+    }
+}
+
+#[cfg(feature = "std")]
+impl Visit for Vec<u8> {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        visitor.visit_bytes(&*self)
+    }
+}
+
+#[cfg(feature = "std")]
+impl Visit for PathBuf {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        self.as_path().visit(visitor)
+    }
+}
 ```
 
-#### Capturing values
+#### With `serde`
 
-Methods on `Value` allow it to capture and erase types that implement combinations of `Serialize` and `Display`:
+With the `kv_serde` feature, the `Visit` trait is implemented for any type that is `Debug + Serialize`:
 
 ```rust
-impl<'kvs> Value<'kvs> {
-    /// Create a new value.
-    /// 
-    /// The value must implement both `serde::Serialize` and `fmt::Display`.
-    /// Either implementation will be used depending on whether the standard
-    /// library is available, but is exposed through the same API.
-    /// 
-    /// In environments where the standard library is available, the `Serialize`
-    /// implementation will be used.
-    /// 
-    /// In environments where the standard library is not available, some
-    /// primitive stack-based values can retain their structure instead of falling
-    /// back to `Display`.
-    pub fn new(v: &'kvs (impl Serialize + Display)) -> Self {
-        Value {
-            inner: {
-                #[cfg(feature = "erased-serde")]
-                {
-                    ValueInner::Serde(v)
-                }
+#[cfg(feature = "kv_serde")]
+impl<T: ?Sized> Visit for T
+where
+    T: Debug + Serialize {}
+```
 
-                #[cfg(not(feature = "erased-serde"))]
-                {
-                    // Try capture a primitive value
-                    if v.to_primitive().is_some() {
-                        ValueInner::Primitive(v)
-                    } else {
-                        ValueInner::Display(v)
-                    }
-                }
+#### Ensuring the fixed set is a subset of the blanket implementation
+
+Changing trait implementations based on Cargo features is a dangerous game. Cargo features are additive, so any observable changes to trait implementations must also be purely additive, otherwise you can end up with libraries that can't compile if a feature is active. This can be very subtle when references and generics are involved.
+
+When the `kv_serde` feature is active, the implementaiton of `Visit` changes from a fixed set to an open one. We have to guarantee that the open set is a superset of the fixed one. That means any valid `T: Visit` without the `kv_serde` feature remains a valid `T: Visit` with the `kv_serde` feature.
+
+There are a few ways we could achieve this, depending on the quality of the docs we want to produce.
+
+For more readable documentation at the risk of incorrectly implementing `Visit`, we can use a private trait like `EnsureVisit: Visit` that is implemented alongside the concrete `Visit` trait regardless of any blanket implementations of `Visit`:
+
+```rust
+// The blanket implemention of `Visit` when `kv_serde` is enabled
+#[cfg(feature = "kv_serde")]
+impl<T: ?Sized> Visit for T where T: Debug + Serialize {}
+
+/// This trait is a private implementation detail for testing.
+/// 
+/// All it does is make sure that our set of concrete types
+/// that implement `Visit` always implement the `Visit` trait,
+/// regardless of crate features and blanket implementations.
+trait EnsureVisit: Visit {}
+
+// Ensure any reference to a `Visit` implements `Visit`
+impl<'a, T> EnsureVisit for &'a T where T: Visit {}
+
+// These impl blocks always exists
+impl<T> EnsureVisit for Option<T> where T: Visit {}
+// This impl block only exists if the `kv_serde` isn't active
+#[cfg(not(feature = "kv_serde"))]
+impl<T> private::Sealed for Option<T> where T: Visit {}
+#[cfg(not(feature = "kv_serde"))]
+impl<T> Visit for Option<T> where T: Visit {
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+
+    }
+}
+```
+
+In the above example, we can ensure that `Option<T: Visit>` always implements the `Visit` trait, whether it's done manually or as part of a blanket implementation. All types that implement `Visit` manually with any `#[cfg]` _must_ also always implement `EnsureVisit` manually (with no `#[cfg]`) with the exact same type bounds. It's pretty subtle, but the subtlety can be localized to a single module within the `log` crate so it can be managed.
+
+Using a trait for this type checking means the `impl Visit for Option<T>` and `impl EnsureVisit for Option<T>` can be wrapped up in a macro so that we never miss adding them. The below macro is an example of a (not very pretty) one that can add the needed implementations of `EnsureVisit` along with the regular `Visit`:
+
+```rust
+macro_rules! impl_to_value {
+    () => {};
+    (
+        impl: { $($params:tt)* }
+        where: { $($where:tt)* }
+        $ty:ty: { $($serialize:tt)* }
+        $($rest:tt)*
+    ) => {
+        impl<$($params)*> EnsureVisit for $ty
+        where
+            $($where)* {}
+        
+        #[cfg(not(feature = "kv_serde"))]
+        impl<$($params)*> private::Sealed for $ty
+        where
+            $($where)* {}
+
+        #[cfg(not(feature = "kv_serde"))]
+        impl<$($params)*> Visit for $ty
+        where
+            $($where)*
+        {
+            $($serialize)*
+        }
+
+        impl_to_value!($($rest)*);
+    };
+    (
+        impl: { $($params:tt)* }
+        $ty:ty: { $($serialize:tt)* } 
+        $($rest:tt)*
+    ) => {
+        impl_to_value! {
+            impl: {$($params)*} where: {} $ty: { $($serialize)* } $($rest)*
+        }
+    };
+    (
+        $ty:ty: { $($serialize:tt)* } 
+        $($rest:tt)*
+    ) => {
+        impl_to_value! {
+            impl: {} where: {} $ty: { $($serialize)* } $($rest)*
+        }
+    }
+}
+
+// Ensure any reference to a `Visit` is also `Visit`
+impl<'a, T> EnsureVisit for &'a T where T: Visit {}
+
+impl_to_value! {
+    u8: {
+        fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+            visitor.visit_u64(*self as u64)
+        }
+    }
+
+    impl: { T: Visit } Option<T>: {
+        fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+            match self {
+                Some(v) => v.to_value().visit(visitor),
+                None => visitor.visit_none(),
             }
         }
     }
-
-    /// Get a `Value` from a displayable reference.
-    pub fn from_display(v: &'kvs impl Display) -> Self {
-        Value {
-            inner: ValueInner::Display(v),
-        }
-    }
-
-    /// Get a `Value` from a serializable reference.
-    #[cfg(feature = "erased-serde")]
-    pub fn from_serde(v: &'kvs impl Serialize) -> Self {
-        Value {
-            inner: ValueInner::Serde(v),
-        }
-    }
-}
-```
-
-`Value::new` will choose either the `Serialize` or `Display` implementation, depending on whether `std` is available. If it is, `Value::new` will use `Serialize` and is equivalent to `Value::from_serde`, if it's not `Value::new` will use `Display` and is equivalent to `Value::from_display`.
-
-`Value::new` can use the `Serialize` implementation for some fixed set of primitives, like `i32` and `bool` even if `std` is not available though. This can be done by capturing those values at the point that the serializer is known into a `Primitive` wrapper:
-
-```rust
-/// Convert a value into a primitive with a known type.
-/// 
-/// The `ToPrimitive` trait lets us pass trait objects around
-/// that are always the same size, rather than bloating values
-/// to the size of the largest primitive.
-pub trait ToPrimitive {
-    /// Perform the conversion.
-    fn to_primitive(&self) -> Option<Primitive>;
-}
-
-impl<T> ToPrimitive for T
-where
-    T: Serialize,
-{
-    fn to_primitive(&self) -> Option<Primitive> {
-       self.serialize(PrimitiveSerializer).ok()
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Primitive(PrimitiveInner);
-
-#[derive(Clone, Copy)]
-enum PrimitiveInner {
-    Unsigned(u64),
-    Signed(i64),
-    Float(f64),
-    Bool(bool),
-    Char(char),
-
-    #[cfg(feature = "i128")]
-    BigUnsigned(u128),
-    
-    #[cfg(feature = "i128")]
-    BigSigned(i128),
-}
-
-impl Serialize for Primitive {}
-
-struct PrimitiveSerializer;
-
-impl Serializer for PrimitiveSerializer {
-    type Ok = Primitive;
-    type Error = Invalid;
 
     ...
 }
 ```
 
-The `Primitive` type stored in a `Value` is another trait object. This is just to ensure the size of `Value` doesn't grow to the size of `Primitive`'s largest variant, which is a 128bit number.
+We don't necessarily need a macro to make new implementations accessible for new contributors safely though.
 
-The `Value::from_serde` method requires `std` because it uses `erased_serde` as an object-safe wrapper around `serde`, which itself requires `std`.
+##### What about specialization?
+
+In a future Rust with specialization we might be able to avoid all the machinery needed to keep the manual impls consistent with the blanket one, and allow consumers to implement `Visit` without needing `serde`. The specifics of specialization are still up in the air though. Under the proposed _always applicable_ rule, manual implementations like `impl<T> Visit for Option<T> where T: Visit` wouldn't be allowed. The ` where specialize(T: Visit)` scheme might make it possible though, although this would probably be a breaking change in any case.
+
+### `Value`
+
+A `Value` is an erased container for a `Visit`, with a potentially short-lived lifetime:
+
+```rust
+/// The value in a key-value pair.
+pub struct Value<'v>(ValueInner<'v>);
+
+enum ValueInner<'v> {
+    Erased(&'v dyn ErasedVisit),
+    Any(Any<'v>),
+}
+
+impl<'v> Value<'v> {
+    /// Create a value.
+    pub fn new(v: &'v impl Visit) -> Self {
+        Value(ValueInner::Erased(v))
+    }
+
+    /// Create a value from an anonymous type.
+    /// 
+    /// The value must be provided with a compatible visit method.
+    pub fn any<T>(v: &'v T, visit: fn(&T, &mut dyn Visitor) -> Result<(), Error>) -> Self
+    where
+        T: 'static,
+    {
+        Value(ValueInner::Any(Any::new(v, visit)))
+    }
+
+    /// Visit the contents of this value with a visitor.
+    pub fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        match self.0 {
+            ValueInner::Erased(v) => v.erased_visit(visitor),
+            ValueInner::Any(ref v) => v.visit(visitor),
+        }
+    }
+}
+```
+
+#### `ErasedVisit`
+
+The `ErasedVisit` trait is an object-safe wrapper for the `Visit` trait. `Visit` itself isn't technically object-safe because it needs the non-object-safe `serde::Serialize` as a supertrait to carry in generic contexts:
+
+```rust
+#[cfg(not(feature = "kv_serde"))]
+trait ErasedVisit: fmt::Debug {
+    fn erased_visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error>;
+}
+
+#[cfg(feature = "kv_serde")]
+trait ErasedVisit: fmt::Debug + erased_serde::Serialize {
+    fn erased_visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error>;
+}
+
+impl<T: ?Sized> ErasedVisit for T
+where
+    T: Visit,
+{
+    fn erased_visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        self.visit(visitor)
+    }
+}
+```
+
+#### `Any`
+
+Other logging frameworks that want to integrate with `log` might not want to pull in a `serde` dependency, and so they couldn't implement the `Visit` trait. The `Any` type uses some `std::fmt` inspired black-magic to allow values that don't implement the `Visit` trait to be erased in a `Value`. It does this by taking a borrowed value along with a function pointer that looks like `Visit::visit`:
+
+```rust
+struct Void {
+    _priv: (),
+    _oibit_remover: PhantomData<*mut dyn Fn()>,
+}
+
+struct Any<'a> {
+    data: &'a Void,
+    visit: fn(&Void, &mut dyn Visitor) -> Result<(), Error>,
+}
+
+impl<'a> Any<'a> {
+    fn new<T>(data: &'a T, visit: fn(&T, &mut dyn Visitor) -> Result<(), Error>) -> Self
+    where
+        T: 'static,
+    {
+        unsafe {
+            Any {
+                data: mem::transmute::<&'a T, &'a Void>(data),
+                visit: mem::transmute::<
+                    fn(&T, &mut dyn Visitor) -> Result<(), Error>,
+                    fn(&Void, &mut dyn Visitor) -> Result<(), Error>>
+                    (visit),
+            }
+        }
+    }
+
+    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+        (self.visit)(self.data, visitor)
+    }
+}
+```
+
+There's some scary code in `Any`, which is really just something like an ad-hoc trait object.
+
+#### Formatting
+
+`Value` always implements `Debug` and `Display` by forwarding to its inner value:
+
+```rust
+impl<'v> fmt::Debug for Value<'v> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            ValueInner::Erased(v) => v.fmt(f),
+            ValueInner::Any(ref v) => {
+                struct ValueFmt<'a, 'b>(&'a mut fmt::Formatter<'b>);
+
+                impl<'a, 'b> Visitor for ValueFmt<'a, 'b> {
+                    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
+                        write!(self.0, "{:?}", v)?;
+
+                        Ok(())
+                    }
+                }
+
+                let mut visitor = ValueFmt(f);
+                v.visit(&mut visitor).map_err(|_| fmt::Error)
+            }
+        }
+    }
+}
+
+impl<'v> fmt::Display for Value<'v> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+```
+
+#### Serialization
+
+When the `kv_serde` feature is enabled, `Value` implements the `Serialize` trait by forwarding to its inner value:
+
+```rust
+impl<'v> Serialize for Value<'v> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self.0 {
+            ValueInner::Erased(v) => {
+                erased_serde::serialize(v, serializer)
+            },
+            ValueInner::Any(ref v) => {
+                struct ErasedVisitSerde<S: Serializer> {
+                    serializer: Option<S>,
+                    ok: Option<S::Ok>,
+                }
+
+                impl<S> Visitor for ErasedVisitSerde<S>
+                where
+                    S: Serializer,
+                {
+                    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
+                        let ok = v.serialize(self.serializer.take().expect("missing serializer"))?;
+                        self.ok = Some(ok);
+
+                        Ok(())
+                    }
+                }
+
+                let mut visitor = ErasedVisitSerde {
+                    serializer: Some(serializer),
+                    ok: None,
+                };
+
+                v.visit(&mut visitor).map_err(|e| e.into_serde())?;
+                Ok(visitor.ok.expect("missing return value"))
+            },
+        }
+    }
+}
+```
 
 #### Ownership
 
@@ -924,53 +1471,133 @@ The `Value` type borrows from its inner value.
 
 The `Value` type doesn't try to guarantee that values are `Send` or `Sync`, and doesn't offer any way of retaining that information when erasing.
 
-### `ToKey`
+### `value::Visitor`
 
-A `ToKey` is a potentially long-lived structure that can be converted into a `Key`:
+A visitor for a `Value` that can interogate its structure:
 
 ```rust
-/// A type that can be converted into a borrowed key.
-pub trait ToKey {
-    /// Perform the conversion.
-    fn to_key(&self) -> Key;
+/// A serializer for primitive values.
+pub trait Visitor {
+    /// Visit an arbitrary value.
+    /// 
+    /// Depending on crate features there are a few things
+    /// you can do with a value. You can:
+    /// 
+    /// - format it using `Debug`.
+    /// - serialize it using `serde`.
+    fn visit_any(&mut self, v: Value) -> Result<(), Error>;
+
+    /// Visit a signed integer.
+    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit an unsigned integer.
+    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a 128bit signed integer.
+    #[cfg(feature = "i128")]
+    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a 128bit unsigned integer.
+    #[cfg(feature = "i128")]
+    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a floating point number.
+    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a boolean.
+    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a single character.
+    fn visit_char(&mut self, v: char) -> Result<(), Error> {
+        let mut b = [0; 4];
+        self.visit_str(&*v.encode_utf8(&mut b))
+    }
+
+    /// Visit a UTF8 string.
+    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
+        self.visit_any((&v).to_value())
+    }
+
+    /// Visit a raw byte buffer.
+    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
+        self.visit_any((&v).to_value())
+    }
+
+    /// Visit standard arguments.
+    fn visit_none(&mut self) -> Result<(), Error> {
+        self.visit_any(().to_value())
+    }
+
+    /// Visit standard arguments.
+    fn visit_fmt(&mut self, v: &fmt::Arguments) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
 }
 
-impl<'a, K: ?Sized> ToKey for &'a K
+impl<'a, T: ?Sized> Visitor for &'a mut T
 where
-    K: ToKey,
+    T: Visitor,
 {
-    fn to_key(&self) -> Key {
-        (*self).to_key()
+    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
+        (**self).visit_any(v)
     }
-}
-```
 
-#### Implementors
-
-`ToKey` is implemented for `str`. This is supported in both `std` and `no_std` contexts:
-
-```rust
-impl ToKey for str {
-    fn to_key(&self) -> Key {
-        Key::from_str(self)
+    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
+        (**self).visit_i64(v)
     }
-}
-```
 
-When `std` is available, `Key` is also implemented for other string containers:
-
-```rust
-#[cfg(feature = "std")]
-impl ToKey for String {
-    fn to_key(&self) -> Key {
-        Key::from_str(self)
+    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
+        (**self).visit_u64(v)
     }
-}
 
-#[cfg(feature = "std")]
-impl<'a> ToKey for borrow::Cow<'a, str> {
-    fn to_key(&self) -> Key {
-        Key::from_str(self.as_ref())
+    #[cfg(feature = "i128")]
+    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
+        (**self).visit_i128(v)
+    }
+
+    #[cfg(feature = "i128")]
+    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
+        (**self).visit_u128(v)
+    }
+
+    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
+        (**self).visit_f64(v)
+    }
+
+    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
+        (**self).visit_bool(v)
+    }
+
+    fn visit_char(&mut self, v: char) -> Result<(), Error> {
+        (**self).visit_char(v)
+    }
+
+    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
+        (**self).visit_str(v)
+    }
+
+    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
+        (**self).visit_bytes(v)
+    }
+
+    fn visit_none(&mut self) -> Result<(), Error> {
+        (**self).visit_none()
+    }
+
+    fn visit_fmt(&mut self, args: &fmt::Arguments) -> Result<(), Error> {
+        (**self).visit_fmt(args)
     }
 }
 ```
@@ -988,7 +1615,7 @@ pub struct Key<'kvs> {
     inner: &'kvs str,
 }
 
-impl<'kvs> ToKey for Key<'kvs> {
+impl<'kvs> Borrow<str> for Key<'kvs> {
     fn to_key(&self) -> Key {
         Key { inner: self.inner }
     }
@@ -1043,19 +1670,19 @@ impl<'kvs> Debug for Key<'kvs> {
 }
 ```
 
-Other standard implementations could be added for any `K: AsRef<str>` in the same fashion.
+Other standard implementations could be added for any `K: Borrow<str>` in the same fashion.
 
 #### Ownership
 
-The `Key` type borrows its inner value.
+The `Key` type can either borrow or own its inner value.
 
 #### Thread-safety
 
 The `Key` type is probably `Send` + `Sync`, but that's not guaranteed.
 
-### `Visitor`
+### `source::Visitor`
 
-The `Visitor` trait used by `KeyValueSource` can visit a single key-value pair:
+The `Visitor` trait used by `Source` can visit a single key-value pair:
 
 ```rust
 pub trait Visitor<'kvs> {
@@ -1076,7 +1703,7 @@ A `Visitor` may serialize the keys and values as it sees them. It may also do ot
 
 #### Implementors
 
-There aren't any public implementors of `Visitor` in the `log` crate, but the `KeyValueSource::try_for_each` and `KeyValueSource::serialize_as_map` methods use the trait internally.
+There aren't any public implementors of `Visitor` in the `log` crate, but the `Source::try_for_each` and `Source::serialize_as_map` methods use the trait internally.
 
 Other crates that use key-value pairs will implement `Visitor`.
 
@@ -1084,94 +1711,20 @@ Other crates that use key-value pairs will implement `Visitor`.
 
 The `Visitor` trait is object-safe.
 
-### `Error`
+### `Source`
 
-Just about the only thing you can do with a `Value` in the `Visitor::visit_pair` method is serialize it with `serde`. Serialization might fail, so to allow errors to get carried back to callers the `visit_pair` method needs to return a `Result`.
-
-```rust
-pub struct Error(Inner);
-
-impl Error {
-    pub fn msg(msg: &'static str) -> Self {
-        Error(Inner::Static(msg))
-    }
-
-    #[cfg(feature = "std")]
-    pub fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
-        &self.0
-    }
-
-    #[cfg(feature = "std")]
-    pub fn into_error(self) -> Box<dyn std::error::Error + Send + Sync> {
-        Box::new(self.0)
-    }
-
-    pub fn into_serde<E>(self) -> E
-    where
-        E: serde::ser::Error,
-    {
-        E::custom(self)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<E> From<E> for Error
-where
-    E: std::error::Error,
-{
-    fn from(err: E) -> Self {
-        Error(Inner::Owned(err.to_string()))
-    }
-}
-
-#[cfg(feature = "std")]
-impl From<Error> for Box<dyn std::error::Error + Send + Sync> {
-    fn from(err: Error) -> Self {
-        err.into_error()
-    }
-}
-
-impl AsRef<dyn std::error::Error + Send + Sync + 'static> for Error {
-    fn as_ref(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
-        self.as_error()
-    }
-}
-
-enum Inner {
-    Static(&'static str),
-    #[cfg(feature = "std")]
-    Owned(String),
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Inner {
-    fn description(&self) -> &str {
-        match self {
-            Inner::Static(msg) => msg,
-            Inner::Owned(msg) => msg,
-        }
-    }
-}
-```
-
-There's no really universal way to handle errors in a logging pipeline. Knowing that some error occurred, and knowing where, should be enough for implementations of `Log` to decide how to handle it. The `Error` type doesn't try to be a general-purpose error management tool, it tries to make it easy to early-return with other errors encountered during `Visitor::visit_pair`.
-
-To make it possible to carry any arbitrary `S::Error` type, where we don't know how long the value can live for and whether it's `Send` or `Sync`, without extra work, the `Error` type does not attempt to store the error value itself. It just converts it into a `String`.
-
-### `KeyValueSource`
-
-The `KeyValueSource` trait is a bit like `Serialize`. It gives us a way to inspect some arbitrary collection of key-value pairs using a visitor pattern:
+The `Source` trait is a bit like `Serialize`. It gives us a way to inspect some arbitrary collection of key-value pairs using a visitor pattern:
 
 ```rust
-pub trait KeyValueSource {
+pub trait Source {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error>;
 
     ...
 }
 
-impl<'a, T: ?Sized> KeyValueSource for &'a T
+impl<'a, T: ?Sized> Source for &'a T
 where
-    T: KeyValueSource,
+    T: Source,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         (*self).visit(visitor)
@@ -1179,23 +1732,59 @@ where
 }
 ```
 
-`KeyValueSource` doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
+`Source` doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
+
+#### Ownership
+
+The `Source` trait is probably the point where having some way to convert from a borrowed to an owned variant would make the most sense.
+
+We could add a method to `Source` that allowed it to be converted into an owned variant with a default implementation:
+
+```rust
+pub trait Source {
+    fn to_owned(&self) -> OwnedSource {
+        OwnedSource::serialized(self)
+    }
+}
+```
+
+The `OwnedSource` could then encapsulte some sharable `dyn Source + Send + Sync`:
+
+```rust
+#[derive(Clone)]
+pub struct OwnedSource(Arc<dyn Source + Send + Sync>);
+
+impl OwnedSource {
+    fn new(impl Into<Arc<dyn Source + Send + Sync>>) -> Self {
+        OwnedSource(source.into())
+    }
+
+    fn serialize(impl Source) -> Self {
+        // Serialize the `Source` to something like
+        // `Vec<(String, OwnedValue)>`
+        // where `OwnedValue` is like `serde_json::Value`
+        ...
+    }
+}
+```
+
+Other implementations of `Source` would be encouraged to override the `to_owned` method if they could provide a more efficient implementation. As an example, if there's a `Source` that is already wrapped up in an `Arc` then it can implement `to_owned` by just cloning itself.
 
 #### Adapters
 
-Some useful adapters exist as provided methods on the `KeyValueSource` trait. They're similar to adapters on the standard `Iterator` trait:
+Some useful adapters exist as provided methods on the `Source` trait. They're similar to adapters on the standard `Iterator` trait:
 
 ```rust
-pub trait KeyValueSource {
+pub trait Source {
     ...
 
-    /// Erase this `KeyValueSource` so it can be used without
+    /// Erase this `Source` so it can be used without
     /// requiring generic type parameters.
-    fn erase(&self) -> ErasedKeyValueSource
+    fn erase(&self) -> ErasedSource
     where
         Self: Sized,
     {
-        ErasedKeyValueSource::erased(self)
+        ErasedSource::erased(self)
     }
 
     /// An adapter to borrow self.
@@ -1203,7 +1792,7 @@ pub trait KeyValueSource {
         self
     }
 
-    /// Chain two `KeyValueSource`s together.
+    /// Chain two `Source`s together.
     fn chain<KVS>(self, other: KVS) -> Chained<Self, KVS>
     where
         Self: Sized,
@@ -1222,7 +1811,7 @@ pub trait KeyValueSource {
     /// will do an indexed lookup instead of a scan.
     fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
     where
-        Q: ToKey,
+        Q: Borrow<str>,
     {
         struct Get<'k, 'v>(Key<'k>, Option<Value<'v>>);
 
@@ -1265,69 +1854,80 @@ pub trait KeyValueSource {
     }
 
     /// Serialize the key-value pairs as a map.
+    #[cfg(feature = "kv_serde")]
     fn serialize_as_map(self) -> SerializeAsMap<Self>
     where
         Self: Sized,
     {
         SerializeAsMap(self)
     }
+
+    /// Serialize the key-value pairs as a map.
+    #[cfg(feature = "kv_serde")]
+    fn serialize_as_seq(self) -> SerializeAsSeq<Self>
+    where
+        Self: Sized,
+    {
+        SerializeAsSeq(self)
+    }
 }
 ```
 
-- `by_ref` to get a reference to a `KeyValueSource` within a method chain.
+- `by_ref` to get a reference to a `Source` within a method chain.
 - `chain` to concatenate one source with another. This is useful for composing implementations of `Log` together for contextual logging.
 - `get` to try find the value associated with a key.
 - `try_for_each` to try execute some closure over all key-value pairs. This is a convenient way to do something with each key-value pair without having to create and implement a `Visitor`.
 - `serialize_as_map` to get a serializable map. This is a convenient way to serialize key-value pairs without having to create and implement a `Visitor`.
+- `serialize_as_seq` to get a serializable sequence of tuples. This is a convenient way to serialize key-value pairs without having to create and implement a `Visitor`.
 
 None of these methods are required for the core API. They're helpful tools for working with key-value pairs with minimal machinery. Even if we don't necessarily include them right away it's worth having an API that can support them later without breakage.
 
 #### Object safety
 
-`KeyValueSource` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `KeyValueSource` that forwards this method can be reasonably written.
+`Source` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `Source` that forwards this method can be reasonably written.
 
 ```rust
-/// An erased `KeyValueSource`.
+/// An erased `Source`.
 #[derive(Clone)]
-pub struct ErasedKeyValueSource<'a>(&'a dyn ErasedKeyValueSourceBridge);
+pub struct ErasedSource<'a>(&'a dyn ErasedSourceBridge);
 
-impl<'a> ErasedKeyValueSource<'a> {
-    /// Capture a `KeyValueSource` and erase its concrete type.
-    pub fn new(kvs: &'a impl KeyValueSource) -> Self {
-        ErasedKeyValueSource(kvs)
+impl<'a> ErasedSource<'a> {
+    /// Capture a `Source` and erase its concrete type.
+    pub fn new(kvs: &'a impl Source) -> Self {
+        ErasedSource(kvs)
     }
 }
 
-impl<'a> Default for ErasedKeyValueSource<'a> {
+impl<'a> Default for ErasedSource<'a> {
     fn default() -> Self {
-        ErasedKeyValueSource(&(&[] as &[(&str, &dyn ToValue)]))
+        ErasedSource(&(&[] as &[(&str, &dyn Visit)]))
     }
 }
 
-impl<'a> KeyValueSource for ErasedKeyValueSource<'a> {
+impl<'a> Source for ErasedSource<'a> {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         self.0.erased_visit(visitor)
     }
 
     fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
     where
-        Q: ToKey,
+        Q: Borrow<str>,
     {
         let key = key.to_key();
         self.0.erased_get(key.as_ref())
     }
 }
 
-/// A trait that erases a `KeyValueSource` so it can be stored
+/// A trait that erases a `Source` so it can be stored
 /// in a `Record` without requiring any generic parameters.
-trait ErasedKeyValueSourceBridge {
+trait ErasedSourceBridge {
     fn erased_visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
     fn erased_get<'kvs>(&'kvs self, key: &str) -> Option<Value<'kvs>>;
 }
 
-impl<KVS> ErasedKeyValueSourceBridge for KVS
+impl<KVS> ErasedSourceBridge for KVS
 where
-    KVS: KeyValueSource + ?Sized,
+    KVS: Source + ?Sized,
 {
     fn erased_visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
         self.visit(visitor)
@@ -1341,13 +1941,13 @@ where
 
 #### Implementors
 
-A `KeyValueSource` with a single pair is implemented for a tuple of a key and value:
+A `Source` with a single pair is implemented for a tuple of a key and value:
 
 ```rust
-impl<K, V> KeyValueSource for (K, V)
+impl<K, V> Source for (K, V)
 where
-    K: ToKey,
-    V: ToValue,
+    K: Borrow<str>,
+    V: Visit,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         visitor.visit_pair(self.0.to_key(), self.1.to_value())
@@ -1355,10 +1955,10 @@ where
 }
 ```
 
-A `KeyValueSource` with multiple pairs is implemented for arrays of `KeyValueSource`s:
+A `Source` with multiple pairs is implemented for arrays of `Source`s:
 
 ```rust
-impl<KVS> KeyValueSource for [KVS] where KVS: KeyValueSource {
+impl<KVS> Source for [KVS] where KVS: Source {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         for kv in self {
             kv.visit(&mut visitor)?;
@@ -1369,21 +1969,42 @@ impl<KVS> KeyValueSource for [KVS] where KVS: KeyValueSource {
 }
 ```
 
-When `std` is available, `KeyValueSource` is implemented for some standard collections too:
+When `std` is available, `Source` is implemented for some standard collections too:
 
 ```rust
 #[cfg(feature = "std")]
-impl<KVS> KeyValueSource for Vec<KVS> where KVS: KeyValueSource {
+impl<KVS: ?Sized> Source for Box<KVS> where KVS: Source {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        (**self).visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<KVS: ?Sized> Source for Arc<KVS> where KVS: Source  {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        (**self).visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<KVS: ?Sized> Source for Rc<KVS> where KVS: Source  {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        (**self).visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<KVS> Source for Vec<KVS> where KVS: Source {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         self.as_slice().visit(visitor)
     }
 }
 
 #[cfg(feature = "std")]
-impl<K, V> KeyValueSource for collections::BTreeMap<K, V>
+impl<K, V> Source for collections::BTreeMap<K, V>
 where
     K: Borrow<str> + Ord,
-    V: ToValue,
+    V: Visit,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         for (k, v) in self {
@@ -1395,18 +2016,18 @@ where
 
     fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
     where
-        Q: ToKey,
+        Q: Borrow<str>,
     {
         let key = key.to_key();
-        collections::BTreeMap::get(self, key.as_ref()).map(ToValue::to_value)
+        collections::BTreeMap::get(self, key.as_ref()).map(Visit::to_value)
     }
 }
 
 #[cfg(feature = "std")]
-impl<K, V> KeyValueSource for collections::HashMap<K, V>
+impl<K, V> Source for collections::HashMap<K, V>
 where
     K: Borrow<str> + Eq + Hash,
-    V: ToValue,
+    V: Visit,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         for (k, v) in self {
@@ -1418,15 +2039,15 @@ where
 
     fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
     where
-        Q: ToKey,
+        Q: Borrow<str>,
     {
         let key = key.to_key();
-        collections::HashMap::get(self, key.as_ref()).map(ToValue::to_value)
+        collections::HashMap::get(self, key.as_ref()).map(Visit::to_value)
     }
 }
 ```
 
-The `BTreeMap` and `HashMap` implementations provide more efficient implementations of `KeyValueSource::get`.
+The `BTreeMap` and `HashMap` implementations provide more efficient implementations of `Source::get`.
 
 ## The `log!` macros
 
@@ -1482,7 +2103,7 @@ Will expand to something like:
         let correlation &correlation_id;
         let user = &user;
 
-        let kvs: &[(&str, &dyn::key_values::ToValue)] =
+        let kvs: &[(&str, &dyn::key_values::Visit)] =
             &[("correlation", &correlation), ("user", &user)];
 
         ::__private_api_log(
@@ -1500,221 +2121,48 @@ Will expand to something like:
 };
 ```
 
-### Logging values that aren't `ToValue`
-
-Not every type a user might want to log will satisfy the default `Display + Serialize` bound. To reduce friction in these cases, there are a few helper macros that can be used to tweak the way structured data is captured.
-
-The pattern here is pretty general, you could imagine other macros being created for capturing other useful trait implementors, like `T: Fail`.
-
-#### `log_serde!`
-
-The `log_serde!` macro allows any type that implements just `Serialize` to be logged:
-
-```rust
-info!(
-    "A log statement";
-    user = log_serde!(user)
-);
-```
-
-The macro definition looks like this:
-
-```rust
-macro_rules! log_serde {
-    ($v:expr) => {
-        $crate::adapter::log_serde(&$v)
-    }
-}
-
-#[cfg(feature = "erased-serde")]
-pub fn log_serde(v: impl Serialize) -> impl ToValue {
-    struct SerdeAdapter<T>(T);
-
-    impl<T> ToValue for SerdeAdapter<T>
-    where
-        T: Serialize,
-    {
-        fn to_value(&self) -> Value {
-            Value::from_serde(&self.0)
-        }
-    }
-
-    SerdeAdapter(v)
-}
-```
-
-#### `log_fmt!`
-
-The `log_fmt!` macro allows any type to be logged as a formatted string:
-
-```rust
-info!(
-    "A log statement";
-    user = log_fmt!(user, Debug::fmt)
-);
-```
-
-The macro definition looks like this:
-
-```rust
-macro_rules! log_fmt {
-    ($v:expr, $f:expr) => {
-        $crate::adapter::log_fmt(&$v, $f)
-    }
-}
-
-pub fn log_fmt<T>(value: T, adapter: impl Fn(&T, &mut fmt::Formatter) -> fmt::Result) -> impl ToValue {
-    struct FmtAdapter<T, F> {
-        value: T,
-        adapter: F,
-    }
-
-    impl<T, F> Display for FmtAdapter<T, F>
-    where
-        F: Fn(&T, &mut Formatter) -> fmt::Result,
-    {
-        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-            (self.adapter)(&self.value, f)
-        }
-    }
-
-    impl<T, F> ToValue for FmtAdapter<T, F>
-    where
-        F: Fn(&T, &mut Formatter) -> fmt::Result,
-    {
-        fn to_value(&self) -> Value {
-            Value::from_display(self)
-        }
-    }
-
-    FmtAdapter { value, adapter }
-}
-```
-
-#### `log_path!`
-
-The `log_path!` macro allows `Path` and `PathBuf` to be logged:
-
-```rust
-info!(
-    "A log statement";
-    path = log_path!(path)
-);
-```
-
-The macro definition looks like this:
-
-```rust
-macro_rules! log_path {
-    ($v:expr) => {
-        $crate::adapter::log_path(&$v)
-    }
-}
-
-#[cfg(feature = "std")]
-pub fn log_path(v: impl AsRef<Path>) -> impl ToValue {
-    #[derive(Debug)]
-    struct PathAdapter<T>(T);
-
-    impl<T> Display for PathAdapter<T>
-    where
-        T: AsRef<Path>,
-    {
-        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-            let path = self.0.as_ref();
-
-            match path.to_str() {
-                Some(path) => Display::fmt(path, f),
-                None => Debug::fmt(path, f),
-            }
-        }
-    }
-
-    impl<T> serde::Serialize for PathAdapter<T>
-    where
-        T: AsRef<Path>,
-    {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer
-        {
-            serializer.collect_str(&self)
-        }
-    }
-
-    PathAdapter(v)
-}
-```
-
-# Drawbacks
+# Drawbacks, rationale, and alternatives
 [drawbacks]: #drawbacks
 
 Structured logging is a non-trivial feature to support.
 
-## `Display + Serialize`
+## The `Debug + Serialize` blanket implementation of `Visit`
 
-Using `Display + Serialize` as a blanket implementation for `ToValue` means we immediately need to work around some values that will probably be logged, but don't satisfy the bound:
+Making sure the `Visit` trait doesn't drop any implementations when the blanket implementation from `kv_serde` replaces the concrete ones is subtle and nonstandard. We have to be especially careful of references and generics. Any mistakes made here can result in dependencies that become uncompilable depending on Cargo features with no workaround besides removing that impl. Using a macro to define the small fixed set, and keeping all impls local to a single module, could help catch these cases.
 
-- `Path` and `PathBuf`
-- Most `std::error::Error`s
-- Most `failure::Fail`s
+It's also possibly surprising that the way the `Visit` trait is implemented in the ecosystem is through an entirely unrelated combination of `serde` and `std` traits. At least it's surprising on the surface. For libraries that define loggable types, they just implement some standard traits for serialization without involving `log` at all. These are traits they should be considering anyway. For consumers of the  `log!` macro, they are mostly going to capture structured values for types they didn't produce, so having `serde` as the answer to _how can I log a `Url`, or a `Uuid`?_ sounds reasonable. It also means libraries defining types like `Url` and `Uuid` don't have yet another public serialization trait to implement.
 
-Using `Debug + Serialize` would allow `Path`s to be logged with no extra effort, but `Display` is probably a more appropriate trait to use.
+If a library provides a datatype that you'd reasonably want to log, but it doesn't implement `serde::Serialize` then adding support for that type isn't just beneficial to you, but to anyone else that might want to serialize that type.
 
-In `no_std` contexts, more machinery is required to try retain the structure of primitive values, rather than falling back to string serialization through the `Display` bound.
+The real question for `serde` is whether or not depending on it as the general serialization framework in `log` creates the potential for some kind of ecosystem dichotomy if an alternative framework becomes popular where half the ecosystem uses `serde` and the other half uses something else that's incompatible. In that case `log` might not reasonably be able to support both without breakage if it goes down this path. The options for mitigating this in the design now is by either require all loggable types implement `Visit` explicitly, or just requiring callers opt in to `serde` support at the callsite in `log!`.
 
-## `serde`
+### Require all loggable types implement `Visit`
 
-Using `serde` as the serialization framework for structured logging introduces a lot of complexity that consumers of key-value pairs need to deal with. Inspecting values requires an implementation of a `Serializer`, which is a complex trait.
+We could entirely punt on `serde` and just provide an API for simple values that implement the simple `Visit` trait. That avoids the potential serialization dichotomy in `log` altogether.
 
-Having `serde` enabled by default means it'll be effectively impossible to compile `log` in any reasonably sized dependency graph without also compiling `serde`.
+The problem here is that any pervasive public API has the chance to create rifts in the ecosystem. By creating a new fundamental API for logging via the `Visit` trait we're just expanding the potential for dichotomies.
 
-# Rationale and alternatives
-[rationale-and-alternatives]: #rationale-and-alternatives
+It also means we need to re-invent `serde`'s support for complex datastructures, the datatypes that implement its traits, and the formats that support it. We'll effectively turn `log` into a serialization framework of its own, and have to introduce arbitrary limitations on the kinds of values that can be logged.
 
-## Just use `Display`
+### Require callers opt in to `serde` support
 
-This API could be a lot simpler if key-value pairs were only required to implement the `Display` trait. Unfortunately, this doesn't really provide structured logging, because `Display` doesn't retain any structure. Take the json example from before:
+We could avoid a potential serialization dichotomy by requiring callers opt in to `serde` support. That way if a new framework came along it could be naturally supported in the same way. There are a few ways callers could opt in to `serde` in the `log!` macros. The specifics aren't really important, but it could look something like this:
 
-```json
-{
-    "ts": 1538040723000,
-    "lvl": "INFO",
-    "msg": "Operation completed successfully in 18ms",
-    "module": "basic",
-    "service": "database",
-    "correlation": 123,
-    "took": 18
-}
+```rust
+use log::log_serde;
+
+info!("A message"; user = log_serde!(user));
 ```
 
-If key-value pairs were implemented as `Display` then this json object would look like this:
+That way an alternative framework could be supported as:
 
-```json
-{
-    "ts": "1538040723000",
-    "lvl": "INFO",
-    "msg": "Operation completed successfully in 18ms",
-    "module": "basic",
-    "service": "database",
-    "correlation": "123",
-    "took": "18"
-}
+```rust
+use log::log_other_framework;
+
+info!("A message"; user = log_other_framework!(user));
 ```
 
-Now without knowing that `ts` is a number we can't reasonably use that field for querying over ranges of events.
-
-## Don't use a blanket implementation
-
-Without a blanket implementation of `ToValue`, a set of primitive and standard types could manually implement the trait in `log`. That could include `Path` and `PathBuf`, which don't currently satify the blanket `Display + Serialize` bounds. This would require libraries providing types in the ecosystem to depend on `log` and implement `ToValue` themselves.
-
-## Define our own serialization trait
-
-Rather than rely on `serde`, define our own simplified, object-safe serialization trait. This would avoid the complexity of erasing `Serialize` implementations, but would introduce the same ecosystem leakage as not using a blanket implementation. It would also be a trait that looks a lot like `Serialize`, without necessarily keeping up with improvements that are made in `serde`.
-
-## Don't enable structured logging by default
-
-Make structured logging a purely optional feature, so it wouldn't necessarily need to support `no_std` environments at all and could avoid the `Display + Serialize` blanket implementation bounds on `ToValue`. This seems appealing, but isn't ideal because it makes a fundamental modern logging feature much less discoverable.
+The problem with this approach is that it puts extra barriers in front of users that want to log. Instead of enabling crate features once and then logging structured values, each log statement needs to know how it can capture values. It also passes the burden of dealing with dichotomies onto every consumer of `log`. It seems like a reasonable idea from the perspective of the `log` crate, but is more hostile to end-users.
 
 # Prior art
 [prior-art]: #prior-art
@@ -1739,10 +2187,3 @@ Supporting something like message templates in Rust using the `log!` macros woul
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
-
-- What parts of the design do you expect to resolve through the RFC process before this gets merged?
-- What parts of the design do you expect to resolve through the implementation of this feature before stabilization?
-- What related issues do you consider out of scope for this RFC that could be addressed in the future independently of the solution that comes out of this RFC?
-
------
-
