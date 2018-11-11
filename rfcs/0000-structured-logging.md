@@ -24,11 +24,11 @@ The API is heavily inspired by the `slog` logging framework.
   - [Implications for dependents](#implications-for-dependents)
   - [Cargo features](#cargo-features)
   - [Key-values API](#key-values-api)
-    - [`Visit`](#Visit)
-    - [`Value`](#value)
-    - [`Key`](#key)
-    - [`value::Visitor`](#valuevisitor)
     - [`Error`](#error)
+    - [`value::Visit`](#valueVisit)
+    - [`value::Visitor`](#valuevisitor)
+    - [`Value`](#valuevalue)
+    - [`Key`](#key)
     - [`Source`](#source)
     - [`source::Visitor`](#sourcevisitor)
     - [`Record` and `RecordBuilder`](#record-and-recordbuilder)
@@ -89,7 +89,7 @@ Having a way to capture additional metadata is good for human-centric formats. H
 
 Why add structured logging support to the `log` crate when libraries like `slog` already exist and support it? `log` needs to support structured logging to make the experience of using `slog` and other logging tools in the Rust ecosystem more compatible.
 
-On the surface there doesn't seem to be a lot of difference between `log` and `slog`, so why not just deprecate one in favour of the other? Conceptually, `log` and `slog` are different libraries that fill different use-cases, even if there's some overlap.
+On the surface there doesn't seem to be a lot of difference between `log` and `slog`, so why not just deprecate one in favour of the other? Conceptually, `log` and `slog` are different libraries that fill different roles, even if there's some overlap.
 
 `slog` is a logging _framework_. It offers all the fundamental tools needed out-of-the-box to capture log records, define and implement the composable pieces of a logging pipeline, and pass them through that pipeline to an eventual destination. It has conventions and trade-offs baked into the design of its API. Loggers are treated explicitly as values in data structures and as arguments, and callers can control whether to pass owned or borrowed data.
 
@@ -206,7 +206,7 @@ info!(
 );
 ```
 
-If you come across a data type in the Rust ecosystem that you can't log, then try looking for a `serde` feature on the crate that defines it. If there isn't one already then adding it will be useful not just for you, but for anyone that might want to serialize those types for other reasons.
+If you come across a data type in the Rust ecosystem that you can't log, then add the `kv_serde` feature to `log` and try looking for a `serde` feature on the crate that defines it. If there isn't one already then adding it will be useful not just for you, but for anyone that might want to serialize those types for other reasons.
 
 ## Supporting key-value pairs in `Log` implementations
 
@@ -621,7 +621,7 @@ To make it possible to carry any arbitrary `S::Error` type, where we don't know 
 
 ### `value::Visit`
 
-The `Visit` trait can be treated like a lightweight subset of `serde::Serialize` that can interoperate with `serde` without necessarily depending on it:
+The `Visit` trait can be treated like a lightweight subset of `serde::Serialize` that can interoperate with `serde`, without necessarily depending on it:
 
 ```rust
 /// A type that can be converted into a borrowed value.
@@ -671,6 +671,17 @@ With default features, the types that implement `Visit` are a subset of `T: Debu
 |                                    |
 --------------------------------------
 ```
+
+The full set of standard types that implement `Visit` are:
+
+- Standard formats: `Arguments`
+- Primitives: `bool`, `char`
+- Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
+- Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
+- Strings: `&str`, `String`
+- Bytes: `&[u8]`, `Vec<u8>`
+- Paths: `Path`, `PathBuf`
+- Special types: `Option<T>` and `()`.
 
 Enabling the `kv_serde` feature expands the set of types that implement `Visit` from this subset to all `T: Debug + Serialize`.
 
@@ -982,6 +993,137 @@ We don't necessarily need a macro to make new implementations accessible for new
 
 In a future Rust with specialization we might be able to avoid all the machinery needed to keep the manual impls consistent with the blanket one, and allow consumers to implement `Visit` without needing `serde`. The specifics of specialization are still up in the air though. Under the proposed _always applicable_ rule, manual implementations like `impl<T> Visit for Option<T> where T: Visit` wouldn't be allowed. The ` where specialize(T: Visit)` scheme might make it possible though, although this would probably be a breaking change in any case.
 
+### `value::Visitor`
+
+A visitor for a `Visit` that can interogate its structure:
+
+```rust
+/// A serializer for primitive values.
+pub trait Visitor {
+    /// Visit an arbitrary value.
+    /// 
+    /// Depending on crate features there are a few things
+    /// you can do with a value. You can:
+    /// 
+    /// - format it using `Debug`.
+    /// - serialize it using `serde`.
+    fn visit_any(&mut self, v: Value) -> Result<(), Error>;
+
+    /// Visit a signed integer.
+    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit an unsigned integer.
+    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a 128bit signed integer.
+    #[cfg(feature = "i128")]
+    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a 128bit unsigned integer.
+    #[cfg(feature = "i128")]
+    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a floating point number.
+    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a boolean.
+    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+
+    /// Visit a single character.
+    fn visit_char(&mut self, v: char) -> Result<(), Error> {
+        let mut b = [0; 4];
+        self.visit_str(&*v.encode_utf8(&mut b))
+    }
+
+    /// Visit a UTF8 string.
+    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
+        self.visit_any((&v).to_value())
+    }
+
+    /// Visit a raw byte buffer.
+    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
+        self.visit_any((&v).to_value())
+    }
+
+    /// Visit standard arguments.
+    fn visit_none(&mut self) -> Result<(), Error> {
+        self.visit_any(().to_value())
+    }
+
+    /// Visit standard arguments.
+    fn visit_fmt(&mut self, v: &fmt::Arguments) -> Result<(), Error> {
+        self.visit_any(v.to_value())
+    }
+}
+
+impl<'a, T: ?Sized> Visitor for &'a mut T
+where
+    T: Visitor,
+{
+    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
+        (**self).visit_any(v)
+    }
+
+    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
+        (**self).visit_i64(v)
+    }
+
+    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
+        (**self).visit_u64(v)
+    }
+
+    #[cfg(feature = "i128")]
+    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
+        (**self).visit_i128(v)
+    }
+
+    #[cfg(feature = "i128")]
+    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
+        (**self).visit_u128(v)
+    }
+
+    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
+        (**self).visit_f64(v)
+    }
+
+    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
+        (**self).visit_bool(v)
+    }
+
+    fn visit_char(&mut self, v: char) -> Result<(), Error> {
+        (**self).visit_char(v)
+    }
+
+    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
+        (**self).visit_str(v)
+    }
+
+    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
+        (**self).visit_bytes(v)
+    }
+
+    fn visit_none(&mut self) -> Result<(), Error> {
+        (**self).visit_none()
+    }
+
+    fn visit_fmt(&mut self, args: &fmt::Arguments) -> Result<(), Error> {
+        (**self).visit_fmt(args)
+    }
+}
+```
+
 ### `Value`
 
 A `Value` is an erased container for a `Visit`, with a potentially short-lived lifetime:
@@ -1121,7 +1263,7 @@ impl<'v> fmt::Display for Value<'v> {
 
 #### Serialization
 
-When the `kv_serde` feature is enabled, `Value` implements the `Serialize` trait by forwarding to its inner value:
+When the `kv_serde` feature is enabled, `Value` implements the `serde::Serialize` trait by forwarding to its inner value:
 
 ```rust
 impl<'v> Serialize for Value<'v> {
@@ -1171,137 +1313,6 @@ The `Value` type borrows from its inner value.
 #### Thread-safety
 
 The `Value` type doesn't try to guarantee that values are `Send` or `Sync`, and doesn't offer any way of retaining that information when erasing.
-
-### `value::Visitor`
-
-A visitor for a `Value` that can interogate its structure:
-
-```rust
-/// A serializer for primitive values.
-pub trait Visitor {
-    /// Visit an arbitrary value.
-    /// 
-    /// Depending on crate features there are a few things
-    /// you can do with a value. You can:
-    /// 
-    /// - format it using `Debug`.
-    /// - serialize it using `serde`.
-    fn visit_any(&mut self, v: Value) -> Result<(), Error>;
-
-    /// Visit a signed integer.
-    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit an unsigned integer.
-    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit a 128bit signed integer.
-    #[cfg(feature = "i128")]
-    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit a 128bit unsigned integer.
-    #[cfg(feature = "i128")]
-    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit a floating point number.
-    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit a boolean.
-    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-
-    /// Visit a single character.
-    fn visit_char(&mut self, v: char) -> Result<(), Error> {
-        let mut b = [0; 4];
-        self.visit_str(&*v.encode_utf8(&mut b))
-    }
-
-    /// Visit a UTF8 string.
-    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
-        self.visit_any((&v).to_value())
-    }
-
-    /// Visit a raw byte buffer.
-    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
-        self.visit_any((&v).to_value())
-    }
-
-    /// Visit standard arguments.
-    fn visit_none(&mut self) -> Result<(), Error> {
-        self.visit_any(().to_value())
-    }
-
-    /// Visit standard arguments.
-    fn visit_fmt(&mut self, v: &fmt::Arguments) -> Result<(), Error> {
-        self.visit_any(v.to_value())
-    }
-}
-
-impl<'a, T: ?Sized> Visitor for &'a mut T
-where
-    T: Visitor,
-{
-    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
-        (**self).visit_any(v)
-    }
-
-    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
-        (**self).visit_i64(v)
-    }
-
-    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
-        (**self).visit_u64(v)
-    }
-
-    #[cfg(feature = "i128")]
-    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
-        (**self).visit_i128(v)
-    }
-
-    #[cfg(feature = "i128")]
-    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
-        (**self).visit_u128(v)
-    }
-
-    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
-        (**self).visit_f64(v)
-    }
-
-    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
-        (**self).visit_bool(v)
-    }
-
-    fn visit_char(&mut self, v: char) -> Result<(), Error> {
-        (**self).visit_char(v)
-    }
-
-    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
-        (**self).visit_str(v)
-    }
-
-    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
-        (**self).visit_bytes(v)
-    }
-
-    fn visit_none(&mut self) -> Result<(), Error> {
-        (**self).visit_none()
-    }
-
-    fn visit_fmt(&mut self, args: &fmt::Arguments) -> Result<(), Error> {
-        (**self).visit_fmt(args)
-    }
-}
-```
 
 ### `Key`
 
@@ -1404,9 +1415,7 @@ A `Visitor` may serialize the keys and values as it sees them. It may also do ot
 
 #### Implementors
 
-There aren't any public implementors of `Visitor` in the `log` crate, but the `Source::try_for_each` and `Source::serialize_as_map` methods use the trait internally.
-
-Other crates that use key-value pairs will implement `Visitor`.
+There aren't any public implementors of `Visitor` in the `log` crate. Other crates that use key-value pairs will implement `Visitor`.
 
 #### Object safety
 
@@ -1414,13 +1423,11 @@ The `Visitor` trait is object-safe.
 
 ### `Source`
 
-The `Source` trait is a bit like `Serialize`. It gives us a way to inspect some arbitrary collection of key-value pairs using a visitor pattern:
+The `Source` trait is a bit like `std::iter::Iterator`. It gives us a way to inspect some arbitrary collection of key-value pairs using an object-safe visitor pattern:
 
 ```rust
 pub trait Source {
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error>;
-
-    ...
 }
 
 impl<'a, T: ?Sized> Source for &'a T
@@ -1469,7 +1476,7 @@ impl OwnedSource {
 }
 ```
 
-Other implementations of `Source` would be encouraged to override the `to_owned` method if they could provide a more efficient implementation. As an example, if there's a `Source` that is already wrapped up in an `Arc` then it can implement `to_owned` by just cloning itself.
+Other implementations of `Source` are encouraged to override the `to_owned` method if they could provide a more efficient implementation. As an example, if there's a `Source` that is already wrapped up in an `Arc` then it can implement `to_owned` by just cloning itself.
 
 #### Adapters
 
@@ -1642,7 +1649,7 @@ where
 
 #### Implementors
 
-A `Source` with a single pair is implemented for a tuple of a key and value:
+A `Source` containing a single key-value pair is implemented for a tuple of a key and value:
 
 ```rust
 impl<K, V> Source for (K, V)
@@ -1879,7 +1886,7 @@ The problem here is that any pervasive public API has the chance to create rifts
 
 It also means we need to re-invent `serde`'s support for complex datastructures, the datatypes that implement its traits, and the formats that support it. We'll effectively turn `log` into a serialization framework of its own, and have to introduce arbitrary limitations on the kinds of values that can be logged.
 
-### Require callers opt in to `serde` support
+### Require callers opt in to `serde` support at the callsite
 
 We could avoid a potential serialization dichotomy by requiring callers opt in to `serde` support. That way if a new framework came along it could be naturally supported in the same way. There are a few ways callers could opt in to `serde` in the `log!` macros. The specifics aren't really important, but it could look something like this:
 
