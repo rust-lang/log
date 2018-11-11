@@ -27,7 +27,7 @@ The API is heavily inspired by the `slog` logging framework.
     - [`Error`](#error)
     - [`value::Visit`](#valueVisit)
     - [`value::Visitor`](#valuevisitor)
-    - [`Value`](#valuevalue)
+    - [`Value`](#value)
     - [`Key`](#key)
     - [`Source`](#source)
     - [`source::Visitor`](#sourcevisitor)
@@ -1871,6 +1871,8 @@ Structured logging is a non-trivial feature to support. It adds complexity and o
 ## The `Debug + Serialize` blanket implementation of `Visit`
 
 Making sure the `Visit` trait doesn't drop any implementations when the blanket implementation from `kv_serde` replaces the concrete ones is subtle and nonstandard. We have to be especially careful of references and generics. Any mistakes made here can result in dependencies that become uncompilable depending on Cargo features with no workaround besides removing that impl. Using a macro to define the small fixed set, and keeping all impls local to a single module, could help catch these cases.
+
+Another problem is documentation. It's not really easy to show in `rustdoc` how different crate features change the public API. Making it obvious how the bounds on `Visit` change might be tricky.
 
 It's also possibly surprising that the way the `Visit` trait is implemented in the ecosystem is through an entirely unrelated combination of `serde` and `std` traits. At least it's surprising on the surface. For libraries that define loggable types, they just implement some standard traits for serialization without involving `log` at all. These are traits they should be considering anyway. For consumers of the  `log!` macro, they are mostly going to capture structured values for types they didn't produce, so having `serde` as the answer to _how can I log a `Url`, or a `Uuid`?_ sounds reasonable. It also means libraries defining types like `Url` and `Uuid` don't have yet another public serialization trait to implement.
 
