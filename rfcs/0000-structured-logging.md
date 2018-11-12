@@ -1878,6 +1878,24 @@ It's also possibly surprising that the way the `Visit` trait is implemented in t
 
 If a library provides a datatype that you'd reasonably want to log, but it doesn't implement `serde::Serialize` then adding support for that type isn't just beneficial to you, but to anyone else that might want to serialize that type.
 
+The degenerate case the `Debug + Serialize` implementation tries to avoid is one where a library needs to implement several very similar serialization-esc traits in order to be loggable in different frameworks:
+
+```rust
+struct Url { .. }
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Url { .. }
+
+#[cfg(feature = "log")]
+impl log::kv::value::Visit for Url { .. }
+
+#[cfg(feature = "slog")]
+impl slog::Value for Url { .. }
+
+#[cfg(feature = "log-framework-x")]
+impl log_framework_x::Serialize for Url { .. }
+```
+
 The real question for `serde` is whether or not depending on it as the general serialization framework in `log` creates the potential for some kind of ecosystem dichotomy if an alternative framework becomes popular where half the ecosystem uses `serde` and the other half uses something else that's incompatible. In that case `log` might not reasonably be able to support both without breakage if it goes down this path. The options for mitigating this in the design now is by either require all loggable types implement `Visit` explicitly, or just requiring callers opt in to `serde` support at the callsite in `log!`.
 
 ### Require all loggable types implement `Visit`
