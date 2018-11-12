@@ -134,7 +134,7 @@ info!(
 
 ### What can be logged?
 
-Using default Cargo features, a closed set of types from the standard library are supported as structured values:
+Using default Cargo features, a fixed set of types from the standard library are supported as structured values:
 
 - Standard formats: `Arguments`
 - Primitives: `bool`, `char`
@@ -142,8 +142,10 @@ Using default Cargo features, a closed set of types from the standard library ar
 - Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
 - Strings: `&str`, `String`
 - Bytes: `&[u8]`, `Vec<u8>`
-- Paths: `Path`, `PathBuf`
-- Special types: `Option<T>` and `()`.
+- Paths: `&Path`, `PathBuf`
+- Special types: `Option<T>`, `&T`, and `()`.
+
+Using other Cargo features, any `T: std::fmt::Debug + serde::Serialize` can be logged, but we'll come back to that later.
 
 In the example from before, `correlation_id` and `user` can be used as structured values if they're in that set of concrete types:
 
@@ -159,7 +161,7 @@ info!(
 );
 ```
 
-What if the `correlation_id` is a `uuid::Uuid` instead of a string? What if the `user` is some other datastructure containing an id along with some other metadata? Only being able to log a few types from the standard library is a bit limiting. To make logging other values possible, the `kv_serde` Cargo feature expands the set of loggable values above to also include any other type that implements both `std::fmt::Debug` and `serde::Serialize`:
+What if the `correlation_id` is a `uuid::Uuid` instead of a string? What if the `user` is some other datastructure containing an id and other metadata? Only being able to log a few primitive types from the standard library is a bit limiting. To make logging complex types and values from other libraries in the ecosystem possible, the `kv_serde` Cargo feature expands the set of loggable values above to also include any type that implements both `std::fmt::Debug` and `serde::Serialize`:
 
 ```toml
 [dependencies.log]
@@ -210,7 +212,7 @@ If you come across a data type in the Rust ecosystem that you can't log, then ad
 
 ## Supporting key-value pairs in `Log` implementations
 
-Capturing structured logs is only half the story. Implementors of the `Log` trait also need to be able to work with any key-value pairs associated with a log record. Key-value pairs are accessible on a log record through the `key_values` method:
+Capturing structured logs is only half the story. Implementors of the `Log` trait also need to be able to work with any key-value pairs associated with a log record. Key-value pairs are accessible on a log record through the `Record::key_values` method:
 
 ```rust
 impl Record {
@@ -235,7 +237,7 @@ Each key-value pair, shown as `$key: $value`, can be formatted from the `Source`
 ```rust
 use log::kv::Source;
 
-fn write_pretty(w: impl Write, r: &Record) -> io::Result<()> {
+fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     // Write the first line of the log record
     ...
 
@@ -248,7 +250,9 @@ fn write_pretty(w: impl Write, r: &Record) -> io::Result<()> {
 }
 ```
 
-In the above example, the `try_for_each` method iterates over each key-value pair and writes them to the terminal. Now take the following json format:
+In the above example, the `Source::try_for_each` method iterates over each key-value pair in the `Source` and writes them to the terminal. 
+
+Let's look at a structured example. Take the following json format:
 
 ```json
 {
@@ -262,24 +266,24 @@ In the above example, the `try_for_each` method iterates over each key-value pai
 }
 ```
 
-Defining a serializable structure based on a log record for this format could be done using `serde_derive`, and then written using `serde_json`. This requires the `kv_serde` feature:
+A `Source` can be serialized as a map using `serde`. This requires the `kv_serde` feature:
 
 ```toml
 [dependencies.log]
 features = ["kv_serde"]
 ```
 
-The structured key-value pairs can then be naturally serialized as a map:
+Defining a serializable structure based on a log record for this format could then be done using `serde_derive`, and then written using `serde_json`:
 
 ```rust
 use log::kv::Source;
 
-fn write_json(w: impl Write, r: &Record) -> io::Result<()> {
+fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     let r = SerializeRecord {
         lvl: r.level(),
         ts: epoch_millis(),
         msg: r.args().to_string(),
-        props: r.key_values().serialize_as_map(),
+        kvs: r.key_values().serialize_as_map(),
     };
 
     serde_json::to_writer(w, &r)?;
@@ -293,17 +297,15 @@ struct SerializeRecord<KVS> {
     ts: u64,
     msg: String,
     #[serde(flatten)]
-    props: KVS,
+    kvs: KVS,
 }
 ```
 
-This time, instead of using the `try_for_each` method, we use `serialize_as_map` to get an adapter that will serialize each key-value pair as an entry in a map.
-
-The crate that produces log records might not be the same crate that consumes them. A producer can depend on the `kv_serde` feature to log more types, and a consumer will always be able to handle them, even if they don't depend on the `kv_serde` feature.
+This time, instead of using the `Source::try_for_each` method, we use the `Source::serialize_as_map` method to get an adapter that will serialize each key-value pair as an entry in a `serde` map.
 
 ## Integrating log frameworks with `log`
 
-The `Source` trait describes some container for structured key-value pairs. Other log frameworks that want to integrate with the `log` crate should build `Record`s that contain some implementation of `Source` based on their own structured logging.
+The `Source` trait we saw previously describes some container for structured key-value pairs that can be iterated. Other log frameworks that want to integrate with the `log` crate should build `Record`s that contain some implementation of `Source` based on their own structured logging.
 
 The previous section demonstrated some of the methods available on `Source` like `Source::try_for_each` and `Source::serialize_as_map`. Both of those methods are provided on top of a single required `Source::visit` method. The `Source` trait itself looks something like this:
 
@@ -315,7 +317,7 @@ trait Source {
 }
 ```
 
-where `source::Visitor` is another trait that accepts individual key-value pairs:
+where `Visitor` is another trait that accepts individual key-value pairs:
 
 ```rust
 trait Visitor<'kvs> {
@@ -323,35 +325,32 @@ trait Visitor<'kvs> {
 }
 ```
 
-The following example wraps up a `BTreeMap<String, serde_json::Value>` and implements the `Source` trait for it:
+As an example, let's say our log framework captures its key-value pairs in a `BTreeMap`:
+
+```rust
+struct KeyValues {
+    data: BTreeMap<String, serde_json::Value>,
+}
+```
+
+The `Source` trait could be implemented for `KeyValues` like this:
 
 ```rust
 use log::kv::source::{self, Source};
 
-struct MySource {
-    data: BTreeMap<String, serde_json::Value>,
-}
-
-impl Source for MySource {
+impl Source for KeyValues {
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
         self.data.visit(visitor)
     }
 }
 ```
 
-The implementation is pretty trivial because `BTreeMap<String, serde_json::Value>` happens to already implement the `Source` trait. Now let's assume `BTreeMap<String, serde_json::Value>` didn't implement `Source`. A manual implementation iterating through the map and converting the `(String, serde_json::Value)` pairs into types that can be visited could look like this:
+This implementation is pretty trivial because `BTreeMap<String, serde_json::Value>` happens to already implement the `Source` trait itself. Let's assume `BTreeMap<String, serde_json::Value>` didn't implement `Source`. A manual implementation iterating through the map and converting the `(&String, &serde_json::Value)` pairs into types that can be visited could look like this:
 
 ```rust
-use log::kv::{
-    source::{self, Source},
-    value,
-};
+use log::kv::source::{self, Source};
 
-struct MySource {
-    data: BTreeMap<String, serde_json::Value>,
-}
-
-impl Source for MySource {
+impl Source for KeyValues {
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
         for (k, v) in self.data {
             visitor.visit_pair(source::Key::new(k), source::Value::new(v))
@@ -360,7 +359,7 @@ impl Source for MySource {
 }
 ```
 
-The `Key::new` method accepts any `T: Borrow<str>`. The `Value::new` accepts any `T: std::fmt::Debug + serde::Serialize`. Values that can't implement `Debug + Serialize` can still be visited using the `source::Value::any` method. This method lets us provide an inline function that will visit the value:
+The `Key::new` method accepts any `T: Borrow<str>`. The `Value::new` accepts [a value that can be logged](#what-can-be-logged). Values that can't satisfy the requirements for logging on their own can still be supported using the `Value::any` method. This method lets us provide an inline function that will visit the value without implementing any traits:
 
 ```rust
 use log::kv::{
@@ -368,20 +367,24 @@ use log::kv::{
     value,
 };
 
-struct MySource {
+// We don't want to depend on `serde`
+// but still want to be able to log `MyValue`s
+#[derive(Debug)]
+struct MyValue { .. }
+
+struct KeyValues {
     data: BTreeMap<String, MyValue>,
 }
 
-impl Source for MySource {
+impl Source for KeyValues {
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
         for (k, v) in self.data {
             let key = source::Key::new(k);
 
-            // Let's assume `MyValue` doesn't implement `Serialize`
-            // Instead it implements `Display`.
+            // The `Value::any` method takes a value and a
+            // function that lets us visit it
             let value = source::Value::any(v: &MyValue, |v: &MyValue, visitor: &mut dyn value::Visitor| {
-                // Let's assume `MyValue` implements `Display`
-                visitor.visit_fmt(format_args!("{}", v))
+                visitor.visit_fmt(format_args!("{:?}", v))
             });
 
             visitor.visit_pair(key, value)
@@ -389,7 +392,7 @@ impl Source for MySource {
 }
 ```
 
-The `value::Visitor` trait is similar to `serde::Serializer`, but only supports a few common types:
+The `value::Visitor` trait is similar to `serde::Serializer`, but only supports simple structures:
 
 ```rust
 trait Visitor {
@@ -407,7 +410,7 @@ trait Visitor {
 }
 ```
 
-A `Source` doesn't have to just contain key-value pairs directly like `BTreeMap<String, Value>` though. It could also act like an adapter, like we have for iterators in the standard library. As another example, the following `Source` doesn't store any key-value pairs of its own, it will sort and de-duplicate pairs read from another source by first reading them into a map before forwarding them on:
+A `Source` doesn't have to just contain key-value pairs directly like `BTreeMap<String, serde_json::Value>` though. It could act like an adapter that changes its pairs before emitting them, like we have for iterators in the standard library. As another example, the following `Source` doesn't store any key-value pairs of its own, instead it will sort and de-duplicate pairs read from another source by first reading them into a map before forwarding them on:
 
 ```rust
 use log::kv::source::{self, Source, Visitor};
@@ -449,7 +452,7 @@ where
 
 ## Writing your own `value::Visitor`
 
-Consumers of key-value pairs can visit structured values without needing a `serde::Serializer`. Instead they can implement a `value::Visitor`. A `Visitor` can always visit any structured value by formatting it using its `Debug` implementation:
+Consumers of key-value pairs can visit structured values without needing a `serde::Serializer`, or needing to depend on `serde` at all. Instead they can implement a `value::Visitor`. A `Visitor` can always visit any structured value by formatting it using its `Debug` implementation:
 
 ```rust
 use log::kv::value::{self, Value};
@@ -621,7 +624,7 @@ To make it possible to carry any arbitrary `S::Error` type, where we don't know 
 
 ### `value::Visit`
 
-The `Visit` trait can be treated like a lightweight subset of `serde::Serialize` that can interoperate with `serde`, without necessarily depending on it:
+The `Visit` trait can be treated like a lightweight subset of `serde::Serialize` that can interoperate with `serde`, without necessarily depending on it. It can't be implemented manually:
 
 ```rust
 /// A type that can be converted into a borrowed value.
@@ -647,13 +650,24 @@ mod private {
 }
 ```
 
-We'll look at the `Visitor` trait shortly. It's like `serde::Serializer`.
+We'll look at the `Visitor` trait in more detail later.
 
-`Visit` is the trait bound that structured values need to satisfy before they can be logged. The trait can't be implemented outside of the `log` crate, because it uses blanket implementations depending on Cargo features. If a crate defines a datastructure that users might want to log, instead of trying to implement `Visit`, it should implement the `serde::Serialize` and `std::fmt::Debug` traits. This means that `Visit` can piggyback off `serde::Serialize` as the pervasive public dependency, so that `Visit` itself doesn't need to be one.
+`Visit` is the trait bound that structured values need to satisfy before they can be logged. The trait can't be implemented outside of the `log` crate, because it uses blanket implementations depending on Cargo features. If a crate defines a datastructure that users might want to log, instead of trying to implement `Visit`, it should implement the `serde::Serialize` and `std::fmt::Debug` traits. It shouldn't need to depend on the `log` crate at all. This means that `Visit` can piggyback off `serde::Serialize` as the pervasive public dependency, so that `Visit` itself doesn't need to be one.
 
 The trait bounds on `private::Sealed` ensure that any generic `T: Visit` carries some additional traits that are needed for the blanket implementation of `Serialize`. As an example, any `Option<T: Visit>` can also be treated as `Option<T: Serialize>` and therefore implement `Serialize` itself. The `Visit` trait is responsible for a lot of type system mischief.
 
 With default features, the types that implement `Visit` are a subset of `T: Debug + Serialize`:
+
+- Standard formats: `Arguments`
+- Primitives: `bool`, `char`
+- Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
+- Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
+- Strings: `&str`, `String`
+- Bytes: `&[u8]`, `Vec<u8>`
+- Paths: `&Path`, `PathBuf`
+- Special types: `Option<T>`, `&T`, and `()`.
+
+Enabling the `kv_serde` feature expands the set of types that implement `Visit` from this subset to all `T: Debug + Serialize`.
 
 ```
 -------- feature = "kv_serde" --------
@@ -663,8 +677,12 @@ With default features, the types that implement `Visit` are a subset of `T: Debu
 |                                    |
 |   - not(feature = "kv_serde") -    |
 |   |                           |    |
-|   | u8, i8, &str, &[u8], bool |    |
-|   | etc...                    |    |
+|   | u8, u16, u32, u64, u128   |    |
+|   | i8, i16, i32, i64, i128   |    |
+|   | bool, char, &str, String  |    |
+|   | &[u8], Vec<u8>            |    |
+|   | &Path, PathBuf, Arguments |    |
+|   | Option<T>, &T, ()         |    |
 |   |                           |    |
 |   -----------------------------    |
 |                                    |
@@ -672,24 +690,11 @@ With default features, the types that implement `Visit` are a subset of `T: Debu
 --------------------------------------
 ```
 
-The full set of standard types that implement `Visit` are:
-
-- Standard formats: `Arguments`
-- Primitives: `bool`, `char`
-- Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
-- Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
-- Strings: `&str`, `String`
-- Bytes: `&[u8]`, `Vec<u8>`
-- Paths: `Path`, `PathBuf`
-- Special types: `Option<T>` and `()`.
-
-Enabling the `kv_serde` feature expands the set of types that implement `Visit` from this subset to all `T: Debug + Serialize`.
-
 #### Object safety
 
-The `Visit` trait is not object-safe, but has a simple object-safe wrapper used by `Value`.
+The `Visit` trait is not object-safe, but has a simple object-safe wrapper used by `Value`. We'll look at `Value` in more detail later.
 
-#### Without `serde`
+#### `Visit` without the `kv_serde` feature
 
 Without the `kv_serde` feature, the `Visit` trait is implemented for a fixed set of fundamental types from the standard library:
 
@@ -864,7 +869,7 @@ impl Visit for PathBuf {
 }
 ```
 
-#### With `serde`
+#### `Visit` with the `kv_serde` feature
 
 With the `kv_serde` feature, the `Visit` trait is implemented for any type that is `Debug + Serialize`:
 
@@ -1070,58 +1075,7 @@ pub trait Visitor {
 
 impl<'a, T: ?Sized> Visitor for &'a mut T
 where
-    T: Visitor,
-{
-    fn visit_any(&mut self, v: Value) -> Result<(), Error> {
-        (**self).visit_any(v)
-    }
-
-    fn visit_i64(&mut self, v: i64) -> Result<(), Error> {
-        (**self).visit_i64(v)
-    }
-
-    fn visit_u64(&mut self, v: u64) -> Result<(), Error> {
-        (**self).visit_u64(v)
-    }
-
-    #[cfg(feature = "i128")]
-    fn visit_i128(&mut self, v: i128) -> Result<(), Error> {
-        (**self).visit_i128(v)
-    }
-
-    #[cfg(feature = "i128")]
-    fn visit_u128(&mut self, v: u128) -> Result<(), Error> {
-        (**self).visit_u128(v)
-    }
-
-    fn visit_f64(&mut self, v: f64) -> Result<(), Error> {
-        (**self).visit_f64(v)
-    }
-
-    fn visit_bool(&mut self, v: bool) -> Result<(), Error> {
-        (**self).visit_bool(v)
-    }
-
-    fn visit_char(&mut self, v: char) -> Result<(), Error> {
-        (**self).visit_char(v)
-    }
-
-    fn visit_str(&mut self, v: &str) -> Result<(), Error> {
-        (**self).visit_str(v)
-    }
-
-    fn visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
-        (**self).visit_bytes(v)
-    }
-
-    fn visit_none(&mut self) -> Result<(), Error> {
-        (**self).visit_none()
-    }
-
-    fn visit_fmt(&mut self, args: &fmt::Arguments) -> Result<(), Error> {
-        (**self).visit_fmt(args)
-    }
-}
+    T: Visitor { }
 ```
 
 ### `Value`
@@ -1165,7 +1119,7 @@ impl<'v> Value<'v> {
 
 #### `ErasedVisit`
 
-The `ErasedVisit` trait is an object-safe wrapper for the `Visit` trait. `Visit` itself isn't technically object-safe because it needs the non-object-safe `serde::Serialize` as a supertrait to carry in generic contexts:
+The `ErasedVisit` trait is a private object-safe wrapper for the `Visit` trait. `Visit` itself isn't technically object-safe because it needs the non-object-safe `serde::Serialize` as a supertrait to carry in generic contexts:
 
 ```rust
 #[cfg(not(feature = "kv_serde"))]
@@ -1190,7 +1144,7 @@ where
 
 #### `Any`
 
-Other logging frameworks that want to integrate with `log` might not want to pull in a `serde` dependency, and so they couldn't implement the `Visit` trait. The `Any` type uses some `std::fmt` inspired black-magic to allow values that don't implement the `Visit` trait to be erased in a `Value`. It does this by taking a borrowed value along with a function pointer that looks like `Visit::visit`:
+Other logging frameworks that want to integrate with `log` might not want to pull in a `serde` dependency, and so they couldn't implement the `Visit` trait. The `Any` type is a private container that uses some `std::fmt` inspired black-magic to allow values that don't implement the `Visit` trait to be erased in a `Value`. It does this by taking a borrowed value along with a function pointer that looks like `Visit::visit`:
 
 ```rust
 struct Void {
@@ -1403,12 +1357,7 @@ pub trait Visitor<'kvs> {
 
 impl<'a, 'kvs, T: ?Sized> Visitor<'kvs> for &'a mut T
 where
-    T: Visitor<'kvs>,
-{
-    fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error> {
-        (*self).visit_pair(k, v)
-    }
-}
+    T: Visitor<'kvs> { }
 ```
 
 A `Visitor` may serialize the keys and values as it sees them. It may also do other work, like sorting or de-duplicating them. Operations that involve ordering keys will probably require allocations.
@@ -1432,12 +1381,7 @@ pub trait Source {
 
 impl<'a, T: ?Sized> Source for &'a T
 where
-    T: Source,
-{
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
-        (*self).visit(visitor)
-    }
-}
+    T: Source { }
 ```
 
 `Source` doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
@@ -1592,7 +1536,7 @@ None of these methods are required for the core API. They're helpful tools for w
 
 #### Object safety
 
-`Source` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `Source` that forwards this method can be reasonably written.
+`Source` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `Source` that forwards this method can be reasonably written in a similar way to the object-safe `ErasedVisit`:
 
 ```rust
 /// An erased `Source`.
@@ -1870,6 +1814,10 @@ Structured logging is a non-trivial feature to support. It adds complexity and o
 
 ## The `Debug + Serialize` blanket implementation of `Visit`
 
+### Drawbacks
+
+The main drawbacks of the feature-gated `Debug + Serialize` approach are that it's non-standard, which makes it harder to communicate.
+
 Making sure the `Visit` trait doesn't drop any implementations when the blanket implementation from `kv_serde` replaces the concrete ones is subtle and nonstandard. We have to be especially careful of references and generics. Any mistakes made here can result in dependencies that become uncompilable depending on Cargo features with no workaround besides removing that impl. Using a macro to define the small fixed set, and keeping all impls local to a single module, could help catch these cases.
 
 Another problem is documentation. It's not really easy to show in `rustdoc` how different crate features change the public API. Making it obvious how the bounds on `Visit` change might be tricky.
@@ -1898,15 +1846,21 @@ impl log_framework_x::Serialize for Url { .. }
 
 The real question for `serde` is whether or not depending on it as the general serialization framework in `log` creates the potential for some kind of ecosystem dichotomy if an alternative framework becomes popular where half the ecosystem uses `serde` and the other half uses something else that's incompatible. In that case `log` might not reasonably be able to support both without breakage if it goes down this path. The options for mitigating this in the design now is by either require all loggable types implement `Visit` explicitly, or just requiring callers opt in to `serde` support at the callsite in `log!`.
 
-### Require all loggable types implement `Visit`
+### Alternatives
 
-We could entirely punt on `serde` and just provide an API for simple values that implement the simple `Visit` trait. That avoids the potential serialization dichotomy in `log` altogether.
+#### Require all loggable types implement `Visit`
 
-The problem here is that any pervasive public API has the chance to create rifts in the ecosystem. By creating a new fundamental API for logging via the `Visit` trait we're just expanding the potential for dichotomies.
+We could entirely punt on `serde` and the non-standard implementations of `Visit`, and just provide an API for values that manually implement the `Visit` trait. That avoids the potential serialization dichotomy in `log` altogether.
+
+The problem here is that any pervasive public API has the chance to create rifts in the ecosystem. By creating a new fundamental API for logging via the `Visit` trait we're just expanding the potential for dichotomies. It also makes `log` another participant in the grab-bag of serialization traits that types in the ecosystem need to implement.
 
 It also means we need to re-invent `serde`'s support for complex datastructures, the datatypes that implement its traits, and the formats that support it. We'll effectively turn `log` into a serialization framework of its own, and have to introduce arbitrary limitations on the kinds of values that can be logged.
 
-### Require callers opt in to `serde` support at the callsite
+#### Attempt to deprecate other log-specific serialization traits in favour of `Visit`
+
+The case where types in the ecosystem like `Url` need to implement a random grab-bag of serialization traits to be compatible with every framework could be avoided by encouraging other frameworks to use `log`'s `Visit` instead of defining their own. We might get to a point where frameworks decide to standardize on a particular API, but that decision should be made naturally instead of being forced onto the ecosystem. The approach this RFC takes makes it possible to standardise, but doesn't depend on it. This also doesn't solve the issue of making `log` into a pervasive public dependency in the first place.
+
+#### Require callers opt in to `serde` support at the callsite
 
 We could avoid a potential serialization dichotomy by requiring callers opt in to `serde` support. That way if a new framework came along it could be naturally supported in the same way. There are a few ways callers could opt in to `serde` in the `log!` macros. The specifics aren't really important, but it could look something like this:
 
