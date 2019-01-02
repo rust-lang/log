@@ -220,6 +220,9 @@
 //!
 //! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
 //! this value before logging a message. By default, no levels are disabled.
+//! 
+//! Libraries should avoid using the max level features because they're global and can't be changed
+//! once they're set.
 //!
 //! For example, a crate can disable trace level logs in debug builds and trace, debug, and info
 //! level logs in release builds with the following configuration:
