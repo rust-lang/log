@@ -19,7 +19,7 @@ implementation that is most suitable for its use case.
 
 `1.16.0+`
 
-This version is explicitly tested in CI and may only be bumped in new minor versions. Any changes to the supported minimum version will be called out in the release notes.
+This version is explicitly tested in CI and may be bumped in any release as needed. Maintaining compatibility with older compilers is a priority though, so the bar for bumping the minimum supported version is set very high. Any changes to the supported minimum version will be called out in the release notes.
 
 ## Usage
 
