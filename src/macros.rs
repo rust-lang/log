@@ -170,6 +170,87 @@ macro_rules! trace {
     )
 }
 
+/// Log at debug level, the given expression and its *v*alue, returning the
+/// value.
+///
+/// This is a logging system equivalent to the
+/// [`std::dbg!`](https://doc.rust-lang.org/std/macro.dbg.html) macro, though
+/// it does not require `std`.  The `Debug` implementation for the type of the
+/// given expression value is used to log. Note that the value is moved and
+/// then returned. If the type does not implement `Copy`, ownership may be
+/// retained by borrowing by reference e.g. `debugv!(&expr)`.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+///
+/// let n = 12;
+/// let m = debugv!(n / 2) - 1;
+/// //      ^-- logs: "n / 2 = 6"
+///
+/// assert_eq!(m, 5);
+/// # }
+/// ```
+#[macro_export(local_inner_macros)]
+macro_rules! debugv {
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                log!(
+                    $crate::Level::Debug,
+                    "{} = {:#?}",
+                    __log_stringify!($val), &tmp
+                );
+                tmp
+            }
+        }
+    }
+}
+
+/// Log at trace level, the given expression and its *v*alue, returning the
+/// value.
+///
+/// The `Debug` implementation for the type of the given expression value is
+/// used to log. Note that the value is moved and then returned. If the type
+/// does not implement `Copy`, ownership may be retained by borrowing by
+/// reference e.g. `tracev!(&expr)`.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+/// #[derive(Debug)]
+/// struct Position { x: f32, y: f32 }
+///
+/// let center = Position { x: 3.234, y: -1.223 };
+///
+/// fn circle(center: &Position, radius: f32) { /*...*/ }
+///
+/// circle(tracev!(&center), 7.3);
+/// //     ^-- logs: "&center = Position { x: 3.234, y: -1.223 }"
+/// # }
+/// ```
+#[macro_export(local_inner_macros)]
+macro_rules! tracev {
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                log!(
+                    $crate::Level::Trace,
+                    "{} = {:#?}",
+                    __log_stringify!($val), &tmp
+                );
+                tmp
+            }
+        }
+    }
+}
+
 /// Determines if a message logged at the specified level in that module will
 /// be logged.
 ///
@@ -249,5 +330,13 @@ macro_rules! __log_file {
 macro_rules! __log_line {
     () => {
         line!()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __log_stringify {
+    ($($args:tt)*) => {
+        stringify!($($args)*)
     };
 }
