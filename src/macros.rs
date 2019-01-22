@@ -44,6 +44,47 @@ macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
 }
 
+/// Log an expression and its value at any specified level.
+///
+/// Logs with the optional or default (module path of use) target, specified
+/// `Level`, optional or default (`"{} = {:?}`) format string, and a single
+/// expression and value, which is returned.  This is normally only used
+/// through the _-v_ macros like `debugv!` or `tracev!`.
+///
+/// Note that the value is moved and then returned. If the type does not
+/// implement `Copy`, ownership may be retained by borrowing by reference
+/// e.g. `debugv!(&expr)`.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use] extern crate log;
+/// use log::Level;
+///
+/// #[derive(Debug)]
+/// struct Point { x: f32, y: f32 }
+///
+/// fn circle(center: &Point, radius: f32) { /*...*/ }
+///
+/// # fn main() {
+/// let center = Point { x: 3.234, y: -1.223 };
+///
+/// circle(logv!(Level::Trace, &center), 7.3);
+/// //     ^-- trace level message: "&center = Point { x: 3.234, y: -1.223 }"
+/// circle(tracev!(&center), 8.0);
+/// //     ^-- trace level message: "&center = Point { x: 3.234, y: -1.223 }"
+/// # }
+/// ```
+#[macro_export]
+macro_rules! logv {
+    (target: $target:expr, $lvl:expr, $($arg:tt)+) => (
+        __logv!($lvl, target: $target, $($arg)+)
+    );
+    ($lvl:expr, $($arg:tt)+) => (
+        __logv!($lvl, target: __log_module_path!(), $($arg)+)
+    );
+}
+
 /// Logs a message at the error level.
 ///
 /// # Examples
@@ -170,85 +211,34 @@ macro_rules! trace {
     )
 }
 
-/// Log at debug level, the given expression and its *v*alue, returning the
-/// value.
-///
-/// This is a logging system equivalent to the
-/// [`std::dbg!`](https://doc.rust-lang.org/std/macro.dbg.html) macro, though
-/// it does not require `std`.  The `Debug` implementation for the type of the
-/// given expression value is used to log. Note that the value is moved and
-/// then returned. If the type does not implement `Copy`, ownership may be
-/// retained by borrowing by reference e.g. `debugv!(&expr)`.
-///
-/// # Examples
-///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
-/// # fn main() {
-///
-/// let n = 12;
-/// let m = debugv!(n / 2) - 1;
-/// //      ^-- logs: "n / 2 = 6"
-///
-/// assert_eq!(m, 5);
-/// # }
-/// ```
+/// Log an expression at the error level, returning the value.
 #[macro_export(local_inner_macros)]
-macro_rules! debugv {
-    ($val:expr) => {
-        match $val {
-            tmp => {
-                log!(
-                    $crate::Level::Debug,
-                    "{} = {:#?}",
-                    __log_stringify!($val), &tmp
-                );
-                tmp
-            }
-        }
-    }
+macro_rules! errorv {
+    ($($arg:tt)+) => (__logv!($crate::Level::Error, $($arg)+))
 }
 
-/// Log at trace level, the given expression and its *v*alue, returning the
-/// value.
-///
-/// The `Debug` implementation for the type of the given expression value is
-/// used to log. Note that the value is moved and then returned. If the type
-/// does not implement `Copy`, ownership may be retained by borrowing by
-/// reference e.g. `tracev!(&expr)`.
-///
-/// # Examples
-///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
-/// # fn main() {
-/// #[derive(Debug)]
-/// struct Position { x: f32, y: f32 }
-///
-/// let center = Position { x: 3.234, y: -1.223 };
-///
-/// fn circle(center: &Position, radius: f32) { /*...*/ }
-///
-/// circle(tracev!(&center), 7.3);
-/// //     ^-- logs: "&center = Position { x: 3.234, y: -1.223 }"
-/// # }
-/// ```
+/// Log an expression at the warn level, returning the value.
+#[macro_export(local_inner_macros)]
+macro_rules! warnv {
+    ($($arg:tt)+) => (__logv!($crate::Level::Warn, $($arg)+))
+}
+
+/// Log an expression at the info level, returning the value.
+#[macro_export(local_inner_macros)]
+macro_rules! infov {
+    ($($arg:tt)+) => (__logv!($crate::Level::Info, $($arg)+))
+}
+
+/// Log an expression at the debug level, returning the value.
+#[macro_export(local_inner_macros)]
+macro_rules! debugv {
+    ($($arg:tt)+) => (__logv!($crate::Level::Debug, $($arg)+))
+}
+
+/// Log an expression at the trace level, returning the value.
 #[macro_export(local_inner_macros)]
 macro_rules! tracev {
-    ($val:expr) => {
-        match $val {
-            tmp => {
-                log!(
-                    $crate::Level::Trace,
-                    "{} = {:#?}",
-                    __log_stringify!($val), &tmp
-                );
-                tmp
-            }
-        }
-    }
+    ($($arg:tt)+) => (__logv!($crate::Level::Trace, $($arg)+))
 }
 
 /// Determines if a message logged at the specified level in that module will
@@ -289,6 +279,41 @@ macro_rules! log_enabled {
     ($lvl:expr) => {
         log_enabled!(target: __log_module_path!(), $lvl)
     };
+}
+
+// Helper macro for the -v macros, handling the permutations of optional
+// parameters. Note: The required level paremeter is first here for
+// convenience of internal use with variable-args.
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! __logv {
+    ($lvl:expr, target: $tgt:expr, $fmt:expr, $val:expr) => (
+        __logv_eval!($tgt, $lvl, $fmt, $val)
+    );
+    ($lvl:expr, target: $tgt:expr, $val:expr) => (
+        __logv_eval!($tgt, $lvl, "{} = {:?}", $val)
+    );
+    ($lvl:expr, $fmt:expr, $val:expr) => (
+        __logv_eval!(__log_module_path!(), $lvl, $fmt, $val)
+    );
+    ($lvl:expr, $val:expr) => (
+        __logv_eval!(__log_module_path!(), $lvl, "{} = {:?}", $val)
+    );
+}
+
+// Inner helper macro for __logv. Evaluates expression exactly once, moves
+// value and returns it.
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! __logv_eval {
+    ($tgt:expr, $lvl:expr, $fmt:expr, $exp:expr) => (
+        match $exp {
+            vt => {
+                log!(target: $tgt, $lvl, $fmt, __log_stringify!($exp), &vt);
+                vt
+            }
+        }
+    )
 }
 
 // The log macro above cannot invoke format_args directly because it uses
