@@ -24,27 +24,141 @@
 //! though that default may be overridden. Logger implementations typically use
 //! the target to filter requests based on some user configuration.
 //!
-//! # Use
+//! ## Logging macros
 //!
-//! The basic use of the log crate is through the five logging macros: [`error!`],
-//! [`warn!`], [`info!`], [`debug!`] and [`trace!`]
-//! where `error!` represents the highest-priority log messages
-//! and `trace!` the lowest. The log messages are filtered by configuring
-//! the log level to exclude messages with a lower priority.
-//! Each of these macros accept format strings similarly to [`println!`].
+//! The `log` crate is primarly used through logging [macros](#macros). These
+//! include formatted logging macros for each of the supported levels, from
+//! highest to lowest priority: `error!`, `warn!`, `info!`, `debug!` and
+//! `trace!`.  There is an additional set of “_-v_” suffix macros
+//! (e.g. `debugv!`) that provide _inline expression and value_ logging. Both
+//! sets of macros are described below, with examples using aribitrary log
+//! levels.
 //!
+//! ### Formatted logging
 //!
-//! [`error!`]: ./macro.error.html
-//! [`warn!`]: ./macro.warn.html
-//! [`info!`]: ./macro.info.html
-//! [`debug!`]: ./macro.debug.html
-//! [`trace!`]: ./macro.trace.html
-//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
+//! The formatted logging macros require a literal format string, supporting
+//! the same syntax as `println!`, via [`std::fmt`]:
 //!
-//! ## In libraries
+//! ```rust
+//! # #[macro_use] extern crate log;
+//! # fn main() {
+//! info!("Landing gear retracted");
+//! let altitude = 3000;
+//! let target = 10500;
+//! debug!("Altitude target: {}, current: {}", target, altitude);
+//! # }
+//! ```
 //!
-//! Libraries should link only to the `log` crate, and use the provided
-//! macros to log whatever information will be useful to downstream consumers.
+//! If for example, the configured maximum logging level is `Info`, then the
+//! above `debug!` statement does not log, and the cost of formatting the
+//! message string is avoided.
+//!
+//! ### Testing for output
+//!
+//! The [`log_enabled!`](macro.log_enabled.html) macro may be used to
+//! explicitly test if logging is enabled, and may be useful to avoid
+//! expensive computations used only for logging.
+//!
+//! ```rust
+//! # #[macro_use] extern crate log;
+//! # struct Foo;
+//! # impl Foo {
+//! #     fn volume(&self) -> f32 { 0.1 }
+//! #     fn mass(&self) -> f32 { 0.2 }
+//! # }
+//! # fn analyze(a: u32) -> Foo { Foo }
+//! use log::Level::Debug;
+//! # fn main() {
+//!
+//! # let asteroid = 1;
+//! if log_enabled!(Debug) {
+//!     let e = analyze(asteroid); // expensive!
+//!     debug!("Asteroid volume: {}, mass: {}", e.volume(), e.mass());
+//! }
+//! # }
+//! ```
+//!
+//! ### Inline expression and value logging
+//!
+//! The _-v_ macros support inline expression and value logging. A _single_
+//! expression argument is evaluated exactly once, regardless of if the
+//! logging level is enabled, and its value is returned from the macro. Given
+//! this code as a starting point:
+//!
+//! ```rust
+//! # fn main() {
+//! let n = 12;
+//! let m = n / 2 - 1;
+//! assert_eq!(m, 5);
+//! # }
+//! ```
+//!
+//! The `debugv!` macro may be inserted inline around any expression or
+//! sub-expression:
+//!
+//! ```rust
+//! # #[macro_use] extern crate log;
+//! # fn main() {
+//! let n = 12;
+//! let m = debugv!(n / 2) - 1;
+//! //      ^-- debug log message: "n / 2 = 6"
+//! assert_eq!(m, 5);
+//! # }
+//! ```
+//!
+//! This feature is a superset of the [`std::dbg!`] macro for the logging
+//! system.  Note that the value of the expression is moved and then
+//! returned. The type must implement `Copy`, but this includes immutable
+//! references to non-`Copy` types.
+//!
+//! The _default_ format string for the _-v_ macros is `"{} = {:?}"`, where
+//! the `stringify!`-ed expression and resulting value are passed, in that
+//! order.  If the log record is not filtered out, the `Debug` implementation
+//! for the type of the given expression value is used (`{:?}`).  A custom
+//! format string can _also_ be passed to the _-v_ macros, for more flexible
+//! output:
+//!
+//! ```rust
+//! # #![allow(unstable)]
+//! # #[macro_use] extern crate log;
+//! # fn main() {
+//! let i = 32;
+//! infov!("{} = {}", i);            // use `Display` instead of `Debug`
+//! infov!("{} = {:x}", i);          // hexadecimal format value
+//! infov!("{} = {:#?}", i);         // use pretty, multi-line format
+//! infov!("index {1:5?} ({0})", i); // prefix, value first with padding
+//! # }
+//! ```
+//!
+//! ### Specifying the logging target
+//!
+//! For _all_ logging macros, the _target_ defaults to the module path of the
+//! current location of use, but may be overridden with the `target:` marker
+//! and string literal as the first argument:
+//!
+//! ```rust
+//! # #[macro_use] extern crate log;
+//! # fn stats() -> i32 { 33 }
+//! # fn main() {
+//! use log::Level::Info;
+//!
+//! let i = 33;
+//! let j = warnv!(target: "maths", (i-1) / 2);
+//! assert_eq!(j, 16);
+//!
+//! if log_enabled!(target: "special", Info) {
+//!     info!(target: "special", "{}", stats());
+//! }
+//! # }
+//! ```
+//!
+//! [`std::fmt`]: https://doc.rust-lang.org/stable/std/fmt/index.html
+//! [`std::dbg!`]: https://doc.rust-lang.org/std/macro.dbg.html
+//!
+//! ## Use in libraries
+//!
+//! Libraries should link only to the `log` crate, and use the provided macros
+//! to log whatever information will be useful to downstream consumers.
 //!
 //! ### Examples
 //!
@@ -75,7 +189,7 @@
 //! # fn main() {}
 //! ```
 //!
-//! ## In executables
+//! ## Use in executables
 //!
 //! Executables should choose a logging implementation and initialize it early in the
 //! runtime of the program. Logging implementations will typically include a
@@ -670,7 +784,8 @@ impl LevelFilter {
 /// `Record` structures are passed as parameters to the [`log`][method.log]
 /// method of the [`Log`] trait. Logger implementors manipulate these
 /// structures in order to display log messages. `Record`s are automatically
-/// created by the [`log!`] macro and so are not seen by log users.
+/// created by the various logging macros and so are not typically seen
+/// directly by `log` users.
 ///
 /// Note that the [`level()`] and [`target()`] accessors are equivalent to
 /// `self.metadata().level()` and `self.metadata().target()` respectively.
@@ -1064,16 +1179,10 @@ pub fn set_max_level(level: LevelFilter) {
 
 /// Returns the current maximum log level.
 ///
-/// The [`log!`], [`error!`], [`warn!`], [`info!`], [`debug!`], and [`trace!`] macros check
-/// this value and discard any message logged at a higher level. The maximum
-/// log level is set by the [`set_max_level`] function.
+/// The logging macros check this value and discard any message logged at a
+/// higher level. The maximum log level is set by the [`set_max_level`]
+/// function.
 ///
-/// [`log!`]: macro.log.html
-/// [`error!`]: macro.error.html
-/// [`warn!`]: macro.warn.html
-/// [`info!`]: macro.info.html
-/// [`debug!`]: macro.debug.html
-/// [`trace!`]: macro.trace.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
