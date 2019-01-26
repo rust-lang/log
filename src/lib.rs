@@ -15,14 +15,13 @@
 //! by this crate, and the consumer of those libraries can choose the logging
 //! implementation that is most suitable for its use case.
 //!
-//! If no logging implementation is selected, the facade falls back to a "noop"
-//! implementation that ignores all log messages. The overhead in this case
-//! is very small - just an integer load, comparison and jump.
+//! If no logging implementation is selected, the facade falls back to a
+//! _no-op_ implementation that ignores all log messages. The overhead in this
+//! case is very small—just an integer load, comparison and jump.
 //!
-//! A log request consists of a _target_, a _level_, and a _body_. A target is a
-//! string which defaults to the module path of the location of the log request,
-//! though that default may be overridden. Logger implementations typically use
-//! the target to filter requests based on some user configuration.
+//! A log `Record` includes a target, level, and message body. Logger
+//! implementations typically use the target and level to filter records,
+//! based on user configuration.
 //!
 //! ## Logging macros
 //!
@@ -191,23 +190,20 @@
 //!
 //! ## Use in executables
 //!
-//! Executables should choose a logging implementation and initialize it early in the
-//! runtime of the program. Logging implementations will typically include a
-//! function to do this. Any log messages generated before
-//! the implementation is initialized will be ignored.
+//! Executables should choose a logging implementation and initialize it early
+//! in the runtime of the program. Logging implementations will typically
+//! include a function to do this. Any log messages generated before the
+//! implementation is initialized will be ignored.
 //!
-//! The executable itself may use the `log` crate to log as well.
+//! _Warning_: The logging system may only be initialized once.
 //!
-//! ### Warning
+//! The executable may also use the `log` crate to log.
 //!
-//! The logging system may only be initialized once.
+//! ### Available logging implementations
 //!
-//! # Available logging implementations
-//!
-//! In order to produce log output executables have to use
-//! a logger implementation compatible with the facade.
-//! There are many available implementations to choose from,
-//! here are some of the most popular ones:
+//! In order to produce log output executables have to use a logger
+//! implementation compatible with the facade.  There are many available
+//! implementations to choose from, here are some of the most popular ones:
 //!
 //! * Simple minimal loggers:
 //!     * [env_logger]
@@ -223,7 +219,7 @@
 //!     * [syslog]
 //!     * [slog-stdlog]
 //!
-//! # Implementing a Logger
+//! ### Implementing a Logger
 //!
 //! Loggers implement the [`Log`] trait. Here's a very basic example that simply
 //! logs all messages at the [`Error`][level_link], [`Warn`][level_link] or
@@ -287,7 +283,7 @@
 //! Implementations that adjust their configurations at runtime should take care
 //! to adjust the maximum log level as well.
 //!
-//! # Use with `std`
+//! ### Use with `std`
 //!
 //! `set_logger` requires you to provide a `&'static Log`, which can be hard to
 //! obtain if your logger depends on some runtime configuration. The
@@ -334,7 +330,7 @@
 //!
 //! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
 //! this value before logging a message. By default, no levels are disabled.
-//! 
+//!
 //! Libraries should avoid using the max level features because they're global and can't be changed
 //! once they're set.
 //!

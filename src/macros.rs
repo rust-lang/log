@@ -8,10 +8,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/// The standard logging macro.
+/// Log formatted message at a specified level.
 ///
-/// This macro will generically log with the specified `Level` and `format!`
-/// based argument list.
+/// This macro will log with the optional or default target, specified `Level`
+/// and `format!` based arguments.
 ///
 /// # Examples
 ///
@@ -26,7 +26,7 @@
 ///
 /// log!(Level::Error, "Received errors: {}, {}", data.0, data.1);
 /// log!(target: "app_events", Level::Warn, "App warning: {}, {}, {}",
-///     data.0, data.1, private_data);
+///      data.0, data.1, private_data);
 /// # }
 /// ```
 #[macro_export(local_inner_macros)]
@@ -85,7 +85,7 @@ macro_rules! logv {
     );
 }
 
-/// Logs a message at the error level.
+/// Log a message at the error level.
 ///
 /// # Examples
 ///
@@ -109,7 +109,7 @@ macro_rules! error {
     )
 }
 
-/// Logs a message at the warn level.
+/// Log a message at the warn level.
 ///
 /// # Examples
 ///
@@ -133,7 +133,7 @@ macro_rules! warn {
     )
 }
 
-/// Logs a message at the info level.
+/// Log a message at the info level.
 ///
 /// # Examples
 ///
@@ -159,7 +159,7 @@ macro_rules! info {
     )
 }
 
-/// Logs a message at the debug level.
+/// Log a message at the debug level.
 ///
 /// # Examples
 ///
@@ -184,7 +184,7 @@ macro_rules! debug {
     )
 }
 
-/// Logs a message at the trace level.
+/// Log a message at the trace level.
 ///
 /// # Examples
 ///
@@ -241,11 +241,11 @@ macro_rules! tracev {
     ($($arg:tt)+) => (__logv!($crate::Level::Trace, $($arg)+))
 }
 
-/// Determines if a message logged at the specified level in that module will
-/// be logged.
+/// Return true if a log record will be logged for optional or default
+/// _target_ and _level_.
 ///
-/// This can be used to avoid expensive computation of log message arguments if
-/// the message would be ignored anyway.
+/// This can be used to avoid expensive computation of log message arguments
+/// if the message would be ignored anyway.
 ///
 /// # Examples
 ///
@@ -260,8 +260,8 @@ macro_rules! tracev {
 ///     debug!("expensive debug data: {} {}", data.x, data.y);
 /// }
 /// if log_enabled!(target: "Global", Debug) {
-///    let data = expensive_call();
-///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
+///     let data = expensive_call();
+///     debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
 /// }
 /// # }
 /// # struct Data { x: u32, y: u32 }
@@ -316,12 +316,11 @@ macro_rules! __logv_eval {
     )
 }
 
-// The log macro above cannot invoke format_args directly because it uses
-// local_inner_macros. A format_args invocation there would resolve to
-// $crate::format_args which does not exist. Instead invoke format_args here
-// outside of local_inner_macros so that it resolves (probably) to
-// core::format_args or std::format_args. Same for the several macros that
-// follow.
+// The macros above cannot invoke `format_args!` or other core/std macros
+// directly when they use `local_inner_macros`. A `format_args!` invocation in
+// these would resolve to `$crate::format_args` which does not exist. Instead
+// invoke `format_args!` here outside of `local_inner_macros` so that it
+// resolves (probably) to `core::format_args` or `std::format_args`.
 //
 // This is a workaround until we drop support for pre-1.30 compilers. At that
 // point we can remove use of local_inner_macros, use $crate:: when invoking
