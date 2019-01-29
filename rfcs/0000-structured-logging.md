@@ -18,10 +18,9 @@ The API is heavily inspired by `slog` and `tokio-trace`.
   - [Logging structured key-value pairs](#logging-structured-key-value-pairs)
   - [Supporting key-value pairs in `Log` implementations](#supporting-key-value-pairs-in-log-implementations)
   - [Integrating log frameworks with `log`](#integrating-log-frameworks-with-log)
-  - [Writing your own `value::Visitor`](#writing-your-own-valuevisitor)
+  - [How producers and consumers of structured values interact](#how-producers-and-consumers-of-structured-values-interact)
 - [Reference-level explanation](#reference-level-explanation)
   - [Design considerations](#design-considerations)
-  - [Implications for dependents](#implications-for-dependents)
   - [Cargo features](#cargo-features)
   - [Key-values API](#key-values-api)
     - [`Error`](#error)
@@ -36,8 +35,6 @@ The API is heavily inspired by `slog` and `tokio-trace`.
 - [Drawbacks, rationale, and alternatives](#drawbacks-rationale-and-alternatives)
 - [Prior art](#prior-art)
 - [Unresolved questions](#unresolved-questions)
-- [Appendix](#appendix)
-  - [Public API](#public-api)
 
 # Motivation
 [motivation]: #motivation
@@ -604,6 +601,8 @@ Using the `kv_serde` feature, any `Value` will also implement `serde::Serialize`
 
 ## Key-values API
 
+The following section details the public API for structured values in `log`, along with possible future extensions and minimal initial implementations. Actual implementation details are excluded for brevity unless they're particularly noteworthy. See the original comment on the [RFC issue](https://github.com/rust-lang-nursery/log/pull/296#issue-222687727) for a reference implementation.
+
 ### `Error`
 
 Just about the only things you can do with a structured value are format it or serialize it. Serialization and writing might fail, so to allow errors to get carried back to callers there needs to be a general error type that they can early return with:
@@ -613,95 +612,35 @@ pub struct Error(Inner);
 
 impl Error {
     pub fn msg(msg: &'static str) -> Self {
-        Error(Inner::Static(msg))
+        ..
     }
 }
 
 impl Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
+    ..
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-enum Inner {
-    Static(&'static str),
-    #[cfg(feature = "std")]
-    Owned(String),
-}
-
-impl Debug for Inner {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Inner::Static(msg) => msg.fmt(f),
-            #[cfg(feature = "std")]
-            Inner::Owned(ref msg) => msg.fmt(f),
-        }
-    }
-}
-
-impl Display for Inner {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Inner::Static(msg) => msg.fmt(f),
-            #[cfg(feature = "std")]
-            Inner::Owned(ref msg) => msg.fmt(f),
-        }
-    }
+    ..
 }
 
 impl From<fmt::Error> for Error {
-    #[cfg(feature = "std")]
-    fn from(err: fmt::Error) -> Self {
-        Self::custom(err)
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn from(_: fmt::Error) -> Self {
-        Self::msg("formatting failed")
-    }
+    ..
 }
 
 impl From<Error> for fmt::Error {
-    fn from(_: Error) -> Self {
-        Self
-    }
+    ..
 }
 
 #[cfg(feature = "kv_sval")]
 mod sval_support {
-    use super::*;
-
     impl From<sval::Error> for Error {
-        fn from(err: sval::Error) -> Self {
-            Self::from_sval(err)
-        }
+        ..
     }
 
-    #[cfg(not(feature = "std"))]
     impl Error {
-        pub(crate) fn from_sval(err: sval::Error) -> Self {
-            Error::msg("sval streaming failed")
-        }
-
         pub fn into_sval(self) -> sval::Error {
-            sval::Error::msg("streaming failed")
-        }
-    }
-
-    #[cfg(feature = "std")]
-    impl Error {
-        pub(crate) fn from_sval(err: sval::Error) -> Self {
-            Error::custom(err)
-        }
-
-        pub fn into_sval(self) -> sval::Error {
-            self.into()
+            ..
         }
     }
 }
@@ -709,24 +648,11 @@ mod sval_support {
 #[cfg(feature = "kv_serde")]
 mod serde_support {
     impl Error {
-        /// Convert into `serde`.
         pub fn into_serde<E>(self) -> E
         where
             E: serde::ser::Error,
         {
-            E::custom(self)
-        }
-    }
-
-    impl Error {
-        #[cfg(not(feature = "std"))]
-        pub(crate) fn from_serde(err: impl serde::ser::Error) -> Self {
-            Self::msg("serde serialization failed")
-        }
-
-        #[cfg(feature = "std")]
-        pub(crate) fn from_serde(err: impl serde::ser::Error) -> Self {
-            Self::custom(err)
+            ..
         }
     }
 }
@@ -734,41 +660,21 @@ mod serde_support {
 #[cfg(feature = "std")]
 mod std_support {
     impl Error {
-        /// Create an error for a formattable value.
         pub fn custom(err: impl fmt::Display) -> Self {
-            Error(Inner::Owned(err.to_string()))
+            ..
         }
     }
 
     impl From<io::Error> for Error {
-        fn from(err: io::Error) -> Self {
-            Error::custom(err)
-        }
+        ..
     }
 
     impl From<Error> for io::Error {
-        fn from(err: Error) -> Self {
-            io::Error::new(io::ErrorKind::Other, err)
-        }
+        ..
     }
 
     impl error::Error for Error {
-        fn description(&self) -> &str {
-            self.0.description()
-        }
-
-        fn cause(&self) -> Option<&dyn error::Error> {
-            self.0.cause()
-        }
-    }
-
-    impl error::Error for Inner {
-        fn description(&self) -> &str {
-            match self {
-                Inner::Static(msg) => msg,
-                Inner::Owned(msg) => msg,
-            }
-        }
+        ..
     }
 }
 ```
@@ -782,6 +688,132 @@ To make it possible to carry any arbitrary `S::Error` type, where we don't know 
 A `Value` is an erased container for some type whose structure can be visited, with a potentially short-lived lifetime:
 
 ```rust
+pub struct Value<'v>(_);
+
+impl<'v> Value<'v> {
+    pub fn from_any<T>(v: &'v T, from: FromAnyFn<T>) -> Self {
+        ..
+    }
+
+    pub fn from_debug(v: &'v impl Debug) -> Self {
+        Self::from_any(v, |from, v| from.debug(v))
+    }
+
+    #[cfg(feature = "kv_sval")]
+    pub fn from_sval(v: &'v (impl sval::Value + Debug)) -> Self {
+        Self::from_any(v, |from, v| from.sval(v))
+    }
+
+    #[cfg(feature = "kv_serde")]
+    pub fn from_serde(v: &'v (impl serde::Serialize + Debug)) -> Self {
+        Self::from_any(v, |from, v| from.serde(v))
+    }
+}
+
+impl<'v> Debug for Value<'v> {
+    ..
+}
+
+impl<'v> Display for Value<'v> {
+    ..
+}
+
+#[cfg(feature = "kv_sval")]
+impl<'v> sval::Value for Value<'v> {
+    ..
+}
+
+#[cfg(feature = "kv_serde")]
+impl<'v> serde::Serialize for Value<'v> {
+    ..
+}
+
+type FromAnyFn<T> = fn(FromAny, &T) -> Result<(), Error>;
+```
+
+The `FromAny` type is like a visitor that accepts values with a particular structure, but doesn't require those values satisfy any lifetime constraints:
+
+```rust
+pub struct FromAny<'a>(_);
+
+impl<'a> FromAny<'a> {
+    pub fn debug(self, v: impl Debug) -> Result<(), Error> {
+        ..
+    }
+
+    #[cfg(feature = "kv_sval")]
+    pub fn sval(self, v: impl sval::Value + Debug) -> Result<(), Error> {
+        ..
+    }
+
+    #[cfg(feature = "kv_serde")]
+    pub fn serde(self, v: impl serde::Serialize + Debug) -> Result<(), Error> {
+        ..
+    }
+
+    fn value(self, v: Value) -> Result<(), Error> {
+        ..
+    }
+
+    fn u64(self, v: u64) -> Result<(), Error> {
+        ..
+    }
+
+    fn i64(self, v: i64) -> Result<(), Error> {
+        ..
+    }
+    
+    fn f64(self, v: f64) -> Result<(), Error> {
+        ..
+    }
+
+    fn bool(self, v: bool) -> Result<(), Error> {
+        ..
+    }
+
+    fn char(self, v: char) -> Result<(), Error> {
+        ..
+    }
+
+    fn none(self) -> Result<(), Error> {
+        ..
+    }
+
+    fn str(self, v: &str) -> Result<(), Error> {
+        ..
+    }
+}
+```
+
+#### A minimal initial API
+
+An initial implementation of `Value` could support just the `std::fmt` machinery:
+
+```rust
+pub struct Value<'v>(_);
+
+impl<'v> Value<'v> {
+    pub fn from_debug(v: &'v impl Debug) -> Self {
+        ..
+    }
+}
+
+impl<'v> Debug for Value<'v> {
+    ..
+}
+
+impl<'v> Display for Value<'v> {
+    ..
+}
+```
+
+Structured serialization frameworks could then be introduced without breakage. This could either be done in terms of the `FromAny` machinery shown previously, by exposing a serialization contract directly, or both.
+
+#### Erasing values in `Value::from_any`
+
+Internally, the `Value` type uses similar machinery to `std::fmt::Argument` for pairing an erased incoming type with a function for operating on it:
+
+```rust
 pub struct Value<'v>(Inner<'v>);
 
 impl<'v> Value<'v> {
@@ -789,11 +821,7 @@ impl<'v> Value<'v> {
         Value(Inner::new(v, from))
     }
 }
-```
 
-The inner type is an erased reference to some data and a function that captures its structure:
-
-```rust
 struct Void {
     _priv: (),
     _oibit_remover: PhantomData<*mut dyn Fn()>,
@@ -823,159 +851,7 @@ impl<'a> Inner<'a> {
 }
 ```
 
-The `FromAny` type is like a visitor that accepts values with a particular structure, but doesn't require those values satisfy any lifetime constraints:
-
-```rust
-/// A builder for a value.
-/// 
-/// An instance of this type is passed to the `Value::from_any` method.
-pub struct FromAny<'a>(&'a mut dyn Backend);
-
-// NOTE: These methods aren't public. They're used by implementations of
-// ToValue for standard library types.
-impl<'a> FromAny<'a> {
-    fn value(self, v: Value) -> Result<(), Error> {
-        v.0.visit(self.0)
-    }
-
-    fn u64(self, v: u64) -> Result<(), Error> {
-        self.0.u64(v)
-    }
-
-    fn i64(self, v: i64) -> Result<(), Error> {
-        self.0.i64(v)
-    }
-    
-    fn f64(self, v: f64) -> Result<(), Error> {
-        self.0.f64(v)
-    }
-
-    fn bool(self, v: bool) -> Result<(), Error> {
-        self.0.bool(v)
-    }
-
-    fn char(self, v: char) -> Result<(), Error> {
-        self.0.char(v)
-    }
-
-    fn none(self) -> Result<(), Error> {
-        self.0.none()
-    }
-
-    fn str(self, v: &str) -> Result<(), Error> {
-        self.0.str(v)
-    }
-}
-```
-
-Internal implementations of `ToValue` for standard library primitives use the private methods on `Backend` to retain their structure, without having to commit to any machinery in the public API. Each serialization framework supported by `log` provides an internal implementation of `Backend`, so there's one for `std::fmt`, one for `sval`, and one for `serde`.
-
-Each backend adds constructor methods to `Value` that allows it to capture values that satisfy the traits expected from that backend:
-
-```rust
-mod fmt {
-    impl<'v> Value<'v> {
-        pub fn from_debug(v: &'v impl Debug) -> Self {
-            Self::from_any(v, |from, v| from.debug(v))
-        }
-    }
-
-    impl<'a> FromAny<'a> {
-        pub fn debug(self, v: impl Debug) -> Result<(), Error> {
-            ..
-        }
-    }
-
-    impl<'v> fmt::Debug for Value<'v> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            ..
-        }
-    }
-
-    impl<'v> fmt::Display for Value<'v> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            ..
-        }
-    }
-}
-
-#[cfg(feature = "kv_sval")]
-mod sval {
-    impl<'v> Value<'v> {
-        pub fn from_sval(v: &'v (impl sval::Value + Debug)) -> Self {
-            Self::from_any(v, |from, v| from.sval(v))
-        }
-    }
-
-    impl<'a> FromAny<'a> {
-        pub fn sval(self, v: impl sval::Value + Debug) -> Result<(), Error> {
-            ..
-        }
-    }
-
-    impl<'v> sval::Value for Value<'v> {
-        fn stream(&self, stream: &mut sval::value::Stream) -> Result<(), sval::Error> {
-            ..
-        }
-    }
-}
-
-#[cfg(feature = "kv_serde")]
-mod serde {
-    impl<'v> Value<'v> {
-        pub fn from_serde(v: &'v (impl Serialize + Debug)) -> Self {
-            Self::from_any(v, |from, v| from.serde(v))
-        }
-    }
-
-    impl<'a> FromAny<'a> {
-        pub fn serde(self, v: impl Serialize + Debug) -> Result<(), Error> {
-            ..
-        }
-    }
-
-    impl<'v> serde::Serialize for Value<'v> {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            ..
-        }
-    }
-}
-```
-
-The implementation details of `Backend` aren't really important because they aren't public and could be implemented in a couple of ways, but a working reference is provided in the appendix.
-
-#### A minimal initial API
-
-An initial implementation of `Value` could support just the `std::fmt` machinery:
-
-```rust
-pub struct Value<'v>(_);
-
-impl<'v> Value<'v> {
-    pub fn from_debug(v: &'v impl Debug) -> Self {
-        ..
-    }
-}
-
-impl<'v> Debug for Value<'v> {
-    ..
-}
-
-impl<'v> Display for Value<'v> {
-    ..
-}
-```
-
-Structured serialization frameworks could then be introduced without breakage. This could either be done in terms of the `FromAny` machinery shown previously, by exposing a serialization contract directly, or both.
-
-#### Adding another supported framework
-
-Adding optional support for another serialization framework like `serde` or `sval` can be done by implementing the `serde::Serialize` or `sval::Value` traits, and adding constructor methods to `Value` that allow it to capture implementations of those traits. A side-effect of pushing all supported serialization frameworks through the one type is that all supported frameworks will have to provide bridging support for all other supported frameworks. This makes the barrier for new frameworks raise exponentially and discourages supporting too many, but also protects the end-user experience from degrading when multiple frameworks are used in a single logging pipeline.
-
-The `sval` library is designed as a compatible extension for structured logging, and might be the first serialization framework to consider supporting (it comes along with `serde` support).
+The benefit of the `Value::from_any` approach over a dedicated trait is that `Value::from_any` doesn't make any constraints on the incoming `&'v T` besides needing to satisfy the `'v` lifetime. That makes it possible to materialize newtypes from the borrowed `&'v T` to satisfy serialization constraints for cases where the caller doesn't own `T` and can't implement traits on it.
 
 #### Ownership
 
@@ -1119,96 +995,61 @@ impl<'a> ToValue for &'a str {
 A `Key` is a short-lived structure that can be represented as a UTF-8 string. This might be possible without allocating, or it might require a destination to write into:
 
 ```rust
-pub struct Key<'k>(Inner<'k>);
+pub struct Key<'k>(_);
 
 impl<'k> Key<'k> {
-    /// Create a key from a borrowed string and optional index.
     pub fn from_str(key: &'k (impl Borrow<str> + ?Sized)) -> Self {
-        Key(Inner::Borrowed(key.borrow()))
+        ..
     }
 
     pub fn as_str(&self) -> &str {
-        match self.0 {
-            Inner::Borrowed(k) => k,
-            #[cfg(feature = "std")]
-            Inner::Owned(ref k) => &*k,
-        }
+        ..
     }
 }
 
 impl<'k> AsRef<str> for Key<'k> {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
+    ..
 }
 
 impl<'k> Borrow<str> for Key<'k> {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
+    ..
 }
 
 impl<'k> From<&'k str> for Key<'k> {
-    fn from(k: &'k str) -> Self {
-        Key::from_str(k, None)
-    }
+    ..
 }
 
 impl<'k> PartialEq for Key<'k> {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_str().eq(other.as_str())
-    }
+    ..
 }
 
 impl<'k> Eq for Key<'k> {}
 
 impl<'k> PartialOrd for Key<'k> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.as_str().partial_cmp(other.as_str())
-    }
+    ..
 }
 
 impl<'k> Ord for Key<'k> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.as_str().cmp(other.as_str())
-    }
+    ..
 }
 
 impl<'k> Hash for Key<'k> {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher,
-    {
-        self.as_str().hash(state)
-    }
+    ..
 }
 
-impl<'k> fmt::Debug for Key<'k> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
+impl<'k> Debug for Key<'k> {
+    ..
 }
 
-impl<'k> fmt::Display for Key<'k> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
-}
-
-enum Inner<'k> {
-    Borrowed(&'k str),
-    #[cfg(feature = "std")]
-    Owned(String),
+impl<'k> Display for Key<'k> {
+    ..
 }
 
 #[cfg(feature = "std")]
 mod std_support {
-    use super::*;
-
     impl<'k> Key<'k> {
-        /// Create a key from an owned string and optional index.
         pub fn from_owned(key: impl Into<String>) -> Self {
-            Key(Inner::Owned(key.into()))
+            ..
         }
     }
 
@@ -1219,38 +1060,21 @@ mod std_support {
     }
 
     impl<'k> From<String> for Key<'k> {
-        fn from(k: String) -> Self {
-            Key::from_owned(k, None)
-        }
+        ..
     }
 }
 
 #[cfg(feature = "kv_sval")]
 mod sval_support {
-    use super::*;
-
-    use sval::value::{self, Value};
-
-    impl<'k> Value for Key<'k> {
-        fn stream(&self, stream: &mut value::Stream) -> Result<(), value::Error> {
-            self.as_str().stream(stream)
-        }
+    impl<'k> sval::Value for Key<'k> {
+        ..
     }
 }
 
 #[cfg(feature = "kv_serde")]
 mod serde_support {
-    use super::*;
-
-    use serde::{Serialize, Serializer};
-
     impl<'k> Serialize for Key<'k> {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            self.as_str().serialize(serializer)
-        }
+        ..
     }
 }
 ```
@@ -1263,13 +1087,9 @@ The `Key` type can either borrow or own its inner value.
 
 #### Thread-safety
 
-The `Key` type is probably `Send` + `Sync`, but that's not guaranteed.
+The `Key` type is probably `Send` and `Sync`, but that's not guaranteed.
 
-#### Extensibility
-
-Future enhancements that could be made to `Key` that haven't been otherwise considered by this RFC.
-
-##### Adding an index to keys
+#### Extensibility: Adding an index to keys
 
 The `Key` type could be extended to hold an optional index into a source. This could be used to retrieve a specific key-value pair more efficiently than scanning.
 
@@ -1322,40 +1142,25 @@ pub trait Source {
     where
         Self: Sized,
     {
-        ErasedSource::erased(self)
+        ..
     }
 
     fn get<'kvs, Q>(&'kvs self, key: Q) -> Option<Value<'kvs>>
     where
         Q: ToKey,
     {
-        struct Get<'k, 'v>(Key<'k>, Option<Value<'v>>);
-
-        impl<'k, 'kvs> Visitor<'kvs> for Get<'k, 'kvs> {
-            fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error> {
-                if k == self.0 {
-                    self.1 = Some(v);
-                }
-
-                Ok(())
-            }
-        }
-
-        let mut visitor = Get(key.to_key(), None);
-        let _ = self.visit(&mut visitor);
-
-        visitor.1
+        ..
     }
 
     fn by_ref(&self) -> &Self {
-        self
+        ..
     }
 
     fn chain<KVS>(self, other: KVS) -> Chained<Self, KVS>
     where
         Self: Sized,
     {
-        Chained(self, other)
+        ..
     }
 
     fn try_for_each<F, E>(self, f: F) -> Result<(), Error>
@@ -1364,20 +1169,7 @@ pub trait Source {
         F: FnMut(Key, Value) -> Result<(), E>,
         E: Into<Error>,
     {
-        struct ForEach<F, E>(F, PhantomData<E>);
-
-        impl<'kvs, F, E> Visitor<'kvs> for ForEach<F, E>
-        where
-            F: FnMut(Key, Value) -> Result<(), E>,
-            E: Into<Error>,
-        {
-            fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error> {
-                (self.0)(k, v).map_err(Into::into)
-            }
-        }
-
-        let mut for_each = ForEach(f, Default::default());
-        self.visit(&mut for_each)
+        ..
     }
 
     #[cfg(any(feature = "kv_serde", feature = "kv_sval"))]
@@ -1385,7 +1177,7 @@ pub trait Source {
     where
         Self: Sized,
     {
-        AsMap(self)
+        ..
     }
 
     #[cfg(any(feature = "kv_serde", feature = "kv_sval"))]
@@ -1393,7 +1185,7 @@ pub trait Source {
     where
         Self: Sized,
     {
-        AsSeq(self)
+        ..
     }
 }
 ```
@@ -1406,16 +1198,13 @@ An initial implementation of `Source` could be provided with just the `visit` an
 
 ```rust
 pub trait Source {
-    /// Serialize the key value pairs.
     fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>;
 
-    /// Erase this `Source` so it can be used without
-    /// requiring generic type parameters.
     fn erase(&self) -> ErasedSource
     where
         Self: Sized,
     {
-        ErasedSource::erased(self)
+        ..
     }
 }
 ```
@@ -1588,11 +1377,7 @@ where
 
 The `BTreeMap` and `HashMap` implementations provide more efficient implementations of `Source::get`.
 
-#### Extensibility
-
-Future enhancements that could be made to `Source` that haven't been otherwise considered by this RFC.
-
-##### Sending `Source`s between threads
+#### Extensibility: Sending `Source`s between threads
 
 Before a record could be processed on a background thread it would need to be converted into some owned variant. The `Source` trait is the point where having some way to convert from a borrowed to an owned value would make the most sense because that's where the knowledge of the underlying key-value storage is.
 
@@ -1637,7 +1422,10 @@ pub trait Visitor<'kvs> {
 
 impl<'a, 'kvs, T: ?Sized> Visitor<'kvs> for &'a mut T
 where
-    T: Visitor<'kvs> { }
+    T: Visitor<'kvs>
+{
+    ..
+}
 ```
 
 A `Visitor` may serialize the keys and values as it sees them. It may also do other work, like sorting or de-duplicating them. Operations that involve ordering keys will probably require allocations.
@@ -1821,367 +1609,3 @@ Supporting something like message templates in Rust using the `log!` macros woul
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
-
-# Appendix
-
-## Public API
-
-For context, ignoring the `log!` macros, this is roughly the additional public API this RFC proposes to support structured logging:
-
-```rust
-
-```
-
-## Backends for `Value`
-
-Each supported serialization framework supported by the `Value` type implements an internal `Backend` trait. The exact machinery isn't really important because it's not public. This reference implementation is an internal serialization contract that includes primitive types, and methods for specific frameworks depending on crate features:
-
-```rust
-trait Backend: fmt::Backend + sval::Backend + serde::Backend {
-    fn u64(&mut self, v: u64) -> Result<(), Error>;
-    fn i64(&mut self, v: i64) -> Result<(), Error>;
-    fn f64(&mut self, v: f64) -> Result<(), Error>;
-    fn bool(&mut self, v: bool) -> Result<(), Error>;
-    fn char(&mut self, v: char) -> Result<(), Error>;
-    fn str(&mut self, v: &str) -> Result<(), Error>;
-    fn none(&mut self) -> Result<(), Error>;
-}
-```
-
-#### `std::fmt` backend
-
-```rust
-mod fmt {
-    impl<'v> value::Value<'v> {
-        pub fn from_debug(v: &'v impl fmt::Debug) -> Self {
-            Self::from_any(v, |from, v| from.debug(v))
-        }
-    }
-
-    impl<'v> fmt::Debug for value::Value<'v> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            self.0.visit(&mut FmtBackend(f)).map_err(|_| fmt::Error)
-        }
-    }
-
-    impl<'v> fmt::Display for value::Value<'v> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "{:?}", self)
-        }
-    }
-
-    impl<'a> value::FromAny<'a> {
-        pub fn debug(self, v: impl fmt::Debug) -> Result<(), value::Error> {
-            self.0.debug(&v)
-        }
-    }
-
-    pub(in crate::key_values::value) trait Backend {
-        fn debug(&mut self, v: &dyn Value) -> Result<(), value::Error>;
-    }
-
-    pub(in crate::key_values::value) use fmt::Debug as Value;
-
-    struct FmtBackend<'a, 'b>(&'a mut fmt::Formatter<'b>);
-
-    impl<'a, 'b> value::Backend for FmtBackend<'a, 'b> {
-        fn u64(&mut self, v: u64) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-
-        fn i64(&mut self, v: i64) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-
-        fn f64(&mut self, v: f64) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-
-        fn bool(&mut self, v: bool) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-
-        fn char(&mut self, v: char) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-
-        fn none(&mut self) -> Result<(), value::Error> {
-            self.debug(&Option::None::<()>)
-        }
-
-        fn str(&mut self, v: &str) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-    }
-
-    impl<'a, 'b> Backend for FmtBackend<'a, 'b> {
-        fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), value::Error> {
-            write!(self.0, "{:?}", v)?;
-
-            Ok(())
-        }
-    }
-
-    #[cfg(feature = "kv_sval")]
-    impl<'a, 'b> value::sval::Backend for FmtBackend<'a, 'b> {
-        fn sval(&mut self, v: &dyn value::sval::Value) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-    }
-
-    #[cfg(feature = "kv_serde")]
-    impl<'a, 'b> value::serde::Backend for FmtBackend<'a, 'b> {
-        fn serde(&mut self, v: &dyn value::serde::Value) -> Result<(), value::Error> {
-            self.debug(&v)
-        }
-    }
-}
-```
-
-The `fmt::Backend` allows any `Value` to be formatted using `std::fmt`, which is exposed to consumers through the `Debug` and `Display` traits.
-
-#### `sval` backend
-
-```rust
-mod sval {
-    #[cfg(feature = "kv_sval")]
-    mod imp {
-        impl<'v> value::Value<'v> {
-            pub fn from_sval(v: &'v (impl sval::Value + fmt::Debug)) -> Self {
-                Self::from_any(v, |from, v| from.sval(v))
-            }
-        }
-
-        impl<'v> sval::Value for value::Value<'v> {
-            fn stream(&self, stream: &mut sval::value::Stream) -> Result<(), sval::value::Error> {
-                self.0.visit(&mut SvalBackend(stream))?;
-
-                Ok(())
-            }
-        }
-
-        impl<'a> value::FromAny<'a> {
-            pub fn sval(self, v: (impl sval::Value + fmt::Debug)) -> Result<(), value::Error> {
-                self.0.sval(&v)
-            }
-        }
-
-        pub(in crate::key_values::value) trait Backend {
-            fn sval(&mut self, v: &dyn Value) -> Result<(), value::Error>;
-        }
-
-        pub(in crate::key_values::value) trait Value: sval::Value + fmt::Debug {}
-        impl<T: ?Sized> Value for T where T: sval::Value + fmt::Debug {}
-
-        struct SvalBackend<'a, 'b>(&'a mut sval::value::Stream<'b>);
-
-        impl<'a, 'b> SvalBackend<'a, 'b> {
-            fn any(&mut self, v: impl sval::Value) -> Result<(), value::Error> {
-                self.0.any(v)?;
-
-                Ok(())
-            }
-        }
-
-        impl<'a, 'b> value::Backend for SvalBackend<'a, 'b> {
-            fn u64(&mut self, v: u64) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-
-            fn i64(&mut self, v: i64) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-
-            fn f64(&mut self, v: f64) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-
-            fn bool(&mut self, v: bool) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-
-            fn char(&mut self, v: char) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-
-            fn none(&mut self) -> Result<(), value::Error> {
-                self.sval(&Option::None::<()>)
-            }
-
-            fn str(&mut self, v: &str) -> Result<(), value::Error> {
-                self.sval(&v)
-            }
-        }
-
-        impl<'a, 'b> Backend for SvalBackend<'a, 'b> {
-            fn sval(&mut self, v: &dyn Value) -> Result<(), value::Error> {
-                self.any(v)
-            }
-        }
-
-        impl<'a, 'b> value::fmt::Backend for SvalBackend<'a, 'b> {
-            fn debug(&mut self, v: &dyn value::fmt::Value) -> Result<(), value::Error> {
-                self.any(format_args!("{:?}", v))
-            }
-        }
-
-        #[cfg(feature = "kv_serde")]
-        impl<'a, 'b> value::serde::Backend for SvalBackend<'a, 'b> {
-            fn serde(&mut self, v: &dyn value::serde::Value) -> Result<(), value::Error> {
-                self.any(sval::serde::to_value(v))
-            }
-        }
-    }
-
-    #[cfg(not(feature = "kv_sval"))]
-    mod imp {
-        pub(in crate::key_values::value) trait Backend {}
-
-        impl<V: ?Sized> Backend for V where V: value::Backend {}
-    }
-
-    pub(super) use self::imp::*;
-}
-```
-
-#### `serde` backend
-
-```rust
-mod serde {
-    #[cfg(feature = "kv_serde")]
-    mod imp {
-        impl<'v> value::Value<'v> {
-            pub fn from_serde(v: &'v (impl serde::Serialize + fmt::Debug)) -> Self {
-                Self::from_any(v, |from, v| from.serde(v))
-            }
-        }
-
-        impl<'v> serde::Serialize for value::Value<'v> {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                let mut visitor = SerdeBackend {
-                    serializer: Some(serializer),
-                    ok: None,
-                };
-
-                self.0.visit(&mut visitor).map_err(value::Error::into_serde)?;
-
-                Ok(visitor.ok.expect("missing return value"))
-            }
-        }
-
-        impl<'a> value::FromAny<'a> {
-            pub fn serde(self, v: (impl serde::Serialize + fmt::Debug)) -> Result<(), value::Error> {
-                self.0.serde(&v)
-            }
-        }
-
-        pub(in crate::key_values::value) trait Backend {
-            fn serde(&mut self, v: &dyn Value) -> Result<(), value::Error>;
-        }
-
-        pub(in crate::key_values::value) trait Value: erased_serde::Serialize + fmt::Debug {}
-        impl<T: ?Sized> Value for T where T: serde::Serialize + fmt::Debug {}
-
-        impl<'a> serde::Serialize for &'a dyn Value {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                erased_serde::serialize(*self, serializer)
-            }
-        }
-
-        struct SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            serializer: Option<S>,
-            ok: Option<S::Ok>,
-        }
-
-        impl<S> SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            fn serialize(&mut self, v: impl erased_serde::Serialize) -> Result<(), value::Error> {
-                self.ok = Some(erased_serde::serialize(&v, self.serializer.take().expect("missing serializer")).map_err(value::Error::from_serde)?);
-
-                Ok(())
-            }
-        }
-
-        impl<S> value::Backend for SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            fn u64(&mut self, v: u64) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-
-            fn i64(&mut self, v: i64) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-
-            fn f64(&mut self, v: f64) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-
-            fn bool(&mut self, v: bool) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-
-            fn char(&mut self, v: char) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-
-            fn none(&mut self) -> Result<(), value::Error> {
-                self.serde(&Option::None::<()>)
-            }
-
-            fn str(&mut self, v: &str) -> Result<(), value::Error> {
-                self.serde(&v)
-            }
-        }
-
-        impl<S> Backend for SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            fn serde(&mut self, v: &dyn Value) -> Result<(), value::Error> {
-                self.serialize(v)
-            }
-        }
-
-        impl<S> value::fmt::Backend for SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            fn debug(&mut self, v: &dyn value::fmt::Value) -> Result<(), value::Error> {
-                self.serialize(format_args!("{:?}", v))
-            }
-        }
-
-        #[cfg(feature = "kv_sval")]
-        impl<S> value::sval::Backend for SerdeBackend<S>
-        where
-            S: serde::Serializer,
-        {
-            fn sval(&mut self, v: &dyn value::sval::Value) -> Result<(), value::Error> {
-                self.serialize(sval::serde::to_serialize(v))
-            }
-        }
-    }
-
-    #[cfg(not(feature = "kv_serde"))]
-    mod imp {
-        pub(in crate::key_values::value) trait Backend {}
-
-        impl<V: ?Sized> Backend for V where V: value::Backend {}
-    }
-
-    pub(super) use self::imp::*;
-}
-```
