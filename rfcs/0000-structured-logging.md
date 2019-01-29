@@ -3,14 +3,13 @@
 
 Add support for structured logging to the `log` crate in both `std` and `no_std` environments, allowing log records to carry typed data beyond a textual message. This document serves as an introduction to what structured logging is all about, and as an RFC for an implementation in the `log` crate.
 
-`log` will provide an API for capturing structured data that's agnostic of the underlying serialization framework, whether that's `std::fmt`, `serde`, or `sval`.
+`log` will provide an API for capturing structured data that offloads complex serialization to de-facto standards in the ecosystem, but avoids integrating them too tightly, or forcing any specific framework on consumers.
 
 The API is heavily inspired by `slog` and `tokio-trace`.
 
 > NOTE: Code in this RFC uses recent language features like `impl Trait`, but can be implemented without them.
 
 # Contents
-
 - [Motivation](#motivation)
   - [What is structured logging?](#what-is-structured-logging)
   - [Why do we need structured logging in `log`?](#why-do-we-need-structured-logging-in-log)
@@ -22,7 +21,7 @@ The API is heavily inspired by `slog` and `tokio-trace`.
 - [Reference-level explanation](#reference-level-explanation)
   - [Design considerations](#design-considerations)
   - [Cargo features](#cargo-features)
-  - [Key-values API](#key-values-api)
+  - [A complete key-values API](#a-complete-key-values-api)
     - [`Error`](#error)
     - [`Value`](#value)
     - [`ToValue`](#tovalue)
@@ -31,6 +30,7 @@ The API is heavily inspired by `slog` and `tokio-trace`.
     - [`Source`](#source)
     - [`Visitor`](#visitor)
     - [`Record` and `RecordBuilder`](#record-and-recordbuilder)
+  - [A minimal key-values API](#a-minimal-key-values-api)
   - [The `log!` macros](#the-log-macros)
 - [Drawbacks, rationale, and alternatives](#drawbacks-rationale-and-alternatives)
 - [Prior art](#prior-art)
@@ -41,17 +41,17 @@ The API is heavily inspired by `slog` and `tokio-trace`.
 
 ## What is structured logging?
 
-Information in log records can be traditionally captured as a blob of text, including a level, a message, and maybe a few other pieces of metadata. There's a lot of potentially valuable information we throw away when we format data as text. Arbitrary textual representations often result in log records that are neither easy for humans to read, nor for machines to parse.
+Information in log records can be traditionally captured as a blob of text, including a level, a message, and maybe a few other pieces of metadata. There's a lot of potentially valuable information we throw away when we format log records this way. Arbitrary textual representations often result in output that is neither easy for humans to read, nor for machines to parse.
 
 Structured logs can retain their original structure in a machine-readable format. They can be changed programmatically within a logging pipeline before reaching their destination. Once there, they can be analyzed using common database tools.
 
-As an example of structured logging, a textual log like this:
+As an example of structured logging, a textual record like this:
 
 ```
 [INF 2018-09-27T09:32:03Z basic] [service: database, correlation: 123] Operation completed successfully in 18ms
 ```
 
-could be represented as a structured log like this:
+could be represented as a structured record like this:
 
 ```json
 {
@@ -65,7 +65,7 @@ could be represented as a structured log like this:
 }
 ```
 
-When log records are kept in a format like this, potentially interesting queries like _what are all records where the correlation is 123?_, or _how many errors were there in the last hour?_ can be computed efficiently.
+When log records are kept in a structured format like this, potentially interesting queries like _what are all records where the correlation is 123?_, or _how many errors were there in the last hour?_ can be computed efficiently.
 
 Even when logging to a console for immediate consumption, the human-readable message can be presented better when it's not trying to include ambient metadata inline:
 
@@ -94,11 +94,11 @@ A healthy logging ecosystem needs both `log` and frameworks like `slog`. As a st
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
-This section introduces the new structured logging API through a tour of how structured values can be captured and consumed.
+This section introduces `log`'s structured logging API through a tour of how structured records can be captured and consumed.
 
 ## Logging structured key-value pairs
 
-Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record. A `;` separates structured key-value pairs from values that are replaced into the message:
+Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record. A `;` separates structured key-value pairs from other data that's interpolated into the message:
 
 ```rust
 info!(
@@ -109,7 +109,9 @@ info!(
 );
 ```
 
-Any `value` or `key = value` expressions before the `;` in the macro will be interpolated into the message as unstructured text using `std::fmt`. This is the `log!` macro we have today. Any `value` or `key = value` expressions after the `;` will be captured as structured key-value pairs. These structured key-value pairs can be inspected or serialized, retaining some notion of their original type. That means in the above example, the `message` key is unstructured, and the `correlation` and `user` keys are structured:
+Any `value` or `key = value` expressions before the `;` in the macro will be interpolated into the message as unstructured text using `std::fmt`. This is the `log!` macro we have today.
+
+Any `value` or `key = value` expressions after the `;` will be captured as structured key-value pairs. These structured key-value pairs can be inspected or serialized, retaining some notion of their original type. That means in the above example, the `message` pair is unstructured, and the `correlation` and `user` pairs are structured:
 
 ```
 info!(
@@ -128,13 +130,13 @@ info!(
 );
 ```
 
-### What can be logged?
+### What can be captured as a structured value?
 
-A type can be logged if it implements the `ToValue` trait:
+A value can be captured as a structured value in a log record if it implements the `ToValue` trait:
 
 ```rust
 pub trait ToValue {
-    fn to_Value(&self) -> Value;
+    fn to_value(&self) -> Value;
 }
 ```
 
@@ -151,7 +153,7 @@ impl<'v> Debug for Value<'v> {
 
 We'll look at `Value` in more detail later. For now, we can think of it as a container that normalizes capturing and emitting the structure of values.
 
-In the example from before:
+So, in the example from before:
 
 ```rust
 info!(
@@ -162,7 +164,7 @@ info!(
 );
 ```
 
-the `correlation_id` and `user` fields can be used as structured values if they implement the `ToValue` trait:
+the `correlation_id` and `user` pairs can be captured as structured values if they implement the `ToValue` trait:
 
 ```
 info!(
@@ -181,18 +183,18 @@ info!(
 );
 ```
 
-Within `log` itself, a fixed set of primitive types from the standard library implement the `ToValue` trait:
+Initially, that means a fixed set of primitive types from the standard library:
 
 - Standard formats: `Arguments`
 - Primitives: `bool`, `char`
 - Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
 - Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
 - Strings: `&str`, `String`
-- Bytes: `&[u8]`, `Vec<u8>`
+- Slices: `&[T]`, `Vec<T>`
 - Paths: `&Path`, `PathBuf`
 - Special types: `Option<T>`, `&T`, and `()`.
 
-Each of these types implements `ToValue` in a way that retains their typing. Using `u8` as an example:
+Each of these types implements `ToValue` in a way that opaquely retains some notion of their underlying structure. Using `u8` as an example:
 
 ```rust
 impl ToValue for u8 {
@@ -226,11 +228,21 @@ impl FromAny {
 
 This machinery is very similar to the internals of `std::fmt`.
 
-Only being able to log primitive types from the standard library is a bit limiting though. What if `correlation_id` is a `uuid::Uuid`, and `user` is a struct, `User`, with fields?
+Only being able to log primitive types from the standard library is a bit limiting though. What if `correlation_id` is a `uuid::Uuid`, and `user` is a struct, `User`, with its own fields?
 
 #### Implementing `ToValue` for a simple value
 
-`uuid::Uuid` could implement the `ToValue` trait directly by capturing its structure as a debuggable format:
+A newtype structure like `uuid::Uuid` could implement the `ToValue` trait directly in terms of some underlying value that already implements `ToValue`:
+
+```rust
+impl ToValue for Uuid {
+    fn to_value(&self) -> Value {
+        self.as_bytes().to_value()
+    }
+}
+```
+
+Alternatively, `uuid::Uuid` could provide a nicer implementation using the `Debug` implementation of its hyphenated format:
 
 ```rust
 impl ToValue for Uuid {
@@ -240,20 +252,20 @@ impl ToValue for Uuid {
 }
 ```
 
-There's some subtlety in this implementation. The actual value whose structure is captured is not the `&'v Uuid`, it's the owned `ToHyphenated<'v>` structure. This is why `Value::from_any` uses a separate function for capturing the structure of its values. It lets us capture a borrowed `Uuid` with the right lifetime `'v`, but materialize an owned `ToHyphenated` with the structure we want.
+There's some subtlety in this second implementation. The actual value whose structure is captured is not the `&'v Uuid`, it's the owned `ToHyphenated<'v>`. This is why `Value::from_any` uses a separate function for capturing the structure of its values that doesn't depend on the lifetime of the given `&'v T`. It lets us capture a borrowed `Uuid` with the right lifetime `'v`, but materialize an owned `ToHyphenated` with the structure we want.
 
 #### Implementing `ToValue` for a complex value
 
-A structure like `User` is a bit different. It could be represented using `Debug`, but then the contents of its fields would be lost in an opaque and unstructured string. It would be better represented as a map of key-value pairs. However, complex values like maps and sequences aren't directly supported in `log`. They're offloaded to serialization frameworks like `serde` and `sval` that are capable of handling them effectively.
+A structure like `User` is a bit different from a newtype like `uuid::Uuid`. It could be represented using `Debug`, but then the contents of its fields would be lost in an opaque and unstructured string. It would be better represented as a map of key-value pairs. However, complex values like maps and sequences aren't directly supported in `log`. They're offloaded to serialization frameworks like `serde` and `sval` that are capable of handling them effectively.
 
-Fundamental serialization frameworks do have direct integration with `log`'s `Value` type through Cargo features. Let's use `sval` as an example. It's a serialization framework that's built specifically for structured logging. Adding the `kv_sval` feature to `log` will enable its integration:
+`serde` and `sval` have direct two-way integration with `log`'s `Value` type through optional Cargo features. Let's use `sval` as an example. It's a serialization framework that's built specifically for structured logging. Adding the `kv_sval` feature to `log` will enable it:
 
 ```toml
 [dependencies.log]
 features = ["kv_sval"]
 ```
 
-The `User` type can then derive `sval`'s `Value` trait and implement `log`'s `ToValue` trait in terms of `sval`:
+Complex structures that derive `sval`'s `Value` trait can then implement `log`'s `ToValue` trait in terms of `sval`:
 
 ```rust
 #[derive(Debug, Value)]
@@ -268,7 +280,7 @@ impl ToValue for User {
 }
 ```
 
-Using `serde` instead of `sval` is a similar story:
+In this way, the underlying structure of a `User`, described as a map by `sval`, is retained when converting it into a `Value`. Using `serde` instead of `sval` is a similar story:
 
 ```toml
 [dependencies.log]
@@ -290,7 +302,7 @@ impl ToValue for User {
 
 #### Capturing values without implementing `ToValue`
 
-Instead of implementing `ToValue` on types throughout the ecosystem at all, callers of the `log!` macros could instead create ad-hoc `Value`s from their data:
+Instead of implementing `ToValue` on types throughout the ecosystem, callers of the `log!` macros could instead create ad-hoc `Value`s from their data at the callsite:
 
 ```rust
 use log::key_values::Value;
@@ -303,7 +315,7 @@ info!(
 );
 ```
 
-In this example, neither `correlation_id` nor `user` need to implement any traits from `log`:
+In this example, `correlation_id` and `user` don't need to implement any traits from `log`. Instead, they need to implement the corresponding trait from `sval` or `serde`:
 
 ```
 info!(
@@ -345,6 +357,15 @@ pub trait Source {
     }
 
     // Run a function for each key-value pair
+    fn for_each<F>(self, f: F) -> Result<(), Error>
+    where
+        Self: Sized,
+        F: FnMut(Key, Value),
+    {
+        ..
+    }
+
+    // Run a function for each key-value pair
     fn try_for_each<F, E>(self, f: F) -> Result<(), Error>
     where
         Self: Sized,
@@ -376,7 +397,7 @@ pub trait Source {
 
 ### Writing key-value pairs as text
 
-To demonstrate how to work with a `Source`, let's take the terminal log format from before:
+To demonstrate how to work with a `Source`, let's take the textual log format from before:
 
 ```
 [INF 2018-09-27T09:32:03Z] Operation completed successfully in 18ms
@@ -386,7 +407,7 @@ correlation: 123
 took: 18
 ```
 
-Each key-value pair, shown as a `$key: $value` line, can be formatted from the `Source` using the `std::fmt` machinery:
+Each key-value pair, shown as a `$key: $value` line, can be formatted from the `Source` on a record using the `std::fmt` machinery:
 
 ```rust
 use log::key_values::Source;
@@ -398,13 +419,13 @@ fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     // Write each key-value pair on a new line
     record
         .key_values()
-        .try_for_each(|k, v| writeln!("{}: {}", k, v))?;
+        .for_each(|k, v| writeln!("{}: {}", k, v))?;
     
     Ok(())
 }
 ```
 
-In the above example, the `Source::try_for_each` method iterates over each key-value pair in the `Source` and writes them to the terminal. 
+In the above example, the `Source::for_each` method iterates over each key-value pair in the `Source` and writes them to the output stream. 
 
 ### Writing key-value pairs as JSON
 
@@ -457,17 +478,17 @@ struct SerializeRecord<KVS> {
 }
 ```
 
-This time, instead of using the `Source::try_for_each` method, we use the `Source::as_map` method to get an adapter that implements `serde::Serialize` by serializing each key-value pair as an entry in a `serde` map.
+This time, instead of using the `Source::for_each` method, we use the `Source::as_map` method to get an adapter that implements `serde::Serialize` by serializing each key-value pair as an entry in a `serde` map.
 
 ## Integrating log frameworks with `log`
 
-The `Source` trait we saw previously describes some container for structured key-value pairs that can be iterated through. Other log frameworks that want to integrate with the `log` crate should build `Record`s that contain some implementation of `Source` based on their own structured logging.
+The `Source` trait we saw previously describes some container for structured key-value pairs that can be iterated or serialized. Other log frameworks that want to integrate with the `log` crate should build `Record`s that contain some implementation of `Source` based on their own structured logging.
 
 The previous section demonstrated some of the methods available on `Source` like `Source::try_for_each` and `Source::as_map`. Both of those methods are provided on top of a required lower-level `Source::visit` method, which looks something like this:
 
 ```rust
 trait Source {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>;
 
     // Provided methods
 }
@@ -497,7 +518,7 @@ The `Source` trait could be implemented for `KeyValues` like this:
 use log::key_values::source::{self, Source};
 
 impl Source for KeyValues {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl source::Visitor<'kvs>) -> Result<(), source::Error> {
         for (k, v) in self.data {
             visitor.visit_pair(source::Key::from_str(k), source::Value::from_serde(v))
         }
@@ -518,7 +539,7 @@ impl<KVS> Source for SortRetainLast<KVS>
 where
     KVS: Source,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn source::Visitor<'kvs>) -> Result<(), source::Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl source::Visitor<'kvs>) -> Result<(), source::Error> {
         // `Seen` is a visitor that will capture key-value pairs
         // in a `BTreeMap`. We use it internally to sort and de-duplicate
         // the key-value pairs that `SortRetainLast` is wrapping.
@@ -572,7 +593,7 @@ Don't create a new serialization API that requires `log` to become a public depe
 
 Provide an API that's suitable for two independent logging frameworks to integrate through if they want. Producers of structured data and consumers of structured data should be able to use different serialization frameworks opaquely and still get good results. As an example, a caller of `info!` should be able to log a map that implements `sval::Value`, and the implementor of the receiving `Log` trait should be able to format that map using `serde::Serialize`. 
 
-### Object safety
+### Remain object safe
 
 `log` is already designed to be object-safe so this new structured logging API needs to be object-safe too.
 
@@ -597,11 +618,11 @@ Using default features, implementors of the `Log` trait will be able to format s
 
 `sval` is a new serialization framework that's specifically designed with structured logging in mind. It's `no_std` and object-safe, but isn't stable and requires `rustc` `1.31.0`. Using the `kv_sval` feature, any `Value` will also implement `sval::Value` so its underlying structure will be visible to consumers of structured data using `sval::Stream`s.
 
-Using the `kv_serde` feature, any `Value` will also implement `serde::Serialize` so its underlying structure will be visible to consumers of structured data using `serde::Serializer`s.
+`serde` is the de-facto general-purpose serialization framework for Rust. It's widely supported and stable, but requires some significant runtime machinery in order to be object-safe. Using the `kv_serde` feature, any `Value` will also implement `serde::Serialize` so its underlying structure will be visible to consumers of structured data using `serde::Serializer`s.
 
-## Key-values API
+## A complete key-values API
 
-The following section details the public API for structured values in `log`, along with possible future extensions and minimal initial implementations. Actual implementation details are excluded for brevity unless they're particularly noteworthy. See the original comment on the [RFC issue](https://github.com/rust-lang-nursery/log/pull/296#issue-222687727) for a reference implementation.
+The following section details the public API for structured values in `log`, along with possible future extensions. Actual implementation details are excluded for brevity unless they're particularly noteworthy. See the original comment on the [RFC issue](https://github.com/rust-lang-nursery/log/pull/296#issue-222687727) for a reference implementation.
 
 ### `Error`
 
@@ -785,30 +806,6 @@ impl<'a> FromAny<'a> {
 }
 ```
 
-#### A minimal initial API
-
-An initial implementation of `Value` could support just the `std::fmt` machinery:
-
-```rust
-pub struct Value<'v>(_);
-
-impl<'v> Value<'v> {
-    pub fn from_debug(v: &'v impl Debug) -> Self {
-        ..
-    }
-}
-
-impl<'v> Debug for Value<'v> {
-    ..
-}
-
-impl<'v> Display for Value<'v> {
-    ..
-}
-```
-
-Structured serialization frameworks could then be introduced without breakage. This could either be done in terms of the `FromAny` machinery shown previously, by exposing a serialization contract directly, or both.
-
 #### Erasing values in `Value::from_any`
 
 Internally, the `Value` type uses similar machinery to `std::fmt::Argument` for pairing an erased incoming type with a function for operating on it:
@@ -845,6 +842,7 @@ impl<'a> Inner<'a> {
         }
     }
 
+    // Backend is an internal trait that bridges supported serialization frameworks
     fn visit(&self, backend: &mut dyn Backend) -> Result<(), Error> {
         (self.from)(FromAny(backend), self.data)
     }
@@ -1163,6 +1161,14 @@ pub trait Source {
         ..
     }
 
+    fn for_each<F>(self, f: F) -> Result<(), Error>
+    where
+        Self: Sized,
+        F: FnMut(Key, Value),
+    {
+        ..
+    }
+
     fn try_for_each<F, E>(self, f: F) -> Result<(), Error>
     where
         Self: Sized,
@@ -1192,23 +1198,6 @@ pub trait Source {
 
 `Source` doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
 
-#### A minimal initial API
-
-An initial implementation of `Source` could be provided with just the `visit` and `erase` methods:
-
-```rust
-pub trait Source {
-    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>;
-
-    fn erase(&self) -> ErasedSource
-    where
-        Self: Sized,
-    {
-        ..
-    }
-}
-```
-
 #### Adapters
 
 Some useful adapters exist as provided methods on the `Source` trait. They're similar to adapters on the standard `Iterator` trait:
@@ -1216,9 +1205,10 @@ Some useful adapters exist as provided methods on the `Source` trait. They're si
 - `by_ref` to get a reference to a `Source` within a method chain.
 - `chain` to concatenate one source with another. This is useful for composing implementations of `Log` together for contextual logging.
 - `get` to try find the value associated with a key.
-- `try_for_each` to try execute some closure over all key-value pairs. This is a convenient way to do something with each key-value pair without having to create and implement a `Visitor`.
+- `for_each` to execute some closure over all key-value pairs. This is a convenient way to do something with each key-value pair without having to create and implement a `Visitor`.
+- `try_for_each` is like `for_each`, but takes a fallible closure.
 - `as_map` to get a serializable map. This is a convenient way to serialize key-value pairs without having to create and implement a `Visitor`.
-- `as_seq` to get a serializable sequence of tuples. This is a convenient way to serialize key-value pairs without having to create and implement a `Visitor`.
+- `as_seq` is like `as_map`, but for serializing as a sequence of tuples.
 
 None of these methods are required for the core API. They're helpful tools for working with key-value pairs with minimal machinery. Even if we don't necessarily include them right away it's worth having an API that can support them later without breakage.
 
@@ -1254,7 +1244,7 @@ impl<'a> Source for ErasedSource<'a> {
 }
 
 trait ErasedSourceBridge {
-    fn erased_visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
+    fn erased_visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>;
     fn erased_get<'kvs>(&'kvs self, key: Key) -> Option<Value<'kvs>>;
 }
 
@@ -1262,7 +1252,7 @@ impl<KVS> ErasedSourceBridge for KVS
 where
     KVS: Source + ?Sized,
 {
-    fn erased_visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn erased_visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error> {
         self.visit(visitor)
     }
 
@@ -1307,25 +1297,25 @@ When `std` is available, `Source` is implemented for some standard collections t
 
 ```rust
 impl<KVS: ?Sized> Source for Box<KVS> where KVS: Source {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error> {
         (**self).visit(visitor)
     }
 }
 
 impl<KVS: ?Sized> Source for Arc<KVS> where KVS: Source  {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error> {
         (**self).visit(visitor)
     }
 }
 
 impl<KVS: ?Sized> Source for Rc<KVS> where KVS: Source  {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error> {
         (**self).visit(visitor)
     }
 }
 
 impl<KVS> Source for Vec<KVS> where KVS: Source {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error> {
         self.as_slice().visit(visitor)
     }
 }
@@ -1335,7 +1325,7 @@ where
     K: Borrow<str> + Ord,
     V: ToValue,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>
     {
         for (k, v) in self {
             visitor.visit_pair(k.borrow().to_key(), v.to_value())?;
@@ -1357,7 +1347,7 @@ where
     K: Borrow<str> + Eq + Hash,
     V: ToValue,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>
     {
         for (k, v) in self {
             visitor.visit_pair(k.borrow().to_key(), v.to_value())?;
@@ -1444,7 +1434,6 @@ Structured key-value pairs can be set on a `RecordBuilder`:
 
 ```rust
 impl<'a> RecordBuilder<'a> {
-    /// Set key values
     pub fn key_values(&mut self, kvs: ErasedSource<'a>) -> &mut RecordBuilder<'a> {
         self.record.kvs = kvs;
         self
@@ -1463,12 +1452,134 @@ pub struct Record<'a> {
 }
 
 impl<'a> Record<'a> {
-    /// The key value pairs attached to this record.
-    /// 
-    /// Pairs aren't guaranteed to be unique (the same key may be repeated with different values).
     pub fn key_values(&self) -> ErasedSource {
         self.kvs.clone()
     }
+}
+```
+
+## A minimal key-values API
+
+The following API is just the fundamental pieces of what's proposed by this RFC. Everything else could be implemented on top of this subset without introducing breakage. It also offers the freedom to move in a different direction entirely:
+
+```rust
+impl<'a> RecordBuilder<'a> {
+    pub fn key_values(&mut self, kvs: ErasedSource<'a>) -> &mut RecordBuilder<'a> {
+        self.record.kvs = kvs;
+        self
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Record<'a> {
+    ..
+
+    kvs: ErasedSource<'a>,
+}
+
+impl<'a> Record<'a> {
+    pub fn key_values(&self) -> ErasedSource {
+        self.kvs.clone()
+    }
+}
+
+pub struct Error(Inner);
+
+impl Error {
+    pub fn msg(msg: &'static str) -> Self {
+        ..
+    }
+}
+
+impl Debug for Error {
+    ..
+}
+
+impl Display for Error {
+    ..
+}
+
+impl From<fmt::Error> for Error {
+    ..
+}
+
+impl From<Error> for fmt::Error {
+    ..
+}
+
+#[cfg(feature = "std")]
+mod std_support {
+    impl Error {
+        pub fn custom(err: impl fmt::Display) -> Self {
+            ..
+        }
+    }
+
+    impl From<io::Error> for Error {
+        ..
+    }
+
+    impl From<Error> for io::Error {
+        ..
+    }
+
+    impl error::Error for Error {
+        ..
+    }
+}
+
+pub struct Value<'v>(_);
+
+impl<'v> Debug for Value<'v> {
+    ..
+}
+
+impl<'v> Display for Value<'v> {
+    ..
+}
+
+pub trait ToValue {
+    fn to_value(&self) -> Value;
+}
+
+pub struct Key<'k>(_);
+
+impl<'k> Key<'k> {
+    pub fn from_str(key: &'k (impl Borrow<str> + ?Sized)) -> Self {
+        ..
+    }
+
+    pub fn as_str(&self) -> &str {
+        ..
+    }
+}
+
+pub trait ToKey {
+    fn to_key(&self) -> Key;
+}
+
+pub trait Source {
+    fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>;
+
+    fn erase(&self) -> ErasedSource
+    where
+        Self: Sized,
+    {
+        ..
+    }
+}
+
+pub struct ErasedSource<'a>(_);
+
+pub trait Visitor<'kvs> {
+    fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error>;
+}
+
+impl<'a, 'kvs, T: ?Sized> Visitor<'kvs> for &'a mut T
+where
+    T: Visitor<'kvs>
+{
+    ..
 }
 ```
 
@@ -1547,19 +1658,21 @@ Will expand to something like:
 # Drawbacks, rationale, and alternatives
 [drawbacks]: #drawbacks
 
-Structured logging is a non-trivial feature to support. It adds complexity and overhead to the `log` crate.
+## Supporting structured logging at all
+
+Structured logging is a non-trivial feature to support. It adds complexity and overhead to the `log` crate. The alternative, not supporting structured logging, is not a suitable long-term solution for `log` unless we plan to eventually deprecate it.
 
 ## Internalizing `sval` and `serde`
 
-Values captured from any one supported framework can be represented by any other. That means a value can be captured in terms of `sval` and consumed in terms of `serde`, with its underlying structure retained. This is done through a one-to-one integration from each framework to each other framework.
+Values captured from any one supported framework can be represented by any other. That means a value can be captured by `sval` can be consumed by `serde`, with its underlying structure retained. This is done through an internal one-to-one integration from each framework to each other framework.
 
 ### Drawbacks
 
 The one-to-one bridge between serialization frameworks within `log` makes the effort needed to support them increase exponentially with each addition, and discourages it from supporting more than a few.
 
-It also introduces direct coupling between `log` and these frameworks. For `sval` specifically, this is risky because it's not currently stable. Breaking changes are a possibility.
+It also introduces direct coupling between `log` and these frameworks. For `sval` specifically, this is risky because it's not currently stable and breaking changes are a possibility.
 
-The mechanism suggested in this RFC for erasing values in `Value::from_any` relies on unsafe code. It's the same as what's used in `std::fmt`, but that machinery isn't directly exposed to callers outside of unstable features.
+The mechanism suggested in this RFC for erasing values in `Value::from_any` relies on unsafe code. It's the same as what's used in `std::fmt`, but in `std::fmt` the machinery isn't directly exposed to callers outside of unstable features.
 
 ### Alternatives
 
@@ -1580,11 +1693,11 @@ pub trait Visitor {
 }
 ```
 
-This is fairly simple for primitive types like integers and strings, but becomes much more involved when dealing with complex values likes maps and sequences. A serialization framework needs to do more than just provide a contract, its API needs to work to support implementations on either side of that contract. Maintaining a useful serialization framework is a distraction for `log`. That's why the `sval` library was created; to manage the necessary complexity of building a serialization framework that's suitable for structured logging externally from the `log` crate.
+This is fairly straightforward for primitive types like integers and strings, but becomes much more involved when dealing with complex values likes maps and sequences. A serialization framework needs to do more than just provide a contract, its API needs to work to support implementations on either side of that contract, otherwise it won't gain adoption.
 
-So the public common serialization contract in `log` is effectively to integrate with one of a few fundamental frameworks.
+Maintaining a useful serialization framework is a distraction for `log`. Serialization of structured values is a complex, necessary, but not primary function of `log`, so it should avoid owning that contract and the baggage that comes along with it if it can. That's why the `sval` library was created; to manage the necessary complexity of building a serialization framework that's suitable for structured logging externally from the `log` crate.
 
-Within the `log` crate, internalizing fundamental serialization frameworks reduces the effort needed from building a complete framework down to shimming an existing framework. The effort of managing breaking changes in supported serialization frameworks isn't less than the effort of managing breaking changes in a common contract provided by `log`. The owner of that contract, whether it's `log` or `serde` or `sval`, has to consider the churn introduced by breakage. Serialization of structured values is a complex, necessary, but not primary feature of `log`, so if it should avoid owning that contract and the baggage that comes along with it if it can.
+Within the `log` crate itself, internalizing fundamental serialization frameworks reduces the effort needed from building a complete framework down to shimming an existing framework. These shims would exist in the wider `log` ecosystem in either case. The effort of managing breaking changes in supported serialization frameworks isn't less than the effort of managing breaking changes in a common contract provided by `log`. The owner of that contract, whether it's `log` or `serde` or `sval`, has to consider the churn introduced by breakage. As a downstream consumer of that breakage, `log` is in the same boat as its consumers.
 
 # Prior art
 [prior-art]: #prior-art
