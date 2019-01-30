@@ -1666,6 +1666,8 @@ Structured logging is a non-trivial feature to support. It adds complexity and o
 
 Values captured from any one supported framework can be represented by any other. That means a value can be captured by `sval` can be consumed by `serde`, with its underlying structure retained. This is done through an internal one-to-one integration from each framework to each other framework.
 
+The choice of `sval` as a supported framework is because it's purpose-built for serializing values in structured logging. The choice of `serde` as a supported framework is because it's the de-facto standard in the Rust ecosystem and already used within `log`.
+
 ### Drawbacks
 
 The one-to-one bridge between serialization frameworks within `log` makes the effort needed to support them increase exponentially with each addition, and discourages it from supporting more than a few.
@@ -1675,6 +1677,8 @@ It also introduces direct coupling between `log` and these frameworks. For `sval
 The mechanism suggested in this RFC for erasing values in `Value::from_any` relies on unsafe code. It's the same as what's used in `std::fmt`, but in `std::fmt` the machinery isn't directly exposed to callers outside of unstable features.
 
 ### Alternatives
+
+#### Build a serialization contract in `log`
 
 Instead of internalizing a few serialization frameworks, `log` could provide a public common contract for them to conform to:
 
@@ -1693,11 +1697,17 @@ pub trait Visitor {
 }
 ```
 
-This is fairly straightforward for primitive types like integers and strings, but becomes much more involved when dealing with complex values likes maps and sequences. A serialization framework needs to do more than just provide a contract, its API needs to work to support implementations on either side of that contract, otherwise it won't gain adoption.
+This is fairly straightforward for primitive types like integers and strings, but becomes much more involved when dealing with complex values likes maps and sequences. Not supporting these complex structures is limiting, and reduces `log`s interoperability with other frameworks that do. A serialization framework needs to do more than just provide a contract, its API needs to work to support implementations on either side of that contract, otherwise it won't gain adoption.
 
 Maintaining a useful serialization framework is a distraction for `log`. Serialization of structured values is a complex, necessary, but not primary function of `log`, so it should avoid owning that contract and the baggage that comes along with it if it can. That's why the `sval` library was created; to manage the necessary complexity of building a serialization framework that's suitable for structured logging externally from the `log` crate.
 
 Within the `log` crate itself, internalizing fundamental serialization frameworks reduces the effort needed from building a complete framework down to shimming an existing framework. These shims would exist in the wider `log` ecosystem in either case. The effort of managing breaking changes in supported serialization frameworks isn't less than the effort of managing breaking changes in a common contract provided by `log`. The owner of that contract, whether it's `log` or `serde` or `sval`, has to consider the churn introduced by breakage. As a downstream consumer of that breakage, `log` is in the same boat as its consumers.
+
+#### Just pick an existing framework
+
+Instead of building a common shim around several serialization frameworks, `log` could just pick one and bake it in directly. This would have the benefit of offering the best end-user experience for existing users of that framework when interacting with the `log!` macros and `Source`s. It also means accepting the trade-offs that framework makes. For `serde`, that means requiring the standard library for boxing values. For `sval`, that means accepting churn as it matures.
+
+The API proposed using the `Value` type as an opaque container along with APIs for specific frameworks is a reasonable middle-ground between baking in a specific framework and only offering a contract without any direct support. It gives producers of structured data a way to plug their data using a framework of choice into a `Value`, either directly or through compatibility with a supported framework. It gives consumers of structured data a first-class experience for plugging `Value`s into their framework of choice by deriving the appropriate traits. It also gives `log` room to add and deprecate support for frameworks if mindshare shifts in the future.
 
 # Prior art
 [prior-art]: #prior-art
