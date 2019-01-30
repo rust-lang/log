@@ -136,7 +136,7 @@ A value can be captured as a structured value in a log record if it implements t
 
 ```rust
 pub trait ToValue {
-    fn to_value(&self) -> Value;
+    fn to_value<'v>(&'v self) -> Value<'v>;
 }
 ```
 
@@ -190,7 +190,6 @@ Initially, that means a fixed set of primitive types from the standard library:
 - Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`
 - Signed integers: `i8`, `i16`, `i32`, `i64`, `i128`
 - Strings: `&str`, `String`
-- Slices: `&[T]`, `Vec<T>`
 - Paths: `&Path`, `PathBuf`
 - Special types: `Option<T>`, `&T`, and `()`.
 
@@ -220,13 +219,12 @@ impl FromAny {
         ..
     }
 
+    // Not publicly exposed. Used by internal implementations
     fn u64(v: u64) -> Result<(), Error> {
         ..
     }
 }
 ```
-
-This machinery is very similar to the internals of `std::fmt`.
 
 Only being able to log primitive types from the standard library is a bit limiting though. What if `correlation_id` is a `uuid::Uuid`, and `user` is a struct, `User`, with its own fields?
 
@@ -237,12 +235,22 @@ A newtype structure like `uuid::Uuid` could implement the `ToValue` trait direct
 ```rust
 impl ToValue for Uuid {
     fn to_value(&self) -> Value {
-        self.as_bytes().to_value()
+        self.as_u128().to_value()
     }
 }
 ```
 
-Alternatively, `uuid::Uuid` could provide a nicer implementation using the `Debug` implementation of its hyphenated format:
+Alternatively, `uuid::Uuid` could provide a nicer implementation using its `Debug` implementation:
+
+```rust
+impl ToValue for Uuid {
+    fn to_value(&self) -> Value {
+        Value::from_debug(self)
+    }
+}
+```
+
+Finally, it could use the `Debug` implementation of its hyphenated format:
 
 ```rust
 impl ToValue for Uuid {
@@ -252,7 +260,7 @@ impl ToValue for Uuid {
 }
 ```
 
-There's some subtlety in this second implementation. The actual value whose structure is captured is not the `&'v Uuid`, it's the owned `ToHyphenated<'v>`. This is why `Value::from_any` uses a separate function for capturing the structure of its values that doesn't depend on the lifetime of the given `&'v T`. It lets us capture a borrowed `Uuid` with the right lifetime `'v`, but materialize an owned `ToHyphenated` with the structure we want.
+There's some subtlety in this last implementation. The actual value whose structure is captured is not the `&'v Uuid`, it's the owned `ToHyphenated<'v>`. This is why `Value::from_any` uses a separate function for capturing the structure of its values that doesn't depend on the lifetime of the given `&'v T`. It lets us capture a borrowed `Uuid` with the right lifetime `'v`, but materialize an owned `ToHyphenated` with the structure we want.
 
 #### Implementing `ToValue` for a complex value
 
@@ -780,7 +788,15 @@ impl<'a> FromAny<'a> {
         ..
     }
 
+    fn u128(self, v: u128) -> Result<(), Error> {
+        ..
+    }
+
     fn i64(self, v: i64) -> Result<(), Error> {
+        ..
+    }
+
+    fn i128(self, v: i128) -> Result<(), Error> {
         ..
     }
     
@@ -871,6 +887,10 @@ pub trait ToValue {
 
 It's the trait bound that values passed as structured data to the `log!` macros need to satisfy.
 
+#### Object safety
+
+The `ToValue` trait is object-safe.
+
 #### Implementors
 
 `ToValue` is implemented for fundamental primitive types:
@@ -921,6 +941,12 @@ impl ToValue for u64 {
     }
 }
 
+impl ToValue for u128 {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.u128(*v))
+    }
+}
+
 impl ToValue for i8 {
     fn to_value(&self) -> Value {
         Value::from_any(self, |from, v| from.i64(*v as i64))
@@ -942,6 +968,12 @@ impl ToValue for i32 {
 impl ToValue for i64 {
     fn to_value(&self) -> Value {
         Value::from_any(self, |from, v| from.i64(*v))
+    }
+}
+
+impl ToValue for i128 {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.i128(*v))
     }
 }
 
@@ -1034,9 +1066,11 @@ impl ToValue for PathBuf {
 }
 ```
 
+Other implementations for `std` types can be added in the same fashion.
+
 ### `Key`
 
-A `Key` is a short-lived structure that can be represented as a UTF-8 string. This might be possible without allocating, or it might require a destination to write into:
+A `Key` is a short-lived structure that can be represented as a UTF-8 string:
 
 ```rust
 pub struct Key<'k>(_);
@@ -1088,26 +1122,31 @@ impl<'k> Debug for Key<'k> {
 impl<'k> Display for Key<'k> {
     ..
 }
+```
 
-#[cfg(feature = "std")]
-mod std_support {
-    impl<'k> Key<'k> {
-        pub fn from_owned(key: impl Into<String>) -> Self {
-            ..
-        }
-    }
+When `std` is available, a `Key` can also contain an owned `String`:
 
-    impl ToKey for String {
-        fn to_key(&self) -> Key {
-            Key::from_str(self, None)
-        }
-    }
-
-    impl<'k> From<String> for Key<'k> {
+```rust
+impl<'k> Key<'k> {
+    pub fn from_owned(key: impl Into<String>) -> Self {
         ..
     }
 }
 
+impl ToKey for String {
+    fn to_key(&self) -> Key {
+        Key::from_str(self, None)
+    }
+}
+
+impl<'k> From<String> for Key<'k> {
+    ..
+}
+```
+
+When the `kv_sval` or `kv_serde` features are enabled, a `Key` can be serialized using `sval` or `serde`:
+
+```rust
 #[cfg(feature = "kv_sval")]
 mod sval_support {
     impl<'k> sval::Value for Key<'k> {
@@ -1135,7 +1174,7 @@ The `Key` type is probably `Send` and `Sync`, but that's not guaranteed.
 
 #### Extensibility: Adding an index to keys
 
-The `Key` type could be extended to hold an optional index into a source. This could be used to retrieve a specific key-value pair more efficiently than scanning.
+The `Key` type could be extended to hold an optional index into a source. This could be used to retrieve a specific key-value pair more efficiently than scanning. There's some subtlety to consider though when the sources of keys are combined in various ways that might invalidate a previous index.
 
 ### `ToKey`
 
@@ -1146,6 +1185,10 @@ pub trait ToKey {
     fn to_key(&self) -> Key;
 }
 ```
+
+#### Object safety
+
+The `ToKey` trait is object-safe.
 
 #### Implementors
 
@@ -1176,7 +1219,7 @@ impl<'k> ToKey for Key<'k> {
 
 ### `Source`
 
-The `Source` trait is a bit like `std::iter::Iterator`. It gives us a way to inspect some arbitrary collection of key-value pairs using an object-safe visitor pattern:
+The `Source` trait is a bit like `std::iter::Iterator` for key-value pairs. It gives us a way to inspect some arbitrary collection of key-value pairs using an object-safe visitor pattern:
 
 ```rust
 pub trait Source {
@@ -1242,7 +1285,7 @@ pub trait Source {
 }
 ```
 
-`Source` doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
+The `Source` trait is the main extensibility point for structured logging in the `log` crate that's used by the `Record` type. It doesn't make any assumptions about how many key-value pairs it contains or how they're visited. That means the visitor may observe keys in any order, and observe the same key multiple times.
 
 #### Adapters
 
@@ -1260,7 +1303,7 @@ None of these methods are required for the core API. They're helpful tools for w
 
 #### Object safety
 
-`Source` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `Source` that forwards this method can be reasonably written in a similar way to the object-safe `ErasedVisit`:
+`Source` is not object-safe because of the provided adapter methods not being object-safe. The only required method, `visit`, is safe though, so an object-safe version of `Source` that forwards this method can be reasonably written:
 
 ```rust
 #[derive(Clone, Copy)]
@@ -1415,9 +1458,9 @@ The `BTreeMap` and `HashMap` implementations provide more efficient implementati
 
 #### Extensibility: Sending `Source`s between threads
 
-Before a record could be processed on a background thread it would need to be converted into some owned variant. The `Source` trait is the point where having some way to convert from a borrowed to an owned value would make the most sense because that's where the knowledge of the underlying key-value storage is.
+Implementations of `Log` might want to offload the processing of records to some background thread. The record would need to be converted into some owned representation before being sent across threads. This is straightforward for the existing borrowed string metadata on a record, but less so for any structured data. The `Source` trait is the point where having some way to convert from a borrowed to an owned set of key-value pairs would make the most sense because that's where the knowledge of the underlying key-value storage is.
 
-A new provided method could be added to the `Source` trait that allowed it to be converted into an owned variant that is `Send + Sync + 'static`:
+A new provided method could be added to the `Source` trait that allows it to be converted into an owned variant that is `Send + Sync + 'static`:
 
 ```rust
 pub trait Source {
@@ -1429,7 +1472,7 @@ pub trait Source {
 }
 
 #[derive(Clone)]
-pub struct OwnedSource(Arc<dyn ErasedSourceBridge + Send + Sync>);
+pub struct OwnedSource(Arc<dyn ErasedSource + Send + Sync>);
 
 impl OwnedSource {
     pub fn new(impl Into<Arc<impl Source + Send + Sync>>) -> Self {
@@ -1468,7 +1511,7 @@ A `Visitor` may serialize the keys and values as it sees them. It may also do ot
 
 #### Implementors
 
-There aren't any public implementors of `Visitor` in the `log` crate. Other crates that use key-value pairs will implement `Visitor`.
+There aren't any public implementors of `Visitor` in the `log` crate. Other crates that use key-value pairs will implement `Visitor`, or use the adapter methods on `Source` and never need to touch `Visitor`s directly.
 
 #### Object safety
 
@@ -1476,7 +1519,7 @@ The `Visitor` trait is object-safe.
 
 ### `Record` and `RecordBuilder`
 
-Structured key-value pairs can be set on a `RecordBuilder`:
+Structured key-value pairs can be set on a `RecordBuilder` as an implementation of a `Source`:
 
 ```rust
 impl<'a> RecordBuilder<'a> {
