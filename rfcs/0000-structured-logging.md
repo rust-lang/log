@@ -1554,25 +1554,17 @@ The following API is just the fundamental pieces of what's proposed by this RFC.
 ```rust
 impl<'a> RecordBuilder<'a> {
     pub fn key_values(&mut self, kvs: ErasedSource<'a>) -> &mut RecordBuilder<'a> {
-        self.record.kvs = kvs;
-        self
+        ..
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct Record<'a> {
-    ..
-
-    kvs: ErasedSource<'a>,
 }
 
 impl<'a> Record<'a> {
     pub fn key_values(&self) -> ErasedSource {
-        self.kvs.clone()
+        ..
     }
 }
 
-pub struct Error(Inner);
+pub struct Error(_);
 
 impl Error {
     pub fn msg(msg: &'static str) -> Self {
@@ -1597,24 +1589,25 @@ impl From<Error> for fmt::Error {
 }
 
 #[cfg(feature = "std")]
-mod std_support {
-    impl Error {
-        pub fn custom(err: impl fmt::Display) -> Self {
-            ..
-        }
-    }
-
-    impl From<io::Error> for Error {
+impl Error {
+    pub fn custom(err: impl fmt::Display) -> Self {
         ..
     }
+}
 
-    impl From<Error> for io::Error {
-        ..
-    }
+#[cfg(feature = "std")]
+impl From<io::Error> for Error {
+    ..
+}
 
-    impl error::Error for Error {
-        ..
-    }
+#[cfg(feature = "std")]
+impl From<Error> for io::Error {
+    ..
+}
+
+#[cfg(feature = "std")]
+impl error::Error for Error {
+    ..
 }
 
 pub struct Value<'v>(_);
@@ -1662,13 +1655,6 @@ pub struct ErasedSource<'a>(_);
 
 pub trait Visitor<'kvs> {
     fn visit_pair(&mut self, k: Key<'kvs>, v: Value<'kvs>) -> Result<(), Error>;
-}
-
-impl<'a, 'kvs, T: ?Sized> Visitor<'kvs> for &'a mut T
-where
-    T: Visitor<'kvs>
-{
-    ..
 }
 ```
 
