@@ -149,7 +149,7 @@ use cases, it offers _less_ customization options.  For example,
 supplying a custom literal prefix to the message, for additional
 context. It is also less symmetric with the the _formatted logging_
 macros, where the format string literal represents the _entire_ text
-message of the log `Record`. Finally, this alternatives adds a small
+message of the log `Record`. Finally, this alternative adds a small
 but measurable amount of formatting overhead, as the value needs to be
 formatted to a temporary `fmt::Arguments` before formatting to the
 final message.
@@ -174,12 +174,12 @@ macro(s), at least in 2018 edition projects, adding this feature to
   README and/or top-level library rustdoc.
 
 * The community effort to maintain such a separate library with
-  compatibility to the `log` crate, as it evolves.  Fro example, _-v_
-  macros will likely need to be adapted, for example, when structured
-  logging is implemented ([log RFC 296]).
+  compatibility to the `log` crate, as it evolves.  For example, the
+  _-v_ macros will likely need to be adapted, when structured logging
+  is implemented ([log RFC 296]).
 
 The [implementation PR] (as of this writing) adds just 74 lines
-non-test code, only of `macro_rules!`.
+of non-test code, all of which is `macro_rules!`.
 
 # Unresolved Questions
 
