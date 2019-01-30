@@ -873,7 +873,7 @@ It's the trait bound that values passed as structured data to the `log!` macros 
 
 #### Implementors
 
-`ToValue` is implemented for fundamental primitive types from the standard library:
+`ToValue` is implemented for fundamental primitive types:
 
 ```rust
 impl<'v> ToValue for Value<'v> {
@@ -984,6 +984,52 @@ where
 impl<'a> ToValue for &'a str {
     fn to_value(&self) -> Value {
         Value::from_any(self, |from, v| from.str(*v))
+    }
+}
+
+impl<'a> ToValue for &'a Arguments {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.debug(*v))
+    }
+}
+```
+
+When `std` is available, `ToValue` is implemented for additional types:
+
+```rust
+impl<T: ?Sized> ToValue for Box<T> where T: ToValue {
+    fn to_value(&self) -> Value {
+        (**self).to_value()
+    }
+}
+
+impl<T: ?Sized> ToValue for Arc<KVS> where KVS: ToValue  {
+    fn to_value(&self) -> Value {
+        (**self).to_value()
+    }
+}
+
+impl<T: ?Sized> ToValue for Rc<KVS> where KVS: ToValue  {
+    fn to_value(&self) -> Value {
+        (**self).to_value()
+    }
+}
+
+impl ToValue for String {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.str(*v))
+    }
+}
+
+impl<'a> ToValue for &'a Path {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.debug(*v))
+    }
+}
+
+impl ToValue for PathBuf {
+    fn to_value(&self) -> Value {
+        Value::from_any(self, |from, v| from.debug(*v))
     }
 }
 ```
