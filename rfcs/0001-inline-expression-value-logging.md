@@ -178,7 +178,7 @@ macro(s), at least in 2018 edition projects, adding this feature to
   _-v_ macros will likely need to be adapted, when structured logging
   is implemented ([log RFC 296]).
 
-The [implementation PR] (as of this writing) adds just 74 lines
+The [implementation PR] (as of this writing) adds just 65 lines
 of non-test code, all of which is `macro_rules!`.
 
 # Unresolved Questions
