@@ -96,14 +96,38 @@ documentation, in the form of rustdoc with doc-tests.
 
 ## Multiple expression support
 
-[RFC 2173] included multiple-expression support for `std::dbg!` but
-was closed, at least in part due to perceived complexity with multiple
-expressions and tuple value returns, in preference to [RFC 2361] which
-was ultimately merged and implemented. While `log` is arguably a "more
-advanced" tool, the complexity of multiple expression support does not
-seem to be warranted by the functional gain or convenience win, over
-using the existing formatted logging macros for more complex
-formatting requirements.
+[RFC 2173] included multiple expression printing and return of values
+via tuple for `std::dbg!`, but was closed in preference to [RFC 2361] as
+merged and implemented.  RFC 2361 on this particular [design
+aspect][2361-single]:
+
+> If the macro accepts more than one expression (returning a tuple),
+> there is a question of what to do with a single
+> expression. Returning a one-value tuple `($expr,)` is probably
+> unexpected, but _not_ doing so creates a discontinuity in the macro's
+> behavior as things are added. With only one expression accepted,
+> users can still pass a tuple expression or call the macro multiple
+> times.
+
+In relation to the proposed design of this RFC, accepting multiple
+expressions would also be at odds with allowing an optional custom
+format string as a preceding parameter.  To support both would require
+an additional marker, e.g. `debugv!(format: "{} = {:x}", i, j)`, as
+further complication and bulk.
+
+As suggested in RFC 2361, explicitly passing a multiple expression
+tuple works when desired, and avoids complications to both the
+syntax and macro implementation:
+
+```rust
+let j = 19;
+let (q, r) = debugv!((j/4, j%4));
+\\           ^-- debug log message: (j / 4, j % 4) = (4, 3)
+let (q, r) = debugv!("quarter {} = {:?}", (j/4, j%4));
+\\           ^-- debug log message: quarter (j / 4, j % 4) = (4, 3)
+assert_eq!(q, 4);
+assert_eq!(r, 3);
+```
 
 ## DSL extension of existing log macros
 
@@ -189,3 +213,4 @@ None.
 [RFC 2361]: https://github.com/rust-lang/rfcs/pull/2361
 [log RFC 296]: https://github.com/rust-lang-nursery/log/pull/296
 [implementation PR]: https://github.com/rust-lang-nursery/log/pull/316
+[2361-single]: https://github.com/rust-lang/rfcs/blob/master/text/2361-dbg-macro.md#accepting-a-single-expression-instead-of-many
