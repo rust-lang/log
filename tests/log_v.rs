@@ -72,6 +72,24 @@ fn main() {
     assert_eq!(errorv!(target: "special", "custom: {} = {:05}", i), 32);
     assert_eq!(last(&a), Some("custom: i = 00032".to_owned()));
 
+    // Explicit tuple for multiple expressions
+    let j = 19;
+    let (q, r) = debugv!((j/4, j%4));
+    assert_eq!(q, 4);
+    assert_eq!(r, 3);
+    assert_eq!(last(&a), Some("(j / 4, j % 4) = (4, 3)".to_owned()));
+    // Explicit tuple and custom format
+    assert_eq!(debugv!("fifth {} = {:?}", (j/5, j%5)), (3, 4));
+    assert_eq!(last(&a), Some("fifth (j / 5, j % 5) = (3, 4)".to_owned()));
+
+    // Syntactic edge case of single value tuple
+    assert_eq!(debugv!((j,)), (19,));
+    #[allow(unused_parens)] {
+        // A trailing comma is required for compiler to interpret as
+        // tuple. This is not a tuple!
+        assert_eq!(debugv!((j)), 19);
+    }
+
     // String and its default `Debug` formatting, by reference and move.
     let vt = "foo";
     assert_eq!(infov!(&vt), &"foo");
