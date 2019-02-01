@@ -6,9 +6,9 @@ superset of the `dbg!` macro recently added to rust `std`.
 # Motivation
 
 The motivation is in part the same as for the accepted `dbg!` macro of
-[RFC 2361] and implemented in rust 1.32. To summarize:
+[RFC 2361], as implemented in rust 1.32. To summarize:
 
-* Its convenient to be able to insert logging into larger expressions
+* It is convenient to be able to insert logging into larger expressions
   without needing to restructure using additional `let` bindings, or
   by duplicating sub-expressions.
 
@@ -77,7 +77,7 @@ let rem = infov!("{1:?} remaining ({0})", deadline - Instance::now());
 ```
 
 For symmetry with the existing `log!` macro, a `logv!` is also
-included, which allows passing a `Level` as parameter.
+included, which allows passing the `Level` as a parameter.
 
 Finally, like all the other public logging macros, the _-v_ macros
 allows overriding the default module-path target with a string
@@ -145,9 +145,9 @@ the message and its value returned from the macro. This complicates
 the macro's, but more importantly, considerably complicates the
 necessary guide documentation for new and existing users to understand
 an evolving logging _DSL_ as new syntax.  This syntax isn't any more
-compact. It aids comprehension when the macro arguments are as
-function-like as possible, by introducing the _-v_ macros specific to
-the feature as designed.
+compact. Comprehension is aided when the macro arguments are as
+function-like as possible, with macros specific to the feature, as
+designed above.
 
 ## Only customize the value part of the format
 
@@ -161,16 +161,15 @@ tracev!("{} = {:x}", i);
 ```
 
 A workable alternative would be to only allow customizing the value
-part of the format, and have the expression part be fixed as `"{} =
-"`:
+part of the format, and with the expression part fixed as `"{} ="`:
 
 ``` rust
-tracev!("{:x}". i);
+tracev!("{:x}", i);
 ```
 
 While this alternative is more compact for the subset of compatible
-use cases, it offers _less_ customization options.  For example,
-supplying a custom literal prefix to the message, for additional
+use cases, it offers less customization options.  For example, it does
+not support adding a custom literal prefix to the message, for additional
 context. It is also less symmetric with the the _formatted logging_
 macros, where the format string literal represents the _entire_ text
 message of the log `Record`. Finally, this alternative adds a small
