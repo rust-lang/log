@@ -172,10 +172,7 @@ use cases, it offers less customization options.  For example, it does
 not support adding a custom literal prefix to the message, for additional
 context. It is also less symmetric with the the _formatted logging_
 macros, where the format string literal represents the _entire_ text
-message of the log `Record`. Finally, this alternative adds a small
-but measurable amount of formatting overhead, as the value needs to be
-formatted to a temporary `fmt::Arguments` before formatting to the
-final message.
+message of the log `Record`.
 
 ## Release this as a separate crate, not in `log`
 
