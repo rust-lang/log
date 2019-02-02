@@ -170,7 +170,7 @@ tracev!("{:x}", i);
 While this alternative is more compact for the subset of compatible
 use cases, it offers less customization options.  For example, it does
 not support adding a custom literal prefix to the message, for additional
-context. It is also less symmetric with the the _formatted logging_
+context. It is also less symmetric with the _formatted logging_
 macros, where the format string literal represents the _entire_ text
 message of the log `Record`.
 
