@@ -75,7 +75,7 @@ macro_rules! log {
 /// //     ^-- trace level message: "&center = Point { x: 3.234, y: -1.223 }"
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! logv {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => (
         __logv!($lvl, target: $target, $($arg)+)
