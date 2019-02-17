@@ -12,8 +12,8 @@ script:
   - cargo test --verbose
   - cargo test --verbose --features serde
   - cargo test --verbose --features std
-  - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml
-  - cargo run --verbose --manifest-path tests/max_level_features/Cargo.toml --release
+  - cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
+  - cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
 
 notifications:
   email:
