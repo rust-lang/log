@@ -98,37 +98,7 @@ This section introduces `log`'s structured logging API through a tour of how str
 
 ## Logging structured key-value pairs
 
-Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record. A `;` separates structured key-value pairs from other data that's interpolated into the message:
-
-```rust
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    correlation = correlation_id,
-    user
-);
-```
-
-Any `value` or `key = value` expressions before the `;` in the macro will be interpolated into the message as unstructured text using `std::fmt`. This is the `log!` macro we have today.
-
-Any `value` or `key = value` expressions after the `;` will be captured as structured key-value pairs. These structured key-value pairs can be inspected or serialized, retaining some notion of their original type. That means in the above example, the `message` pair is unstructured, and the `correlation` and `user` pairs are structured:
-
-```
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    ^^^^^^^^^^^^^^^^^^^
-    unstructured
-
-    correlation = correlation_id,
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    structured
-
-    user
-    ^^^^
-    structured
-);
-```
+Structured logging is supported in `log` by allowing typed key-value pairs to be associated with a log record. This support isn't surfaced in the `log!` macros initially, so you'll need to use a framework like `slog` or `tokio-trace` with `log` integration, or an alternative implementation of the `log!` macros to capture structured key-value pairs.
 
 ### What can be captured as a structured value?
 
@@ -152,36 +122,6 @@ impl<'v> Debug for Value<'v> {
 ```
 
 We'll look at `Value` in more detail later. For now, we can think of it as a container that normalizes capturing and emitting the structure of values.
-
-So, in the example from before:
-
-```rust
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    correlation = correlation_id,
-    user
-);
-```
-
-the `correlation_id` and `user` pairs can be captured as structured values if they implement the `ToValue` trait:
-
-```
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    ^^^^^^^^^^^^^^^^^^^
-    impl Display
-
-    correlation = correlation_id,
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    impl ToValue
-
-    user
-    ^^^^
-    impl ToValue
-);
-```
 
 Initially, that means a fixed set of primitive types from the standard library:
 
@@ -307,40 +247,6 @@ impl ToValue for User {
     }
 }
 ```
-
-#### Capturing values without implementing `ToValue`
-
-Instead of implementing `ToValue` on types throughout the ecosystem, callers of the `log!` macros could instead create ad-hoc `Value`s from their data at the callsite:
-
-```rust
-use log::key_values::Value;
-
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    correlation = Value::from_serde(correlation_id),
-    user = Value::from_sval(user),
-);
-```
-
-In this example, `correlation_id` and `user` don't need to implement any traits from `log`. Instead, they need to implement the corresponding trait from `sval` or `serde`:
-
-```
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-
-    correlation = Value::from_serde(correlation_id),
-                                    ^^^^^^^^^^^^^^
-                                    impl serde::Serialize + Debug
-
-    user = Value::from_sval(user),
-                            ^^^^
-                            impl sval::Value + Debug
-);
-```
-
-Having to decorate every value in every `log!` macro is not ideal for users of the `log` crate, but it does open the door for alternative implementations of the `log!` macros to be more opinionated about what kinds of structured values they'll accept by default.
 
 ## Supporting key-value pairs in `Log` implementations
 
@@ -599,7 +505,7 @@ Don't create a new serialization API that requires `log` to become a public depe
 
 ### Support arbitrary producers and arbitrary consumers
 
-Provide an API that's suitable for two independent logging frameworks to integrate through if they want. Producers of structured data and consumers of structured data should be able to use different serialization frameworks opaquely and still get good results. As an example, a caller of `info!` should be able to log a map that implements `sval::Value`, and the implementor of the receiving `Log` trait should be able to format that map using `serde::Serialize`. 
+Provide an API that's suitable for two independent logging frameworks to integrate through if they want. Producers of structured data and consumers of structured data should be able to use different serialization frameworks opaquely and still get good results. As an example, a producer of a `log::Record` should be able to log a map that implements `sval::Value`, and the implementor of the receiving `Log` trait should be able to format that map using `serde::Serialize`. 
 
 ### Remain object safe
 
@@ -885,7 +791,7 @@ pub trait ToValue {
 }
 ```
 
-It's the trait bound that values passed as structured data to the `log!` macros need to satisfy.
+It's the generic trait bound that macros capturing structured values can require.
 
 #### Object safety
 
@@ -1660,75 +1566,9 @@ pub trait Visitor<'kvs> {
 
 ## The `log!` macros
 
-The `log!` macro will initially support a fairly spartan syntax for capturing structured data. The current `log!` macro looks like this:
+The existing `log!` macros will not be changed in the initial implementation of structured logging. Instead, `log` will rely on new `log!` macro implementations and existing structured frameworks like `slog` and `tokio-trace` to capture structured key-value pairs.
 
-```rust
-log!(<unstructured message>);
-```
-
-This RFC proposes an additional semi-colon-separated part of the macro for capturing key-value pairs: 
-
-```rust
-log!(<unstructured message> ; <structured data>)
-```
-
-The `;` and structured values are optional. If they're not present then the behavior of the `log!` macro is the same as it is today.
-
-As an example, this is what a `log!` statement containing structured key-value pairs could look like:
-
-```rust
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    correlation = correlation_id,
-    user = user
-);
-```
-
-There's a *big* design space around the syntax for capturing log records we could explore, especially when you consider procedural macros. The syntax proposed here for the `log!` macro is not designed to be really ergonomic. It's designed to be *ok*, and to encourage an exploration of the design space by offering a consistent base that other macros could build off.
-
-Having said that, there are a few nonintrusive quality-of-life features that make the `log!` macros nicer to use with structured data.
-
-### Expansion
-
-Structured key-value pairs in the `log!` macro expand to statements that borrow from their environment.
-
-```rust
-info!(
-    "This is the rendered {message}. It is not structured",
-    message = "message";
-    correlation = correlation_id,
-    user = user
-);
-```
-
-Will expand to something like:
-
-```rust
-{
-    let lvl = log::Level::Info;
-
-    if lvl <= ::STATIC_MAX_LEVEL && lvl <= ::max_level() {
-        let correlation &correlation_id;
-        let user = &user;
-
-        let kvs: &[(&str, &dyn::key_values::value::ToValue)] =
-            &[("correlation", &correlation), ("user", &user)];
-
-        ::__private_api_log(
-            ::std::fmt::Arguments::new_v1(
-                &["This is the rendered ", ". It is not structured"],
-                &match (&"message",) {
-                    (arg0,) => [::std::fmt::ArgumentV1::new(arg0, ::std::fmt::Display::fmt)],
-                },
-            ),
-            lvl,
-            &("bin", "mod", "mod.rs", 13u32),
-            &kvs,
-        );
-    }
-};
-```
+It's expected that an external library will be created to explore new implementations of the `log!` macros that are structured by design, rather than attempting to graft structured logging support onto the existing macros. The result of this work should eventually find its way back into the `log` crate.
 
 # Drawbacks, rationale, and alternatives
 [drawbacks]: #drawbacks
