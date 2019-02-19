@@ -1317,7 +1317,7 @@ impl<KVS> Source for Vec<KVS> where KVS: Source {
 
 impl<K, V> Source for BTreeMap<K, V>
 where
-    K: Borrow<str> + Ord,
+    K: ToKey + Borrow<str> + Ord,
     V: ToValue,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>
@@ -1339,7 +1339,7 @@ where
 
 impl<K, V> Source for HashMap<K, V>
 where
-    K: Borrow<str> + Eq + Hash,
+    K: ToKey + Borrow<str> + Eq + Hash,
     V: ToValue,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut impl Visitor<'kvs>) -> Result<(), Error>
@@ -1518,16 +1518,18 @@ impl error::Error for Error {
 
 pub struct Value<'v>(_);
 
+impl<'v> Value<'v> {
+    pub fn from_debug(value: &'v impl Debug) -> Self {
+        ..
+    }
+}
+
 impl<'v> Debug for Value<'v> {
     ..
 }
 
 impl<'v> Display for Value<'v> {
     ..
-}
-
-pub trait ToValue {
-    fn to_value(&self) -> Value;
 }
 
 pub struct Key<'k>(_);
@@ -1540,10 +1542,6 @@ impl<'k> Key<'k> {
     pub fn as_str(&self) -> &str {
         ..
     }
-}
-
-pub trait ToKey {
-    fn to_key(&self) -> Key;
 }
 
 pub trait Source {
