@@ -37,6 +37,7 @@ impl Log for Logger {
         let t = record.target().to_owned();
         assert!(t == "log_v" || t == "special", t);
     }
+
     fn flush(&self) {}
 }
 
@@ -117,4 +118,15 @@ fn main() {
     // logv, default target, tuple
     assert_eq!(logv!(Level::Warn, (i+1, i+2)).1, 5);
     assert_eq!(last(&a), Some("(i + 1, i + 2) = (4, 5)".to_owned()));
+
+    // void function, statement position
+    fn fvoid() {}
+    debugv!(fvoid());
+    assert_eq!(last(&a), Some("fvoid() = ()".to_owned()));
+
+    // str function, with let binding.
+    fn fstr() -> String { "returned".to_owned() }
+    let s = debugv!(fstr());
+    assert_eq!(s, "returned");
+    assert_eq!(last(&a), Some("fstr() = \"returned\"".to_owned()));
 }
