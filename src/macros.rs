@@ -47,7 +47,7 @@ macro_rules! log {
 /// Log an expression and its value at any specified level.
 ///
 /// Logs with the optional or default (module path of use) target, specified
-/// `Level`, optional or default (`"{} = {:?}`) format string, and a single
+/// `Level`, optional or default (`"{} = {:?}"`) format string, and a single
 /// expression and value, which is returned.  This is normally only used
 /// through the _-v_ macros like `debugv!` or `tracev!`.
 ///
