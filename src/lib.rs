@@ -30,7 +30,7 @@
 //! highest to lowest priority: `error!`, `warn!`, `info!`, `debug!` and
 //! `trace!`.  There is an additional set of “_-v_” suffix macros
 //! (e.g. `debugv!`) that provide _inline expression and value_ logging. Both
-//! sets of macros are described below, with examples using aribitrary log
+//! sets of macros are described below, with examples using arbitrary log
 //! levels.
 //!
 //! ### Formatted logging
@@ -79,7 +79,8 @@
 //!
 //! ### Inline expression and value logging
 //!
-//! The _-v_ macros support inline expression and value logging. A _single_
+//! The _-v_ macros support inline expression and value logging, as a superset
+//! of the [`std::dbg!`] macro, for use with the logging system. A _single_
 //! expression argument is evaluated exactly once, regardless of if the
 //! logging level is enabled, and its value is returned from the macro. Given
 //! this code as a starting point:
@@ -92,7 +93,7 @@
 //! # }
 //! ```
 //!
-//! The `debugv!` macro may be inserted inline around any expression or
+//! A _-v_ macro may be inserted inline around any expression or
 //! sub-expression:
 //!
 //! ```rust
@@ -105,10 +106,9 @@
 //! # }
 //! ```
 //!
-//! This feature is a superset of the [`std::dbg!`] macro for the logging
-//! system.  Note that the value of the expression is moved and then
-//! returned. The type must implement `Copy`, but this includes immutable
-//! references to non-`Copy` types.
+//! Note that the value of the expression is moved and then returned. If the
+//! type does not implement `Copy`, ownership may be retained by borrowing by
+//! reference, e.g. `debugv!(&expr)`.
 //!
 //! The _default_ format string for the _-v_ macros is `"{} = {:?}"`, where
 //! the `stringify!`-ed expression and resulting value are passed, in that
@@ -123,7 +123,7 @@
 //! # fn main() {
 //! let i = 32;
 //! infov!("{} = {}", i);            // use `Display` instead of `Debug`
-//! infov!("{} = {:x}", i);          // hexadecimal format value
+//! infov!("{} = {:#x}", i);         // hexadecimal format value
 //! infov!("{} = {:#?}", i);         // use pretty, multi-line format
 //! infov!("index {1:5?} ({0})", i); // prefix, value first with padding
 //! # }
