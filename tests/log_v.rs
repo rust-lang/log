@@ -129,4 +129,12 @@ fn main() {
     let s = debugv!(fstr());
     assert_eq!(s, "returned");
     assert_eq!(last(&a), Some("fstr() = \"returned\"".to_owned()));
+
+    // wrapping assignments is possible, but not very interesting, given
+    // rust doesn't emit the value, even with Copy types.
+    let mut m = 1;
+    assert_eq!(m, 1);
+    infov!(m = 2);
+    assert_eq!(m, 2);
+    assert_eq!(last(&a), Some("m = 2 = ()".to_owned()));
 }
