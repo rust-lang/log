@@ -101,7 +101,7 @@
 //! # fn main() {
 //! let n = 12;
 //! let m = debugv!(n / 2) - 1;
-//! //      ^-- debug log message: "n / 2 = 6"
+//! //      ^-- debug log message: "n / 2 → 6"
 //! assert_eq!(m, 5);
 //! # }
 //! ```
@@ -110,7 +110,7 @@
 //! type does not implement `Copy`, ownership may be retained by borrowing by
 //! reference, e.g. `debugv!(&expr)`.
 //!
-//! The _default_ format string for the _-v_ macros is `"{} = {:?}"`, where
+//! The _default_ format string for the _-v_ macros is `"{} → {:?}"`, where
 //! the `stringify!`-ed expression and resulting value are passed, in that
 //! order.  If the log record is not filtered out, the `Debug` implementation
 //! for the type of the given expression value is used (`{:?}`).  A custom
@@ -122,9 +122,9 @@
 //! # #[macro_use] extern crate log;
 //! # fn main() {
 //! let i = 32;
-//! infov!("{} = {}", i);            // use `Display` instead of `Debug`
-//! infov!("{} = {:#x}", i);         // hexadecimal format value
-//! infov!("{} = {:#?}", i);         // use pretty, multi-line format
+//! infov!("{} → {}", i);            // use `Display` instead of `Debug`
+//! infov!("{} → {:#x}", i);         // hexadecimal format value
+//! infov!("{} → {:#?}", i);         // use pretty, multi-line format
 //! infov!("index {1:5?} ({0})", i); // prefix, value first with padding
 //! # }
 //! ```

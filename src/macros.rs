@@ -47,7 +47,7 @@ macro_rules! log {
 /// Log an expression and its value at any specified level.
 ///
 /// Logs with the optional or default (module path of use) target, specified
-/// `Level`, optional or default (`"{} = {:?}"`) format string, and a single
+/// `Level`, optional or default (`"{} → {:?}"`) format string, and a single
 /// expression and value, which is returned.  This is normally only used
 /// through the _-v_ macros like `debugv!` or `tracev!`.
 ///
@@ -70,9 +70,9 @@ macro_rules! log {
 /// let center = Point { x: 3.234, y: -1.223 };
 ///
 /// circle(logv!(Level::Trace, &center), 7.3);
-/// //     ^-- trace level message: "&center = Point { x: 3.234, y: -1.223 }"
+/// //     ^-- trace level message: "&center → Point { x: 3.234, y: -1.223 }"
 /// circle(tracev!(&center), 8.0);
-/// //     ^-- trace level message: "&center = Point { x: 3.234, y: -1.223 }"
+/// //     ^-- trace level message: "&center → Point { x: 3.234, y: -1.223 }"
 /// # }
 /// ```
 #[macro_export(local_inner_macros)]
@@ -291,13 +291,13 @@ macro_rules! __logv {
         __logv_eval!($tgt, $lvl, $fmt, $val)
     );
     ($lvl:expr, target: $tgt:expr, $val:expr) => (
-        __logv_eval!($tgt, $lvl, "{} = {:?}", $val)
+        __logv_eval!($tgt, $lvl, "{} → {:?}", $val)
     );
     ($lvl:expr, $fmt:expr, $val:expr) => (
         __logv_eval!(__log_module_path!(), $lvl, $fmt, $val)
     );
     ($lvl:expr, $val:expr) => (
-        __logv_eval!(__log_module_path!(), $lvl, "{} = {:?}", $val)
+        __logv_eval!(__log_module_path!(), $lvl, "{} → {:?}", $val)
     );
 }
 
