@@ -86,10 +86,11 @@
 //! this code as a starting point:
 //!
 //! ```rust
+//! use std::time::{Duration, Instant};
 //! # fn main() {
-//! let n = 12;
-//! let m = n / 2 - 1;
-//! assert_eq!(m, 5);
+//! # let deadline = Instant::now() + Duration::new(0, 950_000);
+//!
+//! let remaining = deadline - Instant::now();
 //! # }
 //! ```
 //!
@@ -98,11 +99,14 @@
 //!
 //! ```rust
 //! # #[macro_use] extern crate log;
+//! use std::time::{Duration, Instant};
 //! # fn main() {
-//! let n = 12;
-//! let m = debugv!(n / 2) - 1;
-//! //      ^-- debug log message: "n / 2 → 6"
-//! assert_eq!(m, 5);
+//! # let deadline = Instant::now() + Duration::new(0, 950_000);
+//!
+//! let remaining = debugv!(deadline - Instant::now());
+//! //               ^-- debug log: deadline - Instant::now() → 950µs
+//! debugv!(remaining);
+//! // or            ^-- debug log: remaining → 950µs
 //! # }
 //! ```
 //!
