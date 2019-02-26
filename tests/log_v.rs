@@ -36,6 +36,7 @@ impl Log for Logger {
         assert!(record.line().is_some());
         let t = record.target().to_owned();
         assert!(t == "log_v" || t == "special", t);
+        println!("{:5} {}", record.level(), record.args());
     }
 
     fn flush(&self) {}
@@ -47,6 +48,8 @@ fn main() {
     set_boxed_logger(Box::new(Logger(me))).unwrap();
 
     log::set_max_level(LevelFilter::Debug);
+
+    info!("Start of test (test output follows)");
 
     // Simplest use
     let i = 32;
@@ -137,4 +140,6 @@ fn main() {
     infov!(m = 2);
     assert_eq!(m, 2);
     assert_eq!(last(&a), Some("m = 2 → ()".to_owned()));
+
+    info!("End of test (passed)");
 }
