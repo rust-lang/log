@@ -122,7 +122,6 @@
 //! output:
 //!
 //! ```rust
-//! # #![allow(unstable)]
 //! # #[macro_use] extern crate log;
 //! # fn main() {
 //! let i = 32;
