@@ -42,32 +42,52 @@ equivalent.
 
 ## `std::dbg!` doesn't work well in projects with `log` configured
 
-In the context of unit tests, when using `cargo test`, _stderr_ (or
-_stdout_) configured log output isn't captured, while `dbg!`, at least
-when used within the tests, is captured.  For passing tests, only log
-output will be shown. For failing tests, log and `dbg!` output are
-shown out of order, with `dbg!` captured and buffered for output at
-the end of the test.
+In the context of unit tests, the `cargo test` harness attempts to
+capture _stderr_/_stdout_ independently for each test, but the
+mechanism is incomplete and fragile: Output from threads other than
+the test thread _escapes_ the capture, as does the output of most all
+logger implementations, even when on the test thread. Interest in
+fixing this has most recently been subsumed by
+[_Tracking issue for eRFC 2318, Custom test frameworks_, rust-lang/rust#50297 (comment)][issue 50297]—but
+with no clear commitment to a complete implementation and fix.
 
-A workaround is the rather elusive `cargo test -- --nocapture` flags,
-while selecting a single test by name or using `-j 1` (single thread)
-to prevent interleaving of output. But even with these workarounds in
-place, or in the context of examples or other executables:
+This results in the practical issue that mixing `log` output with
+`println!`, `eprintln!`, or `std::dbg!` results in confusing
+buffering, with only the latter being captured. When tests pass, only `log`
+output will be shown. When tests fail, `log` and `std::dbg!` output are
+both shown, but out of order, with `std::dbg!` captured and buffered
+for output after the test panics.
+
+For new users of `log` this can be particularly confusing, since they
+are often working through their own project bugs while at the same
+time trying to understand this inconsistent `cargo test` behavior.
+
+In such mixed usage, no capture is must less confusing than
+partial/broken output capture, so the rather elusive and fun to type
+`cargo test -- --nocapture --test-threads=1` can suffice as a
+workaround. Anecdotally: The author finally discovered the last flag
+of this puzzle just rencently, and previously was incorrectly using the
+_documented_ `-j 1` flag.
+
+Even with the hard-earned knowledge of these workarounds, or if test
+output capture eventually becomes reliable, when mixing `std::dbg!` with
+`log`:
 
 * The output is jarringly in two different formats: one configurable
   by the logging implementation, the other hard-coded by `std::dbg!`
-  which acts effectively like its own micro-logging system.
+  which is effectively its own micro-logging system.
 
 * `std::dbg!` is hard-coded to use "pretty" multi-line format (via
   `{:#?}`), which is also jarring by normal logging conventions.
 
-* `std::dbg!` isn't beholden to log's level or other filtering and
-  thus can't be kept in a project.
+* `std::dbg!` isn't beholden to `log`'s level or other filtering and
+  thus can't be reasonably kept in a project, at least outside of test
+  code.
 
 * Other log metadata or output options like module name (`target`) or
   thread names are not available with `dbg!`
 
-Below, us an excerpt of a debugging session combining `log::trace!`,
+Below is an excerpt of a debugging session combining `log::trace!`,
 `log::debug!`, and `std::dbg!`:
 
 ```txt
@@ -78,8 +98,7 @@ TRACE tokio_threadpool::sender: execute; count=1
 TRACE tokio_threadpool::pool:     -> submit external
 TRACE tokio_threadpool::pool: signal_work -- notify; idx=1
 TRACE tokio_threadpool::pool: signal_work -- spawn; idx=1
-[body-image-futio/src/futio_tests/server.rs:73] Tuner::new().set_buffer_size_fs(17).finish()
-= Tunables {
+[body-image-futio/src/futio_tests/server.rs:73] Tuner::new().set_buffer_size_fs(17).finish() = Tunables {
     max_body_ram: 196608,
     max_body: 1073741824,
     buffer_size_ram: 8192,
@@ -102,9 +121,9 @@ TRACE tokio_threadpool::worker:   sleeping -- push to stack; idx=1
 TRACE tokio_threadpool::worker:     -> starting to sleep; idx=1
 ```
 
-With `std::dbg!` released, there is intrinsic value in offering
-developers parity and convenience with an extension to `log` for
-inline expression and value logging.
+With `std::dbg!` released, there is now intrinsic value in at least
+offering developers parity and convenience with an extension to `log`
+for inline expression and value logging.
 
 # Detailed Design
 
@@ -303,3 +322,4 @@ None.
 [log RFC 296]: https://github.com/rust-lang-nursery/log/pull/296
 [implementation PR]: https://github.com/rust-lang-nursery/log/pull/316
 [2361-single]: https://github.com/rust-lang/rfcs/blob/master/text/2361-dbg-macro.md#accepting-a-single-expression-instead-of-many
+[issue 50297]: https://github.com/rust-lang/rust/issues/50297#issuecomment-388988381
