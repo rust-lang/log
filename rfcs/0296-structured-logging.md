@@ -1,3 +1,7 @@
+- Feature Name: `structured_logging`
+- Start Date: 2019-03-11
+- RFC PR: [log/rfcs#0296](https://github.com/rust-lang-nursery/log/pull/296)
+
 # Summary
 [summary]: #summary
 
