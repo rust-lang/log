@@ -220,7 +220,7 @@
 //!
 //! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
 //! this value before logging a message. By default, no levels are disabled.
-//! 
+//!
 //! Libraries should avoid using the max level features because they're global and can't be changed
 //! once they're set.
 //!
