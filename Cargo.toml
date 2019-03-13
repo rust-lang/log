@@ -39,6 +39,9 @@ release_max_level_trace = []
 
 std = []
 
+# requires Rust `>= 1.21.0`
+kv_unstable = []
+
 [badges]
 travis-ci = { repository = "rust-lang-nursery/log" }
 appveyor = { repository = "alexcrichton/log" }
