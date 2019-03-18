@@ -6,12 +6,12 @@ rust:
   - beta
   - nightly
 install:
-  - rustup target add thumbv6m-none-eabi
+  - '[ "$TRAVIS_RUST_VERSION" == "1.16.0" ] || rustup target add thumbv6m-none-eabi'
 script:
   - cargo build --verbose
   - cargo build --verbose --features serde
   - cargo build --verbose --features std
-  - cargo build --verbose --target=thumbv6m-none-eabi
+  - '[ "$TRAVIS_RUST_VERSION" == "1.16.0" ] || cargo build --verbose --target=thumbv6m-none-eabi'
   - cargo test --verbose
   - cargo test --verbose --features serde
   - cargo test --verbose --features std
