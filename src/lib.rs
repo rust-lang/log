@@ -1198,10 +1198,11 @@ where
 ///
 /// # Safety
 ///
-/// This function is only safe to call when there is no chance that any of its
-/// operations will be preempted. This usually means that **there must not be
-/// any active threads**, and (on embedded) that **interrupts must be
-/// disabled**.
+/// This function is only safe to call when no other logger initialization
+/// function is called while this function still executes.
+///
+/// This can be upheld by (for example) making sure that **there are no other
+/// threads**, and (on embedded) that **interrupts are disabled**.
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
@@ -1214,7 +1215,7 @@ pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError
         INITIALIZING => {
             // This is just plain UB, since we were racing another initialization function
             unreachable!("set_logger_racy must not be used with other initialization functions")
-        },
+        }
         _ => Err(SetLoggerError(())),
     }
 }
