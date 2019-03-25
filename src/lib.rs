@@ -1120,8 +1120,8 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 ///
 /// This method is available even when the `std` feature is disabled. However,
 /// it is currently unavailable on `thumbv6` targets, which lack support for
-/// some atomic operations which are used by this function. However, even on
-/// those targets, [`set_logger_racy`] is available.
+/// some atomic operations which are used by this function. Even on those
+/// targets, [`set_logger_racy`] will be available.
 ///
 /// # Errors
 ///
@@ -1203,6 +1203,9 @@ where
 ///
 /// This can be upheld by (for example) making sure that **there are no other
 /// threads**, and (on embedded) that **interrupts are disabled**.
+///
+/// It is safe to use other logging functions while this function runs
+/// (including all logging macros).
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
