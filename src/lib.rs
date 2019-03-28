@@ -1102,7 +1102,7 @@ pub fn max_level() -> LevelFilter {
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", atomic_cas))]
 pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
     set_logger_inner(|| unsafe { &*Box::into_raw(logger) })
 }
@@ -1115,6 +1115,13 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 /// This function does not typically need to be called manually. Logger
 /// implementations should provide an initialization method that installs the
 /// logger internally.
+///
+/// # Availability
+///
+/// This method is available even when the `std` feature is disabled. However,
+/// it is currently unavailable on `thumbv6` targets, which lack support for
+/// some atomic operations which are used by this function. Even on those
+/// targets, [`set_logger_racy`] will be available.
 ///
 /// # Errors
 ///
@@ -1154,10 +1161,14 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 /// error!("oops");
 /// # }
 /// ```
+///
+/// [`set_logger_racy`]: fn.set_logger_racy.html
+#[cfg(atomic_cas)]
 pub fn set_logger(logger: &'static Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
+#[cfg(atomic_cas)]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static Log,
@@ -1175,6 +1186,40 @@ where
             }
             _ => Err(SetLoggerError(())),
         }
+    }
+}
+
+/// A thread-unsafe version of [`set_logger`].
+///
+/// This function is available on all platforms, even those that do not have
+/// support for atomics that is needed by [`set_logger`].
+///
+/// In almost all cases, [`set_logger`] should be preferred.
+///
+/// # Safety
+///
+/// This function is only safe to call when no other logger initialization
+/// function is called while this function still executes.
+///
+/// This can be upheld by (for example) making sure that **there are no other
+/// threads**, and (on embedded) that **interrupts are disabled**.
+///
+/// It is safe to use other logging functions while this function runs
+/// (including all logging macros).
+///
+/// [`set_logger`]: fn.set_logger.html
+pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
+    match STATE.load(Ordering::SeqCst) {
+        UNINITIALIZED => {
+            LOGGER = logger;
+            STATE.store(INITIALIZED, Ordering::SeqCst);
+            Ok(())
+        }
+        INITIALIZING => {
+            // This is just plain UB, since we were racing another initialization function
+            unreachable!("set_logger_racy must not be used with other initialization functions")
+        }
+        _ => Err(SetLoggerError(())),
     }
 }
 
