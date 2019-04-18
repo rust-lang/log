@@ -308,7 +308,7 @@ mod macros;
 mod serde;
 
 #[cfg(feature = "kv_unstable")]
-pub mod key_values;
+pub mod kv;
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
@@ -736,7 +736,7 @@ pub struct Record<'a> {
 // `#[derive(Debug)]` on `Record`.
 #[cfg(feature = "kv_unstable")]
 #[derive(Clone)]
-struct KeyValues<'a>(&'a key_values::Source);
+struct KeyValues<'a>(&'a kv::Source);
 
 #[cfg(feature = "kv_unstable")]
 impl<'a> fmt::Debug for KeyValues<'a> {
@@ -797,7 +797,7 @@ impl<'a> Record<'a> {
     /// The structued key-value pairs associated with the message.
     #[cfg(feature = "kv_unstable")]
     #[inline]
-    pub fn key_values(&self) -> &key_values::Source {
+    pub fn key_values(&self) -> &kv::Source {
         self.key_values.0
     }
 
@@ -904,7 +904,7 @@ impl<'a> RecordBuilder<'a> {
                 module_path: None,
                 file: None,
                 line: None,
-                key_values: KeyValues(&Option::None::<(key_values::Key, key_values::Value)>),
+                key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
             },
         };
 
@@ -972,7 +972,7 @@ impl<'a> RecordBuilder<'a> {
     /// Set [`key_values`](struct.Record.html#method.key_values)
     #[cfg(feature = "kv_unstable")]
     #[inline]
-    pub fn key_values(&mut self, kvs: &'a key_values::Source) -> &mut RecordBuilder<'a> {
+    pub fn key_values(&mut self, kvs: &'a kv::Source) -> &mut RecordBuilder<'a> {
         self.record.key_values = KeyValues(kvs);
         self
     }
@@ -1608,7 +1608,7 @@ mod tests {
     #[cfg(feature = "kv_unstable")]
     fn test_record_key_values_builder() {
         use super::Record;
-        use key_values::source::{self, Visitor};
+        use kv::{self, Visitor};
 
         struct TestVisitor {
             seen_pairs: usize,
@@ -1617,9 +1617,9 @@ mod tests {
         impl<'kvs> Visitor<'kvs> for TestVisitor {
             fn visit_pair(
                 &mut self,
-                _: source::Key<'kvs>,
-                _: source::Value<'kvs>
-            ) -> Result<(), source::KeyValueError> {
+                _: kv::Key<'kvs>,
+                _: kv::Value<'kvs>
+            ) -> Result<(), kv::KeyValueError> {
                 self.seen_pairs += 1;
                 Ok(())
             }

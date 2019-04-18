@@ -137,8 +137,8 @@ mod std_support {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use key_values::value::KeyValueError;
-    use key_values::value::backend::Backend;
+    use kv::value::KeyValueError;
+    use kv::value::backend::Backend;
 
     use std::fmt::Write;
     use std::str::{self, Utf8Error};

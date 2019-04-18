@@ -1,6 +1,6 @@
 //! Sources for key-value pairs.
 
-use key_values::{KeyValueError, Key, ToKey, Value, ToValue};
+use kv::{KeyValueError, Key, ToKey, Value, ToValue};
 
 /// A source of key-value pairs.
 /// 
