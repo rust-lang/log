@@ -733,7 +733,9 @@ pub struct Record<'a> {
 }
 
 // This wrapper type is only needed so we can
-// `#[derive(Debug)]` on `Record`.
+// `#[derive(Debug)]` on `Record`. It also
+// provides a useful `Debug` implementation for
+// the underlying `Source`.
 #[cfg(feature = "kv_unstable")]
 #[derive(Clone)]
 struct KeyValues<'a>(&'a kv::Source);
@@ -741,7 +743,21 @@ struct KeyValues<'a>(&'a kv::Source);
 #[cfg(feature = "kv_unstable")]
 impl<'a> fmt::Debug for KeyValues<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("KeyValues").finish()
+        use self::kv::{Key, Value, Visitor, KeyValueError};
+
+        struct FmtVisitor<'a, 'b: 'a>(fmt::DebugMap<'a, 'b>);
+
+        impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for FmtVisitor<'a, 'b> {
+            fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError> {
+                self.0.entry(&key, &value);
+
+                Ok(())
+            }
+        }
+
+        let mut visitor = FmtVisitor(f.debug_map());
+        self.0.visit(&mut visitor)?;
+        visitor.0.finish()
     }
 }
 
