@@ -40,11 +40,7 @@ mod std_support {
 
     impl error::Error for KeyValueError {
         fn description(&self) -> &str {
-            self.msg
-        }
-
-        fn cause(&self) -> Option<&error::Error> {
-            None
+            "key_values error"
         }
     }
 }

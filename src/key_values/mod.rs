@@ -1,11 +1,11 @@
 //! Structured key-value pairs.
 
 mod error;
-pub mod source;
-pub mod key;
-pub mod value;
+mod source;
+mod key;
+mod value;
 
 pub use self::error::KeyValueError;
-pub use self::source::Source;
-pub use self::key::Key;
-pub use self::value::Value;
+pub use self::source::{Source, Visitor};
+pub use self::key::{Key, ToKey};
+pub use self::value::{Value, ToValue};

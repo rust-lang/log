@@ -6,7 +6,7 @@ mod any;
 mod backend;
 mod impls;
 
-pub use key_values::KeyValueError;
+use key_values::KeyValueError;
 
 use self::any::{Any, FromAnyFn};
 

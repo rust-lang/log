@@ -7,7 +7,7 @@ use std::borrow::Borrow;
 
 /// A type that can be converted into a [`Key`](struct.Key.html).
 pub trait ToKey {
-    /// Perform the covnersion.
+    /// Perform the conversion.
     fn to_key(&self) -> Key;
 }
 
@@ -28,7 +28,7 @@ impl<'k> ToKey for Key<'k> {
     }
 }
 
-impl<'k> ToKey for &'k str {
+impl ToKey for str {
     fn to_key(&self) -> Key {
         Key::from_str(self)
     }

@@ -732,6 +732,8 @@ pub struct Record<'a> {
     key_values: KeyValues<'a>,
 }
 
+// This wrapper type is only needed so we can
+// `#[derive(Debug)]` on `Record`.
 #[cfg(feature = "kv_unstable")]
 #[derive(Clone)]
 struct KeyValues<'a>(&'a key_values::Source);

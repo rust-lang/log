@@ -1,9 +1,6 @@
 //! Sources for key-value pairs.
 
-pub use key_values::{KeyValueError, Key, Value};
-
-use key_values::key::ToKey;
-use key_values::value::ToValue;
+use key_values::{KeyValueError, Key, ToKey, Value, ToValue};
 
 /// A source of key-value pairs.
 /// 
@@ -96,6 +93,15 @@ mod std_support {
     {
         fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
             (**self).visit(visitor)
+        }
+    }
+
+    impl<'kvs, V> Visitor<'kvs> for Box<V>
+    where
+        V: Visitor<'kvs> + ?Sized,
+    {
+        fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError> {
+            (**self).visit_pair(key, value)
         }
     }
 }
