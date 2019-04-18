@@ -1,88 +1,172 @@
 use std::fmt;
 
-use super::{ToValue, Value};
+use super::{KeyValueError, ToValue, Value, Visit, Visitor};
 
 impl ToValue for u8 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.u64(*value as u64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for u8 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.u64(*self as u64)
     }
 }
 
 impl ToValue for u16 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.u64(*value as u64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for u16 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.u64(*self as u64)
     }
 }
 
 impl ToValue for u32 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.u64(*value as u64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for u32 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.u64(*self as u64)
     }
 }
 
 impl ToValue for u64 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.u64(*value))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for u64 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.u64(*self)
     }
 }
 
 impl ToValue for i8 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.i64(*value as i64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for i8 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.i64(*self as i64)
     }
 }
 
 impl ToValue for i16 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.i64(*value as i64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for i16 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.i64(*self as i64)
     }
 }
 
 impl ToValue for i32 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.i64(*value as i64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for i32 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.i64(*self as i64)
     }
 }
 
 impl ToValue for i64 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.i64(*value))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for i64 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.i64(*self)
     }
 }
 
 impl ToValue for f32 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.f64(*value as f64))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for f32 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.f64(*self as f64)
     }
 }
 
 impl ToValue for f64 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.f64(*value))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for f64 {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.f64(*self)
     }
 }
 
 impl ToValue for bool {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.bool(*value))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for bool {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.bool(*self)
     }
 }
 
 impl ToValue for char {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.char(*value))
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for char {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.char(*self)
     }
 }
 
 impl<'v> ToValue for &'v str {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.str(value))
+        Value::from_internal(self)
+    }
+}
+
+impl<'v> Visit for &'v str {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.str(*self)
     }
 }
 
 impl ToValue for () {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, _| from.none())
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for () {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.none()
     }
 }
 
@@ -91,18 +175,25 @@ where
     T: ToValue,
 {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| {
-            match *value {
-                Some(ref value) => from.value(value),
-                None => from.none(),
-            }
-        })
+        Value::from_internal(self)
+    }
+}
+
+impl<T> Visit for Option<T>
+where
+    T: ToValue,
+{
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        match *self {
+            Some(ref value) => value.to_value().visit(visitor),
+            None => visitor.none(),
+        }
     }
 }
 
 impl<'v> ToValue for fmt::Arguments<'v> {
     fn to_value(&self) -> Value {
-        Value::from_any(self, |from, value| from.debug(value))
+        Value::from_debug(self)
     }
 }
 
@@ -123,13 +214,25 @@ mod std_support {
 
     impl ToValue for String {
         fn to_value(&self) -> Value {
-            Value::from_any(self, |from, value| from.str(&*value))
+            Value::from_internal(self)
+        }
+    }
+
+    impl Visit for String {
+        fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+            visitor.str(&*self)
         }
     }
 
     impl<'a> ToValue for Cow<'a, str> {
         fn to_value(&self) -> Value {
-            Value::from_any(self, |from, value| from.str(&*value))
+            Value::from_internal(self)
+        }
+    }
+
+    impl<'a> Visit for Cow<'a, str> {
+        fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+            visitor.str(&*self)
         }
     }
 }
@@ -138,7 +241,7 @@ mod std_support {
 mod tests {
     use super::*;
     use kv::value::KeyValueError;
-    use kv::value::backend::Backend;
+    use kv::value::internal::Visitor;
 
     use std::fmt::Write;
     use std::str::{self, Utf8Error};
@@ -216,15 +319,15 @@ mod tests {
             None,
         }
 
-        struct TestBackend<F>(F);
+        struct TestVisitor<F>(F);
 
-        impl<F> Backend for TestBackend<F>
+        impl<F> Visitor for TestVisitor<F>
         where
             F: Fn(Token),
         {
-            fn fmt(&mut self, v: fmt::Arguments) -> Result<(), KeyValueError> {
+            fn debug(&mut self, v: &fmt::Debug) -> Result<(), KeyValueError> {
                 let mut buf = Buffer::new();
-                write!(&mut buf, "{}", v)?;
+                write!(&mut buf, "{:?}", v)?;
 
                 let s = buf.as_str().map_err(|_| KeyValueError::msg("invalid UTF8"))?;
                 (self.0)(Token::Str(s));
@@ -269,8 +372,8 @@ mod tests {
 
         // Check that a value retains the right structure
         fn check(value: Value, expected: Token) {
-            let mut backend = TestBackend(|token: Token| assert_eq!(expected, token));
-            value.inner.visit(&mut backend).unwrap();
+            let mut visitor = TestVisitor(|token: Token| assert_eq!(expected, token));
+            value.visit(&mut visitor).unwrap();
         }
 
         check(42u64.to_value(), Token::U64(42));

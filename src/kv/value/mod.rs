@@ -2,13 +2,12 @@
 
 use std::fmt;
 
-mod any;
-mod backend;
+mod internal;
 mod impls;
 
 use kv::KeyValueError;
 
-use self::any::{Any, FromAnyFn};
+use self::internal::{Inner, Visit, Visitor};
 
 /// A type that can be converted into a [`Value`](struct.Value.html).
 pub trait ToValue {
@@ -35,15 +34,17 @@ impl<'v> ToValue for Value<'v> {
 
 /// A value in a structured key-value pair.
 pub struct Value<'v> {
-    inner: Any<'v>,
+    inner: Inner<'v>,
 }
 
 impl<'v> Value<'v> {
-    // FIXME: The `from_any` API is intended to be public.
-    // Its implications need discussion first though.
-    fn from_any<T>(v: &'v T, from: FromAnyFn<T>) -> Self {
+    /// Get a value from an internal `Visit`.
+    fn from_internal<T>(value: &'v T) -> Self
+    where
+        T: Visit,
+    {
         Value {
-            inner: Any::new(v, from)
+            inner: Inner::Internal(value),
         }
     }
 
@@ -52,13 +53,19 @@ impl<'v> Value<'v> {
     where
         T: fmt::Debug,
     {
-        Self::from_any(value, |from, value| from.debug(value))
+        Value {
+            inner: Inner::Debug(value),
+        }
+    }
+
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        self.inner.visit(visitor)
     }
 }
 
 impl<'v> fmt::Debug for Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.inner.visit(&mut self::backend::FmtBackend(f))?;
+        self.visit(&mut self::internal::FmtVisitor(f))?;
 
         Ok(())
     }
@@ -66,7 +73,7 @@ impl<'v> fmt::Debug for Value<'v> {
 
 impl<'v> fmt::Display for Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.inner.visit(&mut self::backend::FmtBackend(f))?;
+        self.visit(&mut self::internal::FmtVisitor(f))?;
 
         Ok(())
     }
