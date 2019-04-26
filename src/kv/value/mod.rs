@@ -48,13 +48,23 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Get a value from a formattable type.
+    /// Get a value from a debuggable type.
     pub fn from_debug<T>(value: &'v T) -> Self
     where
         T: fmt::Debug,
     {
         Value {
             inner: Inner::Debug(value),
+        }
+    }
+
+    /// Get a  value from a displayable type.
+    pub fn from_display<T>(value: &'v T)  -> Self
+    where
+        T: fmt::Display,
+    {
+        Value {
+            inner: Inner::Display(value),
         }
     }
 

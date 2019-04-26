@@ -2,6 +2,30 @@ use std::fmt;
 
 use super::{KeyValueError, ToValue, Value, Visit, Visitor};
 
+impl ToValue for usize {
+    fn to_value(&self) -> Value {
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for usize {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.u64(*self as u64)
+    }
+}
+
+impl ToValue for isize {
+    fn to_value(&self) -> Value {
+        Value::from_internal(self)
+    }
+}
+
+impl Visit for isize {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        visitor.i64(*self as i64)
+    }
+}
+
 impl ToValue for u8 {
     fn to_value(&self) -> Value {
         Value::from_internal(self)

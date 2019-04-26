@@ -15,8 +15,10 @@ pub(super) enum Inner<'v> {
     /// An internal `Visit`. It'll be an internal structure-preserving
     /// type from the standard library that's implemented in this crate.
     Internal(&'v Visit),
-    /// A formattable value.
+    /// A debuggable value.
     Debug(&'v fmt::Debug),
+    /// A displayable value.
+    Display(&'v fmt::Display),
 }
 
 impl<'v> Inner<'v> {
@@ -24,6 +26,7 @@ impl<'v> Inner<'v> {
         match *self {
             Inner::Internal(ref value) => value.visit(visitor),
             Inner::Debug(ref value) => visitor.debug(value),
+            Inner::Display(ref value) => visitor.display(value),
         }
     }
 }
@@ -36,6 +39,9 @@ pub(super) trait Visit {
 /// The internal serialization contract.
 pub(super) trait Visitor {
     fn debug(&mut self, v: &fmt::Debug) -> Result<(), KeyValueError>;
+    fn display(&mut self, v: &fmt::Display) -> Result<(), KeyValueError> {
+        self.debug(&format_args!("{}",  v))
+    }
 
     fn u64(&mut self, v: u64) -> Result<(), KeyValueError>;
     fn i64(&mut self, v: i64) -> Result<(), KeyValueError>;
