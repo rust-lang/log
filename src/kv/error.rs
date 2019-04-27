@@ -40,7 +40,7 @@ mod std_support {
 
     impl error::Error for Error {
         fn description(&self) -> &str {
-            "key_values error"
+            "key values error"
         }
     }
 }
