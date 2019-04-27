@@ -2,33 +2,33 @@ use std::fmt;
 
 /// An error encountered while working with structured data.
 #[derive(Clone, Debug)]
-pub struct KeyValueError {
+pub struct Error {
     msg: &'static str,
 }
 
-impl KeyValueError {
+impl Error {
     /// Create an error from the given message.
     pub fn msg(msg: &'static str) -> Self {
-        KeyValueError {
+        Error {
             msg: msg,
         }
     }
 }
 
-impl fmt::Display for KeyValueError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.msg.fmt(f)
     }
 }
 
-impl From<fmt::Error> for KeyValueError {
+impl From<fmt::Error> for Error {
     fn from(_: fmt::Error) -> Self {
-        KeyValueError::msg("formatting failed")
+        Error::msg("formatting failed")
     }
 }
 
-impl From<KeyValueError> for fmt::Error {
-    fn from(_: KeyValueError) -> Self {
+impl From<Error> for fmt::Error {
+    fn from(_: Error) -> Self {
         fmt::Error
     }
 }
@@ -38,7 +38,7 @@ mod std_support {
     use super::*;
     use std::error;
 
-    impl error::Error for KeyValueError {
+    impl error::Error for Error {
         fn description(&self) -> &str {
             "key_values error"
         }

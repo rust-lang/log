@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::KeyValueError;
+use super::Error;
 
 // `Visit` and `Visitor` is an internal API for visiting the structure of a value.
 // It's not intended to be public (at this stage).
@@ -22,7 +22,7 @@ pub(super) enum Inner<'v> {
 }
 
 impl<'v> Inner<'v> {
-    pub(super) fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    pub(super) fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         match *self {
             Inner::Internal(ref value) => value.visit(visitor),
             Inner::Debug(ref value) => visitor.debug(value),
@@ -33,60 +33,60 @@ impl<'v> Inner<'v> {
 
 /// An internal structure-preserving value.
 pub(super) trait Visit {
-    fn visit(&self, backend: &mut Visitor) -> Result<(), KeyValueError>;
+    fn visit(&self, backend: &mut Visitor) -> Result<(), Error>;
 }
 
 /// The internal serialization contract.
 pub(super) trait Visitor {
-    fn debug(&mut self, v: &fmt::Debug) -> Result<(), KeyValueError>;
-    fn display(&mut self, v: &fmt::Display) -> Result<(), KeyValueError> {
+    fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error>;
+    fn display(&mut self, v: &fmt::Display) -> Result<(), Error> {
         self.debug(&format_args!("{}",  v))
     }
 
-    fn u64(&mut self, v: u64) -> Result<(), KeyValueError>;
-    fn i64(&mut self, v: i64) -> Result<(), KeyValueError>;
-    fn f64(&mut self, v: f64) -> Result<(), KeyValueError>;
-    fn bool(&mut self, v: bool) -> Result<(), KeyValueError>;
-    fn char(&mut self, v: char) -> Result<(), KeyValueError>;
-    fn str(&mut self, v: &str) -> Result<(), KeyValueError>;
-    fn none(&mut self) -> Result<(), KeyValueError>;
+    fn u64(&mut self, v: u64) -> Result<(), Error>;
+    fn i64(&mut self, v: i64) -> Result<(), Error>;
+    fn f64(&mut self, v: f64) -> Result<(), Error>;
+    fn bool(&mut self, v: bool) -> Result<(), Error>;
+    fn char(&mut self, v: char) -> Result<(), Error>;
+    fn str(&mut self, v: &str) -> Result<(), Error>;
+    fn none(&mut self) -> Result<(), Error>;
 }
 
 /// A visitor for `std::fmt`.
 pub(super) struct FmtVisitor<'a, 'b: 'a>(pub(super) &'a mut fmt::Formatter<'b>);
 
 impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
-    fn debug(&mut self, v: &fmt::Debug) -> Result<(), KeyValueError> {
+    fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
         v.fmt(self.0)?;
 
         Ok(())
     }
 
-    fn u64(&mut self, v: u64) -> Result<(), KeyValueError> {
+    fn u64(&mut self, v: u64) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn i64(&mut self, v: i64) -> Result<(), KeyValueError> {
+    fn i64(&mut self, v: i64) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn f64(&mut self, v: f64) -> Result<(), KeyValueError> {
+    fn f64(&mut self, v: f64) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn bool(&mut self, v: bool) -> Result<(), KeyValueError> {
+    fn bool(&mut self, v: bool) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn char(&mut self, v: char) -> Result<(), KeyValueError> {
+    fn char(&mut self, v: char) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn str(&mut self, v: &str) -> Result<(), KeyValueError> {
+    fn str(&mut self, v: &str) -> Result<(), Error> {
         self.debug(&format_args!("{:?}", v))
     }
 
-    fn none(&mut self) -> Result<(), KeyValueError> {
+    fn none(&mut self) -> Result<(), Error> {
         self.debug(&format_args!("None"))
     }
 }

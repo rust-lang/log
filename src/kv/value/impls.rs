@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{KeyValueError, ToValue, Value, Visit, Visitor};
+use super::{Error, ToValue, Value, Visit, Visitor};
 
 impl ToValue for usize {
     fn to_value(&self) -> Value {
@@ -9,7 +9,7 @@ impl ToValue for usize {
 }
 
 impl Visit for usize {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.u64(*self as u64)
     }
 }
@@ -21,7 +21,7 @@ impl ToValue for isize {
 }
 
 impl Visit for isize {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.i64(*self as i64)
     }
 }
@@ -33,7 +33,7 @@ impl ToValue for u8 {
 }
 
 impl Visit for u8 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.u64(*self as u64)
     }
 }
@@ -45,7 +45,7 @@ impl ToValue for u16 {
 }
 
 impl Visit for u16 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.u64(*self as u64)
     }
 }
@@ -57,7 +57,7 @@ impl ToValue for u32 {
 }
 
 impl Visit for u32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.u64(*self as u64)
     }
 }
@@ -69,7 +69,7 @@ impl ToValue for u64 {
 }
 
 impl Visit for u64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.u64(*self)
     }
 }
@@ -81,7 +81,7 @@ impl ToValue for i8 {
 }
 
 impl Visit for i8 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.i64(*self as i64)
     }
 }
@@ -93,7 +93,7 @@ impl ToValue for i16 {
 }
 
 impl Visit for i16 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.i64(*self as i64)
     }
 }
@@ -105,7 +105,7 @@ impl ToValue for i32 {
 }
 
 impl Visit for i32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.i64(*self as i64)
     }
 }
@@ -117,7 +117,7 @@ impl ToValue for i64 {
 }
 
 impl Visit for i64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.i64(*self)
     }
 }
@@ -129,7 +129,7 @@ impl ToValue for f32 {
 }
 
 impl Visit for f32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.f64(*self as f64)
     }
 }
@@ -141,7 +141,7 @@ impl ToValue for f64 {
 }
 
 impl Visit for f64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.f64(*self)
     }
 }
@@ -153,7 +153,7 @@ impl ToValue for bool {
 }
 
 impl Visit for bool {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.bool(*self)
     }
 }
@@ -165,7 +165,7 @@ impl ToValue for char {
 }
 
 impl Visit for char {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.char(*self)
     }
 }
@@ -177,7 +177,7 @@ impl<'v> ToValue for &'v str {
 }
 
 impl<'v> Visit for &'v str {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.str(*self)
     }
 }
@@ -189,7 +189,7 @@ impl ToValue for () {
 }
 
 impl Visit for () {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         visitor.none()
     }
 }
@@ -207,7 +207,7 @@ impl<T> Visit for Option<T>
 where
     T: ToValue,
 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         match *self {
             Some(ref value) => value.to_value().visit(visitor),
             None => visitor.none(),
@@ -243,7 +243,7 @@ mod std_support {
     }
 
     impl Visit for String {
-        fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
             visitor.str(&*self)
         }
     }
@@ -255,7 +255,7 @@ mod std_support {
     }
 
     impl<'a> Visit for Cow<'a, str> {
-        fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+        fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
             visitor.str(&*self)
         }
     }
@@ -264,7 +264,7 @@ mod std_support {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kv::value::KeyValueError;
+    use kv::value::Error;
     use kv::value::internal::Visitor;
 
     use std::fmt::Write;
@@ -349,46 +349,46 @@ mod tests {
         where
             F: Fn(Token),
         {
-            fn debug(&mut self, v: &fmt::Debug) -> Result<(), KeyValueError> {
+            fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
                 let mut buf = Buffer::new();
                 write!(&mut buf, "{:?}", v)?;
 
-                let s = buf.as_str().map_err(|_| KeyValueError::msg("invalid UTF8"))?;
+                let s = buf.as_str().map_err(|_| Error::msg("invalid UTF8"))?;
                 (self.0)(Token::Str(s));
                 Ok(())
             }
 
-            fn u64(&mut self, v: u64) -> Result<(), KeyValueError> {
+            fn u64(&mut self, v: u64) -> Result<(), Error> {
                 (self.0)(Token::U64(v));
                 Ok(())
             }
 
-            fn i64(&mut self, v: i64) -> Result<(), KeyValueError> {
+            fn i64(&mut self, v: i64) -> Result<(), Error> {
                 (self.0)(Token::I64(v));
                 Ok(())
             }
 
-            fn f64(&mut self, v: f64) -> Result<(), KeyValueError> {
+            fn f64(&mut self, v: f64) -> Result<(), Error> {
                 (self.0)(Token::F64(v));
                 Ok(())
             }
 
-            fn bool(&mut self, v: bool) -> Result<(), KeyValueError> {
+            fn bool(&mut self, v: bool) -> Result<(), Error> {
                 (self.0)(Token::Bool(v));
                 Ok(())
             }
 
-            fn char(&mut self, v: char) -> Result<(), KeyValueError> {
+            fn char(&mut self, v: char) -> Result<(), Error> {
                 (self.0)(Token::Char(v));
                 Ok(())
             }
 
-            fn str(&mut self, v: &str) -> Result<(), KeyValueError> {
+            fn str(&mut self, v: &str) -> Result<(), Error> {
                 (self.0)(Token::Str(v));
                 Ok(())
             }
 
-            fn none(&mut self) -> Result<(), KeyValueError> {
+            fn none(&mut self) -> Result<(), Error> {
                 (self.0)(Token::None);
                 Ok(())
             }

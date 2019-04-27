@@ -743,12 +743,12 @@ struct KeyValues<'a>(&'a kv::Source);
 #[cfg(feature = "kv_unstable")]
 impl<'a> fmt::Debug for KeyValues<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::kv::{Key, Value, Visitor, KeyValueError};
+        use self::kv::{Key, Value, Visitor, Error};
 
         struct FmtVisitor<'a, 'b: 'a>(fmt::DebugMap<'a, 'b>);
 
         impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for FmtVisitor<'a, 'b> {
-            fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError> {
+            fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
                 self.0.entry(&key, &value);
 
                 Ok(())
@@ -1635,7 +1635,7 @@ mod tests {
                 &mut self,
                 _: kv::Key<'kvs>,
                 _: kv::Value<'kvs>
-            ) -> Result<(), kv::KeyValueError> {
+            ) -> Result<(), kv::Error> {
                 self.seen_pairs += 1;
                 Ok(())
             }

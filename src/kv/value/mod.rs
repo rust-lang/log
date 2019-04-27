@@ -5,7 +5,7 @@ use std::fmt;
 mod internal;
 mod impls;
 
-use kv::KeyValueError;
+use kv::Error;
 
 use self::internal::{Inner, Visit, Visitor};
 
@@ -68,7 +68,7 @@ impl<'v> Value<'v> {
         }
     }
 
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), KeyValueError> {
+    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         self.inner.visit(visitor)
     }
 }

@@ -1,6 +1,6 @@
 //! Sources for key-value pairs.
 
-use kv::{KeyValueError, Key, ToKey, Value, ToValue};
+use kv::{Error, Key, ToKey, Value, ToValue};
 
 /// A source of key-value pairs.
 /// 
@@ -11,14 +11,14 @@ pub trait Source {
     /// Visit key-value pairs.
     /// 
     /// A source doesn't have to guarantee any ordering or uniqueness of pairs.
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError>;
+    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error>;
 }
 
 impl<'a, T> Source for &'a T
 where
     T: Source + ?Sized,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         (**self).visit(visitor)
     }
 }
@@ -28,7 +28,7 @@ where
     K: ToKey,
     V: ToValue,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         visitor.visit_pair(self.0.to_key(), self.1.to_value())
     }
 }
@@ -37,7 +37,7 @@ impl<S> Source for [S]
 where
     S: Source,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         for source in self {
             source.visit(visitor)?;
         }
@@ -50,7 +50,7 @@ impl<S> Source for Option<S>
 where
     S: Source,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
         if let Some(ref source) = *self {
             source.visit(visitor)?;
         }
@@ -62,14 +62,14 @@ where
 /// A visitor for the key-value pairs in a [`Source`](trait.Source.html).
 pub trait Visitor<'kvs> {
     /// Visit a key-value pair.
-    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError>;
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error>;
 }
 
 impl<'a, 'kvs, T> Visitor<'kvs> for &'a mut T
 where
     T: Visitor<'kvs> + ?Sized,
 {
-    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError> {
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         (**self).visit_pair(key, value)
     }
 }
@@ -82,7 +82,7 @@ mod std_support {
     where
         S: Source + ?Sized,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
             (**self).visit(visitor)
         }
     }
@@ -91,7 +91,7 @@ mod std_support {
     where
         S: Source,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), KeyValueError> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
             (**self).visit(visitor)
         }
     }
@@ -100,7 +100,7 @@ mod std_support {
     where
         V: Visitor<'kvs> + ?Sized,
     {
-        fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), KeyValueError> {
+        fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
             (**self).visit_pair(key, value)
         }
     }
