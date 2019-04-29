@@ -307,6 +307,9 @@ use std::sync::atomic::ATOMIC_USIZE_INIT;
 mod macros;
 mod serde;
 
+#[cfg(feature = "kv_unstable")]
+pub mod kv;
+
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
 static mut LOGGER: &'static Log = &NopLogger;
@@ -725,6 +728,37 @@ pub struct Record<'a> {
     module_path: Option<&'a str>,
     file: Option<&'a str>,
     line: Option<u32>,
+    #[cfg(feature = "kv_unstable")]
+    key_values: KeyValues<'a>,
+}
+
+// This wrapper type is only needed so we can
+// `#[derive(Debug)]` on `Record`. It also
+// provides a useful `Debug` implementation for
+// the underlying `Source`.
+#[cfg(feature = "kv_unstable")]
+#[derive(Clone)]
+struct KeyValues<'a>(&'a kv::Source);
+
+#[cfg(feature = "kv_unstable")]
+impl<'a> fmt::Debug for KeyValues<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::kv::{Key, Value, Visitor, Error};
+
+        struct FmtVisitor<'a, 'b: 'a>(fmt::DebugMap<'a, 'b>);
+
+        impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for FmtVisitor<'a, 'b> {
+            fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+                self.0.entry(&key, &value);
+
+                Ok(())
+            }
+        }
+
+        let mut visitor = FmtVisitor(f.debug_map());
+        self.0.visit(&mut visitor)?;
+        visitor.0.finish()
+    }
 }
 
 impl<'a> Record<'a> {
@@ -774,6 +808,47 @@ impl<'a> Record<'a> {
     #[inline]
     pub fn line(&self) -> Option<u32> {
         self.line
+    }
+
+    /// The structued key-value pairs associated with the message.
+    #[cfg(feature = "kv_unstable")]
+    #[inline]
+    pub fn key_values(&self) -> &kv::Source {
+        self.key_values.0
+    }
+
+    /// Create a new [`Builder`](struct.Builder.html) based on this record.
+    #[cfg(feature = "kv_unstable")]
+    #[inline]
+    pub fn to_builder(&self) -> RecordBuilder {
+        #[cfg(feature = "kv_unstable")]
+        return RecordBuilder {
+            record: Record {
+                metadata: Metadata {
+                    level: self.metadata.level,
+                    target: self.metadata.target,
+                },
+                args: self.args,
+                module_path: self.module_path,
+                file: self.file,
+                line: self.line,
+                key_values: self.key_values.clone(),
+            }
+        };
+
+        #[cfg(not(feature = "kv_unstable"))]
+        return RecordBuilder {
+            record: Record {
+                metadata: Metadata {
+                    level: self.metadata.level,
+                    target: self.metadata.target,
+                },
+                args: self.args,
+                module_path: self.module_path,
+                file: self.file,
+                line: self.line,
+            }
+        };
     }
 }
 
@@ -837,7 +912,20 @@ impl<'a> RecordBuilder<'a> {
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
     #[inline]
     pub fn new() -> RecordBuilder<'a> {
-        RecordBuilder {
+        #[cfg(feature = "kv_unstable")]
+        return RecordBuilder {
+            record: Record {
+                args: format_args!(""),
+                metadata: Metadata::builder().build(),
+                module_path: None,
+                file: None,
+                line: None,
+                key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
+            },
+        };
+
+        #[cfg(not(feature = "kv_unstable"))]
+        return RecordBuilder {
             record: Record {
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
@@ -845,7 +933,7 @@ impl<'a> RecordBuilder<'a> {
                 file: None,
                 line: None,
             },
-        }
+        };
     }
 
     /// Set [`args`](struct.Record.html#method.args).
@@ -894,6 +982,14 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn line(&mut self, line: Option<u32>) -> &mut RecordBuilder<'a> {
         self.record.line = line;
+        self
+    }
+
+    /// Set [`key_values`](struct.Record.html#method.key_values)
+    #[cfg(feature = "kv_unstable")]
+    #[inline]
+    pub fn key_values(&mut self, kvs: &'a kv::Source) -> &mut RecordBuilder<'a> {
+        self.record.key_values = KeyValues(kvs);
         self
     }
 
@@ -1522,5 +1618,43 @@ mod tests {
         assert_eq!(record_test.module_path(), Some("foo"));
         assert_eq!(record_test.file(), Some("bar"));
         assert_eq!(record_test.line(), Some(30));
+    }
+
+    #[test]
+    #[cfg(feature = "kv_unstable")]
+    fn test_record_key_values_builder() {
+        use super::Record;
+        use kv::{self, Visitor};
+
+        struct TestVisitor {
+            seen_pairs: usize,
+        }
+
+        impl<'kvs> Visitor<'kvs> for TestVisitor {
+            fn visit_pair(
+                &mut self,
+                _: kv::Key<'kvs>,
+                _: kv::Value<'kvs>
+            ) -> Result<(), kv::Error> {
+                self.seen_pairs += 1;
+                Ok(())
+            }
+        }
+
+        let kvs: &[(&str, i32)] = &[
+            ("a", 1),
+            ("b", 2)
+        ];
+        let record_test = Record::builder()
+            .key_values(&kvs)
+            .build();
+        
+        let mut visitor = TestVisitor {
+            seen_pairs: 0,
+        };
+
+        record_test.key_values().visit(&mut visitor).unwrap();
+
+        assert_eq!(2, visitor.seen_pairs);
     }
 }
