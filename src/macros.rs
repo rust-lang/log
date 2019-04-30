@@ -15,10 +15,8 @@
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
-/// use log::Level;
+/// ```edition2018
+/// use log::{log, Level};
 ///
 /// # fn main() {
 /// let data = (42, "Forty-two");
@@ -48,9 +46,9 @@ macro_rules! log {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
+/// use log::error;
+///
 /// # fn main() {
 /// let (err_info, port) = ("No connection", 22);
 ///
@@ -72,9 +70,9 @@ macro_rules! error {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
+/// use log::warn;
+///
 /// # fn main() {
 /// let warn_description = "Invalid Input";
 ///
@@ -96,9 +94,9 @@ macro_rules! warn {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
+/// use log::info;
+///
 /// # fn main() {
 /// # struct Connection { port: u32, speed: f32 }
 /// let conn_info = Connection { port: 40, speed: 3.20 };
@@ -122,9 +120,9 @@ macro_rules! info {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
+/// use log::debug;
+///
 /// # fn main() {
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
@@ -147,9 +145,9 @@ macro_rules! debug {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
+/// use log::trace;
+///
 /// # fn main() {
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
@@ -178,10 +176,9 @@ macro_rules! trace {
 ///
 /// # Examples
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate log;
+/// ```edition2018
 /// use log::Level::Debug;
+/// use log::{debug, log_enabled};
 ///
 /// # fn foo() {
 /// if log_enabled!(Debug) {

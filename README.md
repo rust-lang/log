@@ -36,8 +36,7 @@ log = "0.4"
 ```
 
 ```rust
-#[macro_use]
-extern crate log;
+use log::{info, trace, warn};
 
 pub fn shave_the_yak(yak: &mut Yak) {
     trace!("Commencing yak shaving");
