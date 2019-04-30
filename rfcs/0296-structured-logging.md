@@ -338,12 +338,12 @@ fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     record
         .key_values()
         .for_each(|k, v| writeln!("{}: {}", k, v))?;
-    
+
     Ok(())
 }
 ```
 
-In the above example, the `Source::for_each` method iterates over each key-value pair in the `Source` and writes them to the output stream. 
+In the above example, the `Source::for_each` method iterates over each key-value pair in the `Source` and writes them to the output stream.
 
 ### Writing key-value pairs as JSON
 
@@ -509,7 +509,7 @@ Don't create a new serialization API that requires `log` to become a public depe
 
 ### Support arbitrary producers and arbitrary consumers
 
-Provide an API that's suitable for two independent logging frameworks to integrate through if they want. Producers of structured data and consumers of structured data should be able to use different serialization frameworks opaquely and still get good results. As an example, a producer of a `log::Record` should be able to log a map that implements `sval::Value`, and the implementor of the receiving `Log` trait should be able to format that map using `serde::Serialize`. 
+Provide an API that's suitable for two independent logging frameworks to integrate through if they want. Producers of structured data and consumers of structured data should be able to use different serialization frameworks opaquely and still get good results. As an example, a producer of a `log::Record` should be able to log a map that implements `sval::Value`, and the implementor of the receiving `Log` trait should be able to format that map using `serde::Serialize`.
 
 ### Remain object safe
 
@@ -709,7 +709,7 @@ impl<'a> FromAny<'a> {
     fn i128(self, v: i128) -> Result<(), Error> {
         ..
     }
-    
+
     fn f64(self, v: f64) -> Result<(), Error> {
         ..
     }

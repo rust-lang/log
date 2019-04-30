@@ -1648,7 +1648,7 @@ mod tests {
         let record_test = Record::builder()
             .key_values(&kvs)
             .build();
-        
+
         let mut visitor = TestVisitor {
             seen_pairs: 0,
         };

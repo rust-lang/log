@@ -4,7 +4,7 @@ use super::Error;
 
 // `Visit` and `Visitor` is an internal API for visiting the structure of a value.
 // It's not intended to be public (at this stage).
-// 
+//
 // Right now we only have an implementation for `std::fmt`, but
 // this trait makes it possible to add more structured backends like
 // `serde` that can retain that original structure.

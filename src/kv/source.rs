@@ -3,30 +3,30 @@
 use kv::{Error, Key, ToKey, Value, ToValue};
 
 /// A source of key-value pairs.
-/// 
+///
 /// The source may be a single pair, a set of pairs, or a filter over a set of pairs.
 /// Use the [`Visitor`](trait.Visitor.html) trait to inspect the structured data
 /// in a source.
 pub trait Source {
     /// Visit key-value pairs.
-    /// 
+    ///
     /// A source doesn't have to guarantee any ordering or uniqueness of key-value pairs.
     /// If the given visitor returns an error then the source may early-return with it,
     /// even if there are more key-value pairs.
-    /// 
+    ///
     /// # Implementation notes
-    /// 
+    ///
     /// A source should yield the same key-value pairs to a subsequent visitor unless
     /// that visitor itself fails.
     fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error>;
 
     /// Count the number of key-value pairs that can be visited.
-    /// 
+    ///
     /// # Implementation notes
-    /// 
+    ///
     /// A source that knows the number of key-value pairs upfront may provide a more
     /// efficient implementation.
-    /// 
+    ///
     /// A subsequent call to `visit` should yield the same number of key-value pairs
     /// to the visitor, unless that visitor fails part way through.
     fn count(&self) -> usize {
