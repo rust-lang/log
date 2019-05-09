@@ -3,7 +3,7 @@
 name = "log"
 version = "0.4.6" # remember to update html_root_url
 authors = ["The Rust Project Developers"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/rust-lang/log"
 documentation = "https://docs.rs/log"
