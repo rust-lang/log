@@ -638,7 +638,7 @@ impl FromStr for LevelFilter {
 
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", LOG_LEVEL_NAMES[*self as usize])
+        fmt.pad(LOG_LEVEL_NAMES[*self as usize])
     }
 }
 
