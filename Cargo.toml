@@ -37,3 +37,6 @@ default = ["use_std"]
 
 [dependencies]
 log = "0.4"
+
+[patch.crates-io]
+log = { git = "https://github.com/busyjay/log", branch = "revert-to-static" }
