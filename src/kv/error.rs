@@ -1,29 +1,45 @@
 use std::fmt;
 
 /// An error encountered while working with structured data.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Error {
-    msg: &'static str,
+    inner: Inner
+}
+
+#[derive(Debug)]
+enum Inner {
+    #[cfg(feature = "std")]
+    Io(std::io::Error),
+    Msg(&'static str),
+    Fmt,
 }
 
 impl Error {
     /// Create an error from the given message.
     pub fn msg(msg: &'static str) -> Self {
         Error {
-            msg: msg,
+            inner: Inner::Msg(msg),
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.msg.fmt(f)
+        use self::Inner::*;
+        match &self.inner {
+            #[cfg(feature = "std")]
+            Io(err) => err.fmt(f),
+            Msg(msg) => msg.fmt(f),
+            Fmt => fmt::Error.fmt(f),
+        }
     }
 }
 
 impl From<fmt::Error> for Error {
     fn from(_: fmt::Error) -> Self {
-        Error::msg("formatting failed")
+        Error {
+            inner: Inner::Fmt,
+        }
     }
 }
 
@@ -36,11 +52,29 @@ impl From<Error> for fmt::Error {
 #[cfg(feature = "std")]
 mod std_support {
     use super::*;
-    use std::error;
+    use std::{error, io};
 
     impl error::Error for Error {
         fn description(&self) -> &str {
             "key values error"
+        }
+    }
+
+    impl From<io::Error> for Error {
+        fn from(err: io::Error) -> Self {
+            Error {
+                inner: Inner::Io(err)
+            }
+        }
+    }
+
+    impl From<Error> for io::Error {
+        fn from(err: Error) -> Self {
+            if let Inner::Io(err) = err.inner {
+                err
+            } else {
+                io::Error::new(io::ErrorKind::Other, err)
+            }
         }
     }
 }
