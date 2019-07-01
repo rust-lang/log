@@ -1,4 +1,6 @@
 use std::fmt;
+#[cfg(feature = "std")]
+use std::io;
 
 /// An error encountered while working with structured data.
 #[derive(Debug)]
@@ -9,7 +11,7 @@ pub struct Error {
 #[derive(Debug)]
 enum Inner {
     #[cfg(feature = "std")]
-    Io(std::io::Error),
+    Io(io::Error),
     Msg(&'static str),
     Fmt,
 }
@@ -28,9 +30,9 @@ impl fmt::Display for Error {
         use self::Inner::*;
         match &self.inner {
             #[cfg(feature = "std")]
-            Io(err) => err.fmt(f),
-            Msg(msg) => msg.fmt(f),
-            Fmt => fmt::Error.fmt(f),
+            &Io(ref err) => err.fmt(f),
+            &Msg(ref msg) => msg.fmt(f),
+            &Fmt => fmt::Error.fmt(f),
         }
     }
 }
