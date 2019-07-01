@@ -5,6 +5,9 @@ use std::fmt;
 mod internal;
 mod impls;
 
+#[cfg(test)]
+pub(in kv) mod test;
+
 use kv::Error;
 
 use self::internal::{Inner, Visit, Visitor};
