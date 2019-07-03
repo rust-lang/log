@@ -34,7 +34,7 @@ impl<'v> Inner<'v> {
                 Primitive::Str(value) => visitor.str(value),
                 Primitive::None => visitor.none(),
             },
-            Inner::Fill(value) => value.fill(Slot::new(visitor)),
+            Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
             Inner::Debug(value) => visitor.debug(value),
             Inner::Display(value) => visitor.display(value),
         }

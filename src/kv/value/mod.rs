@@ -42,14 +42,14 @@ impl<'v> ToValue for Value<'v> {
 /// to perform extra work to determine the concrete type to use.
 pub trait Fill {
     /// Fill a value.
-    fn fill(&self, slot: Slot) -> Result<(), Error>;
+    fn fill(&self, slot: &mut Slot) -> Result<(), Error>;
 }
 
 impl<'a, T> Fill for &'a T
 where
     T: Fill + ?Sized,
 {
-    fn fill(&self, slot: Slot) -> Result<(), Error> {
+    fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
         (**self).fill(slot)
     }
 }
@@ -150,5 +150,42 @@ impl<'v> fmt::Display for Value<'v> {
         self.visit(&mut self::internal::FmtVisitor(f))?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fill_value() {
+        struct TestFill;
+
+        impl Fill for TestFill {
+            fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+                let dbg: &fmt::Debug = &1;
+
+                slot.fill(Value::from_debug(&dbg))
+            }
+        }
+
+        assert_eq!("1", Value::from_fill(&TestFill).to_str_buf());
+    }
+
+    #[test]
+    #[should_panic]
+    fn fill_multiple_times_panics() {
+        struct BadFill;
+
+        impl Fill for BadFill {
+            fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+                slot.fill(42.into())?;
+                slot.fill(6789.into())?;
+
+                Ok(())
+            }
+        }
+
+        let _ = Value::from_fill(&BadFill).to_str_buf();
     }
 }
