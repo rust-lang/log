@@ -1,5 +1,6 @@
 //! Sources for key-value pairs.
 
+use std::fmt;
 use kv::{Error, Key, ToKey, Value, ToValue};
 
 /// A source of key-value pairs.
@@ -165,6 +166,35 @@ where
 {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         (**self).visit_pair(key, value)
+    }
+}
+
+impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugMap<'a, 'b> {
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+        self.entry(&key, &value);
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugList<'a, 'b> {
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+        self.entry(&(key, value));
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugSet<'a, 'b> {
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+        self.entry(&(key, value));
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugTuple<'a, 'b> {
+    fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+        self.field(&key);
+        self.field(&value);
+        Ok(())
     }
 }
 
