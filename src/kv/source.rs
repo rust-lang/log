@@ -171,6 +171,9 @@ where
 #[cfg(feature = "std")]
 mod std_support {
     use super::*;
+    use std::borrow::Borrow;
+    use std::collections::{BTreeMap, HashMap};
+    use std::hash::{BuildHasher, Hash};
 
     impl<S> Source for Box<S>
     where
@@ -215,10 +218,54 @@ mod std_support {
         }
     }
 
+    impl<K, V, S> Source for HashMap<K, V, S>
+    where
+        K: ToKey + Borrow<str> + Eq + Hash,
+        V: ToValue,
+        S: BuildHasher,
+    {
+        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
+            for (key, value) in self {
+                visitor.visit_pair(key.to_key(), value.to_value())?;
+            }
+            Ok(())
+        }
+
+        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+            HashMap::get(self, key.as_str()).map(|v| v.to_value())
+        }
+
+        fn count(&self) -> usize {
+            self.len()
+        }
+    }
+
+    impl<K, V> Source for BTreeMap<K, V>
+    where
+        K: ToKey + Borrow<str> + Ord,
+        V: ToValue,
+    {
+        fn visit<'kvs>(&'kvs self, visitor: &mut Visitor<'kvs>) -> Result<(), Error> {
+            for (key, value) in self {
+                visitor.visit_pair(key.to_key(), value.to_value())?;
+            }
+            Ok(())
+        }
+
+        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+            BTreeMap::get(self, key.as_str()).map(|v| v.to_value())
+        }
+
+        fn count(&self) -> usize {
+            self.len()
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
         use kv::value::test::Token;
+        use std::collections::{BTreeMap, HashMap};
 
         #[test]
         fn count() {
@@ -229,10 +276,39 @@ mod std_support {
         #[test]
         fn get() {
             let source = vec![("a", 1), ("b", 2), ("a", 1)];
-            assert_eq!(Token::I64(1), Source::get(&source, Key::from_str("a")).unwrap().to_token());
+            assert_eq!(
+                Token::I64(1),
+                Source::get(&source, Key::from_str("a")).unwrap().to_token()
+            );
 
             let source = Box::new(Option::None::<(&str, i32)>);
             assert!(Source::get(&source, Key::from_str("a")).is_none());
+        }
+
+        #[test]
+        fn hash_map() {
+            let mut map = HashMap::new();
+            map.insert("a", 1);
+            map.insert("b", 2);
+
+            assert_eq!(2, Source::count(&map));
+            assert_eq!(
+                Token::I64(1),
+                Source::get(&map, Key::from_str("a")).unwrap().to_token()
+            );
+        }
+
+        #[test]
+        fn btree_map() {
+            let mut map = BTreeMap::new();
+            map.insert("a", 1);
+            map.insert("b", 2);
+
+            assert_eq!(2, Source::count(&map));
+            assert_eq!(
+                Token::I64(1),
+                Source::get(&map, Key::from_str("a")).unwrap().to_token()
+            );
         }
     }
 }
@@ -274,8 +350,14 @@ mod tests {
     #[test]
     fn get() {
         let source = &[("a", 1), ("b", 2), ("a", 1)] as &[_];
-        assert_eq!(Token::I64(1), Source::get(source, Key::from_str("a")).unwrap().to_token());
-        assert_eq!(Token::I64(2), Source::get(source, Key::from_str("b")).unwrap().to_token());
+        assert_eq!(
+            Token::I64(1),
+            Source::get(source, Key::from_str("a")).unwrap().to_token()
+        );
+        assert_eq!(
+            Token::I64(2),
+            Source::get(source, Key::from_str("b")).unwrap().to_token()
+        );
         assert!(Source::get(&source, Key::from_str("c")).is_none());
 
         let source = Option::None::<(&str, i32)>;
