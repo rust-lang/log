@@ -16,7 +16,7 @@ exclude = ["rfcs/**/*", "/.travis.yml", "/appveyor.yml"]
 build = "build.rs"
 
 [package.metadata.docs.rs]
-features = ["std", "serde"]
+features = ["std", "serde", "kv_unstable"]
 
 [[test]]
 name = "filters"
