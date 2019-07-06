@@ -1,196 +1,190 @@
 use std::fmt;
 
-use super::{Error, ToValue, Value, Visit, Visitor};
+use super::{ToValue, Value, Primitive};
 
 impl ToValue for usize {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for usize {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.u64(*self as u64)
+impl<'v> From<usize> for Value<'v> {
+    fn from(value: usize) -> Self {
+        Value::from_primitive(Primitive::Unsigned(value as u64))
     }
 }
 
 impl ToValue for isize {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for isize {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.i64(*self as i64)
+impl<'v> From<isize> for Value<'v> {
+    fn from(value: isize) -> Self {
+        Value::from_primitive(Primitive::Signed(value as i64))
     }
 }
 
 impl ToValue for u8 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for u8 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.u64(*self as u64)
+impl<'v> From<u8> for Value<'v> {
+    fn from(value: u8) -> Self {
+        Value::from_primitive(Primitive::Unsigned(value as u64))
     }
 }
 
 impl ToValue for u16 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for u16 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.u64(*self as u64)
+impl<'v> From<u16> for Value<'v> {
+    fn from(value: u16) -> Self {
+        Value::from_primitive(Primitive::Unsigned(value as u64))
     }
 }
 
 impl ToValue for u32 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for u32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.u64(*self as u64)
+impl<'v> From<u32> for Value<'v> {
+    fn from(value: u32) -> Self {
+        Value::from_primitive(Primitive::Unsigned(value as u64))
     }
 }
 
 impl ToValue for u64 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for u64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.u64(*self)
+impl<'v> From<u64> for Value<'v> {
+    fn from(value: u64) -> Self {
+        Value::from_primitive(Primitive::Unsigned(value))
     }
 }
 
 impl ToValue for i8 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for i8 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.i64(*self as i64)
+impl<'v> From<i8> for Value<'v> {
+    fn from(value: i8) -> Self {
+        Value::from_primitive(Primitive::Signed(value as i64))
     }
 }
 
 impl ToValue for i16 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for i16 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.i64(*self as i64)
+impl<'v> From<i16> for Value<'v> {
+    fn from(value: i16) -> Self {
+        Value::from_primitive(Primitive::Signed(value as i64))
     }
 }
 
 impl ToValue for i32 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for i32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.i64(*self as i64)
+impl<'v> From<i32> for Value<'v> {
+    fn from(value: i32) -> Self {
+        Value::from_primitive(Primitive::Signed(value as i64))
     }
 }
 
 impl ToValue for i64 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for i64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.i64(*self)
+impl<'v> From<i64> for Value<'v> {
+    fn from(value: i64) -> Self {
+        Value::from_primitive(Primitive::Signed(value))
     }
 }
 
 impl ToValue for f32 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for f32 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.f64(*self as f64)
+impl<'v> From<f32> for Value<'v> {
+    fn from(value: f32) -> Self {
+        Value::from_primitive(Primitive::Float(value as f64))
     }
 }
 
 impl ToValue for f64 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for f64 {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.f64(*self)
+impl<'v> From<f64> for Value<'v> {
+    fn from(value: f64) -> Self {
+        Value::from_primitive(Primitive::Float(value))
     }
 }
 
 impl ToValue for bool {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for bool {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.bool(*self)
+impl<'v> From<bool> for Value<'v> {
+    fn from(value: bool) -> Self {
+        Value::from_primitive(Primitive::Bool(value))
     }
 }
 
 impl ToValue for char {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl Visit for char {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.char(*self)
+impl<'v> From<char> for Value<'v> {
+    fn from(value: char) -> Self {
+        Value::from_primitive(Primitive::Char(value))
     }
 }
 
 impl<'v> ToValue for &'v str {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
+        Value::from(*self)
     }
 }
 
-impl<'v> Visit for &'v str {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.str(*self)
+impl<'v> From<&'v str> for Value<'v> {
+    fn from(value: &'v str) -> Self {
+        Value::from_primitive(Primitive::Str(value))
     }
 }
 
 impl ToValue for () {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
-    }
-}
-
-impl Visit for () {
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-        visitor.none()
+        Value::from_primitive(Primitive::None)
     }
 }
 
@@ -199,18 +193,9 @@ where
     T: ToValue,
 {
     fn to_value(&self) -> Value {
-        Value::from_internal(self)
-    }
-}
-
-impl<T> Visit for Option<T>
-where
-    T: ToValue,
-{
-    fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         match *self {
-            Some(ref value) => value.to_value().visit(visitor),
-            None => visitor.none(),
+            Some(ref value) => value.to_value(),
+            None => Value::from_primitive(Primitive::None),
         }
     }
 }
@@ -238,25 +223,13 @@ mod std_support {
 
     impl ToValue for String {
         fn to_value(&self) -> Value {
-            Value::from_internal(self)
+            Value::from_primitive(Primitive::Str(&*self))
         }
     }
 
-    impl Visit for String {
-        fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-            visitor.str(&*self)
-        }
-    }
-
-    impl<'a> ToValue for Cow<'a, str> {
+    impl<'v> ToValue for Cow<'v, str> {
         fn to_value(&self) -> Value {
-            Value::from_internal(self)
-        }
-    }
-
-    impl<'a> Visit for Cow<'a, str> {
-        fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
-            visitor.str(&*self)
+            Value::from_primitive(Primitive::Str(&*self))
         }
     }
 }

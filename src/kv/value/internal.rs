@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::Error;
+use super::{Fill, Slot, Error};
 
 // `Visit` and `Visitor` is an internal API for visiting the structure of a value.
 // It's not intended to be public (at this stage).
@@ -12,9 +12,10 @@ use super::Error;
 /// A container for a structured value for a specific kind of visitor.
 #[derive(Clone, Copy)]
 pub(super) enum Inner<'v> {
-    /// An internal `Visit`. It'll be an internal structure-preserving
-    /// type from the standard library that's implemented in this crate.
-    Internal(&'v Visit),
+    /// A simple primitive value that can be copied without allocating.
+    Primitive(Primitive<'v>),
+    /// A value that can be filled.
+    Fill(&'v Fill),
     /// A debuggable value.
     Debug(&'v fmt::Debug),
     /// A displayable value.
@@ -24,16 +25,20 @@ pub(super) enum Inner<'v> {
 impl<'v> Inner<'v> {
     pub(super) fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         match *self {
-            Inner::Internal(ref value) => value.visit(visitor),
-            Inner::Debug(ref value) => visitor.debug(value),
-            Inner::Display(ref value) => visitor.display(value),
+            Inner::Primitive(value) => match value {
+                Primitive::Signed(value) => visitor.i64(value),
+                Primitive::Unsigned(value) => visitor.u64(value),
+                Primitive::Float(value) => visitor.f64(value),
+                Primitive::Bool(value) => visitor.bool(value),
+                Primitive::Char(value) => visitor.char(value),
+                Primitive::Str(value) => visitor.str(value),
+                Primitive::None => visitor.none(),
+            },
+            Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
+            Inner::Debug(value) => visitor.debug(value),
+            Inner::Display(value) => visitor.display(value),
         }
     }
-}
-
-/// An internal structure-preserving value.
-pub(super) trait Visit {
-    fn visit(&self, backend: &mut Visitor) -> Result<(), Error>;
 }
 
 /// The internal serialization contract.
@@ -50,6 +55,17 @@ pub(super) trait Visitor {
     fn char(&mut self, v: char) -> Result<(), Error>;
     fn str(&mut self, v: &str) -> Result<(), Error>;
     fn none(&mut self) -> Result<(), Error>;
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum Primitive<'v> {
+    Signed(i64),
+    Unsigned(u64),
+    Float(f64),
+    Bool(bool),
+    Char(char),
+    Str(&'v str),
+    None,
 }
 
 /// A visitor for `std::fmt`.

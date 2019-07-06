@@ -44,6 +44,12 @@ impl<'a> PartialEq<&'a str> for StrBuf {
     }
 }
 
+impl<'a> PartialEq<StrBuf> for &'a str {
+    fn eq(&self, other: &StrBuf) -> bool {
+        *self == other.as_ref()
+    }
+}
+
 impl AsRef<str> for StrBuf {
     fn as_ref(&self) -> &str {
         str::from_utf8(&self.buf[0..self.len]).unwrap()

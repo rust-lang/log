@@ -3,7 +3,7 @@
 mod error;
 mod source;
 mod key;
-mod value;
+pub mod value;
 
 pub use self::error::Error;
 pub use self::source::{Source, Visitor};
