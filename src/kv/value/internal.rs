@@ -1,6 +1,7 @@
 use std::fmt;
 
 use super::{Fill, Slot, Error};
+use kv;
 
 // `Visit` and `Visitor` is an internal API for visiting the structure of a value.
 // It's not intended to be public (at this stage).
@@ -68,41 +69,82 @@ pub(super) enum Primitive<'v> {
     None,
 }
 
-/// A visitor for `std::fmt`.
-pub(super) struct FmtVisitor<'a, 'b: 'a>(pub(super) &'a mut fmt::Formatter<'b>);
+mod fmt_support {
+    use super::*;
 
-impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
-    fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
-        v.fmt(self.0)?;
+    impl<'v> kv::Value<'v> {
+        /// Get a value from a debuggable type.
+        pub fn from_debug<T>(value: &'v T) -> Self
+        where
+            T: fmt::Debug,
+        {
+            kv::Value {
+                inner: Inner::Debug(value),
+            }
+        }
 
-        Ok(())
+        /// Get a value from a displayable type.
+        pub fn from_display<T>(value: &'v T) -> Self
+        where
+            T: fmt::Display,
+        {
+            kv::Value {
+                inner: Inner::Display(value),
+            }
+        }
     }
 
-    fn u64(&mut self, v: u64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
+    impl<'v> fmt::Debug for kv::Value<'v> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            self.visit(&mut FmtVisitor(f))?;
+
+            Ok(())
+        }
     }
 
-    fn i64(&mut self, v: i64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
+    impl<'v> fmt::Display for kv::Value<'v> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            self.visit(&mut FmtVisitor(f))?;
 
-    fn f64(&mut self, v: f64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
+            Ok(())
+        }
     }
+    
+    struct FmtVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
 
-    fn bool(&mut self, v: bool) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
+    impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
+        fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
+            v.fmt(self.0)?;
 
-    fn char(&mut self, v: char) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
+            Ok(())
+        }
 
-    fn str(&mut self, v: &str) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
+        fn u64(&mut self, v: u64) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
 
-    fn none(&mut self) -> Result<(), Error> {
-        self.debug(&format_args!("None"))
+        fn i64(&mut self, v: i64) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
+
+        fn f64(&mut self, v: f64) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
+
+        fn bool(&mut self, v: bool) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
+
+        fn char(&mut self, v: char) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
+
+        fn str(&mut self, v: &str) -> Result<(), Error> {
+            self.debug(&format_args!("{:?}", v))
+        }
+
+        fn none(&mut self) -> Result<(), Error> {
+            self.debug(&format_args!("None"))
+        }
     }
 }
