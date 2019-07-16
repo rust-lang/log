@@ -21,6 +21,10 @@ pub(super) enum Inner<'v> {
     Debug(&'v fmt::Debug),
     /// A displayable value.
     Display(&'v fmt::Display),
+
+    #[cfg(feature = "kv_unstable_sval")]
+    /// A structured value from `sval`.
+    Sval(&'v sval_support::Value),
 }
 
 impl<'v> Inner<'v> {
@@ -38,6 +42,9 @@ impl<'v> Inner<'v> {
             Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
             Inner::Debug(value) => visitor.debug(value),
             Inner::Display(value) => visitor.display(value),
+
+            #[cfg(feature = "kv_unstable_sval")]
+            Inner::Sval(value) => visitor.sval(value),
         }
     }
 }
@@ -56,6 +63,9 @@ pub(super) trait Visitor {
     fn char(&mut self, v: char) -> Result<(), Error>;
     fn str(&mut self, v: &str) -> Result<(), Error>;
     fn none(&mut self) -> Result<(), Error>;
+
+    #[cfg(feature = "kv_unstable_sval")]
+    fn sval(&mut self, v: &sval_support::Value) -> Result<(), Error>;
 }
 
 #[derive(Clone, Copy)]
@@ -145,6 +155,84 @@ mod fmt_support {
 
         fn none(&mut self) -> Result<(), Error> {
             self.debug(&format_args!("None"))
+        }
+
+        #[cfg(feature = "kv_unstable_sval")]
+        fn sval(&mut self, v: &sval_support::Value) -> Result<(), Error> {
+            sval_support::fmt(self.0, v)
+        }
+    }
+}
+
+#[cfg(feature = "kv_unstable_sval")]
+mod sval_support {
+    use super::*;
+
+    extern crate sval;
+
+    impl<'v> kv::Value<'v> {
+        /// Get a value from a structured type.
+        pub fn from_sval<T>(value: &'v T) -> Self
+        where
+            T: sval::Value,
+        {
+            kv::Value {
+                inner: Inner::Sval(value),
+            }
+        }
+    }
+
+    impl<'v> sval::Value for kv::Value<'v> {
+        fn stream(&self, s: &mut sval::value::Stream) -> sval::value::Result {
+            self.visit(&mut SvalVisitor(s)).map_err(|_| sval::value::Error::msg("sval formatting failed"))?;
+
+            Ok(())
+        }
+    }
+
+    pub(super) use self::sval::Value;
+
+    pub(super) fn fmt(f: &mut fmt::Formatter, v: &sval::Value) -> Result<(), Error> {
+        sval::fmt::debug(f, v).map_err(|_| Error::msg("sval formatting failed"))
+    }
+
+    struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
+
+    impl<'a, 'b: 'a> Visitor for SvalVisitor<'a, 'b> {
+        fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
+            self.0.fmt(format_args!("{:?}", v)).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn u64(&mut self, v: u64) -> Result<(), Error> {
+            self.0.u64(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn i64(&mut self, v: i64) -> Result<(), Error> {
+            self.0.i64(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn f64(&mut self, v: f64) -> Result<(), Error> {
+            self.0.f64(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn bool(&mut self, v: bool) -> Result<(), Error> {
+            self.0.bool(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn char(&mut self, v: char) -> Result<(), Error> {
+            self.0.char(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn str(&mut self, v: &str) -> Result<(), Error> {
+            self.0.str(v).map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn none(&mut self) -> Result<(), Error> {
+            self.0.none().map_err(|_| Error::msg("sval formatting failed"))
+        }
+
+        fn sval(&mut self, v: &sval::Value) -> Result<(), Error> {
+            self.0.any(v).map_err(|_| Error::msg("sval formatting failed"))
         }
     }
 }

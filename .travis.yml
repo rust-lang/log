@@ -7,7 +7,7 @@ rust:
   - nightly
 matrix:
   include:
-    - rust: 1.21.0
+    - rust: 1.31.0
       script:
         - cargo test --verbose --features kv_unstable
         - cargo test --verbose --features "kv_unstable std"
