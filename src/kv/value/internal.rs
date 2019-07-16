@@ -3,12 +3,8 @@ use std::fmt;
 use super::{Fill, Slot, Error};
 use kv;
 
-// `Visit` and `Visitor` is an internal API for visiting the structure of a value.
+// `Visitor` is an internal API for visiting the structure of a value.
 // It's not intended to be public (at this stage).
-//
-// Right now we only have an implementation for `std::fmt`, but
-// this trait makes it possible to add more structured backends like
-// `serde` that can retain that original structure.
 
 /// A container for a structured value for a specific kind of visitor.
 #[derive(Clone, Copy)]
@@ -165,7 +161,7 @@ mod fmt_support {
 }
 
 #[cfg(feature = "kv_unstable_sval")]
-mod sval_support {
+pub(super) mod sval_support {
     use super::*;
 
     extern crate sval;
@@ -184,55 +180,85 @@ mod sval_support {
 
     impl<'v> sval::Value for kv::Value<'v> {
         fn stream(&self, s: &mut sval::value::Stream) -> sval::value::Result {
-            self.visit(&mut SvalVisitor(s)).map_err(|_| sval::value::Error::msg("sval formatting failed"))?;
+            self.visit(&mut SvalVisitor(s)).map_err(Error::into_sval)?;
 
             Ok(())
         }
     }
 
-    pub(super) use self::sval::Value;
+    pub(in kv::value) use self::sval::Value;
 
     pub(super) fn fmt(f: &mut fmt::Formatter, v: &sval::Value) -> Result<(), Error> {
-        sval::fmt::debug(f, v).map_err(|_| Error::msg("sval formatting failed"))
+        sval::fmt::debug(f, v)?;
+        Ok(())
+    }
+
+    impl Error {
+        fn from_sval(_: sval::value::Error) -> Self {
+            Error::msg("`sval` serialization failed")
+        }
+        
+        fn into_sval(self) -> sval::value::Error {
+            sval::value::Error::msg("`sval` serialization failed")
+        }
     }
 
     struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
 
     impl<'a, 'b: 'a> Visitor for SvalVisitor<'a, 'b> {
         fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
-            self.0.fmt(format_args!("{:?}", v)).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.fmt(format_args!("{:?}", v)).map_err(Error::from_sval)
         }
 
         fn u64(&mut self, v: u64) -> Result<(), Error> {
-            self.0.u64(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.u64(v).map_err(Error::from_sval)
         }
 
         fn i64(&mut self, v: i64) -> Result<(), Error> {
-            self.0.i64(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.i64(v).map_err(Error::from_sval)
         }
 
         fn f64(&mut self, v: f64) -> Result<(), Error> {
-            self.0.f64(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.f64(v).map_err(Error::from_sval)
         }
 
         fn bool(&mut self, v: bool) -> Result<(), Error> {
-            self.0.bool(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.bool(v).map_err(Error::from_sval)
         }
 
         fn char(&mut self, v: char) -> Result<(), Error> {
-            self.0.char(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.char(v).map_err(Error::from_sval)
         }
 
         fn str(&mut self, v: &str) -> Result<(), Error> {
-            self.0.str(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.str(v).map_err(Error::from_sval)
         }
 
         fn none(&mut self) -> Result<(), Error> {
-            self.0.none().map_err(|_| Error::msg("sval formatting failed"))
+            self.0.none().map_err(Error::from_sval)
         }
 
         fn sval(&mut self, v: &sval::Value) -> Result<(), Error> {
-            self.0.any(v).map_err(|_| Error::msg("sval formatting failed"))
+            self.0.any(v).map_err(Error::from_sval)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use kv::value::test::Token;
+
+        #[test]
+        fn test_from_sval() {
+            assert_eq!(kv::Value::from_sval(&42u64).to_token(), Token::Sval);
+        }
+
+        #[test]
+        fn test_sval_structured() {
+            let value = kv::Value::from(42u64);
+            let expected = vec![sval::test::Token::Unsigned(42)];
+
+            assert_eq!(sval::test::tokens(value), expected);
         }
     }
 }

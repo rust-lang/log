@@ -1,10 +1,10 @@
 // Test support for inspecting Values
 
-use std::fmt::{self, Write};
+use std::fmt;
 use std::str;
 
 use super::{Value, Error};
-use super::internal::Visitor;
+use super::internal;
 
 #[derive(Debug, PartialEq)]
 pub(in kv) enum Token {
@@ -13,47 +13,11 @@ pub(in kv) enum Token {
     F64(f64),
     Char(char),
     Bool(bool),
-    Str(StrBuf),
+    Str(String),
     None,
-}
 
-#[derive(Debug, PartialEq)]
-pub(in kv) struct StrBuf {
-    buf: [u8; 16],
-    len: usize,
-}
-
-impl<'a> From<&'a str> for StrBuf {
-    fn from(s: &'a str) -> Self {
-        let mut buf = Buffer::new();
-        write!(&mut buf, "{}", s).unwrap();
-
-        buf.into_str_buf()
-    }
-}
-
-impl PartialEq<str> for StrBuf {
-    fn eq(&self, other: &str) -> bool {
-        self.as_ref() == other
-    }
-}
-
-impl<'a> PartialEq<&'a str> for StrBuf {
-    fn eq(&self, other: &&'a str) -> bool {
-        self.as_ref() == *other
-    }
-}
-
-impl<'a> PartialEq<StrBuf> for &'a str {
-    fn eq(&self, other: &StrBuf) -> bool {
-        *self == other.as_ref()
-    }
-}
-
-impl AsRef<str> for StrBuf {
-    fn as_ref(&self) -> &str {
-        str::from_utf8(&self.buf[0..self.len]).unwrap()
-    }
+    #[cfg(feature = "kv_unstable_sval")]
+    Sval,
 }
 
 #[cfg(test)]
@@ -61,12 +25,9 @@ impl<'v> Value<'v> {
     pub(in kv) fn to_token(&self) -> Token {
         struct TestVisitor(Option<Token>);
 
-        impl Visitor for TestVisitor {
+        impl internal::Visitor for TestVisitor {
             fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
-                let mut buf = Buffer::new();
-                write!(&mut buf, "{:?}", v)?;
-
-                self.0 = Some(Token::Str(buf.into_str_buf()));
+                self.0 = Some(Token::Str(format!("{:?}", v)));
                 Ok(())
             }
 
@@ -104,59 +65,17 @@ impl<'v> Value<'v> {
                 self.0 = Some(Token::None);
                 Ok(())
             }
+
+            #[cfg(feature = "kv_unstable_sval")]
+            fn sval(&mut self, _: &internal::sval_support::Value) -> Result<(), Error> {
+                self.0 = Some(Token::Sval);
+                Ok(())
+            }
         }
 
         let mut visitor = TestVisitor(None);
         self.visit(&mut visitor).unwrap();
 
         visitor.0.unwrap()
-    }
-
-    pub(in kv) fn to_str_buf(&self) -> StrBuf {
-        let mut buf = Buffer::new();
-        write!(&mut buf, "{}", self).unwrap();
-
-        buf.into_str_buf()
-    }
-}
-
-// A quick-and-dirty no-std buffer
-// to write strings into
-struct Buffer {
-    buf: [u8; 16],
-    len: usize,
-}
-
-impl Buffer {
-    fn new() -> Self {
-        Buffer {
-            buf: [0; 16],
-            len: 0,
-        }
-    }
-
-    fn into_str_buf(self) -> StrBuf {
-        StrBuf {
-            buf: self.buf,
-            len: self.len,
-        }
-    }
-}
-
-impl Write for Buffer {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let bytes = s.as_bytes();
-
-        let end = self.len + bytes.len();
-
-        if end > 16 {
-            panic!("`{}` would overflow", s);
-        }
-
-        let buf = &mut self.buf[self.len..end];
-        buf.copy_from_slice(bytes);
-        self.len = end;
-
-        Ok(())
     }
 }

@@ -39,7 +39,8 @@ release_max_level_trace = []
 
 std = []
 
-# requires Rust `>= 1.31.0`
+# requires the latest stable
+# this will have a tighter MSRV before stabilization
 kv_unstable = []
 kv_unstable_sval = ["kv_unstable", "sval/fmt"]
 
@@ -54,3 +55,4 @@ sval = { version = "0.4.2", optional = true, default-features = false }
 
 [dev-dependencies]
 serde_test = "1.0"
+sval = { version = "0.4.2", features = ["test"] }

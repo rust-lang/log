@@ -133,7 +133,7 @@ mod tests {
             }
         }
 
-        assert_eq!("1", Value::from_fill(&TestFill).to_str_buf());
+        assert_eq!("1", Value::from_fill(&TestFill).to_string());
     }
 
     #[test]
@@ -150,6 +150,6 @@ mod tests {
             }
         }
 
-        let _ = Value::from_fill(&BadFill).to_str_buf();
+        let _ = Value::from_fill(&BadFill).to_string();
     }
 }

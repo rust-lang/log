@@ -1,6 +1,4 @@
 use std::fmt;
-#[cfg(feature = "std")]
-use std::io;
 
 /// An error encountered while working with structured data.
 #[derive(Debug)]
@@ -11,13 +9,13 @@ pub struct Error {
 #[derive(Debug)]
 enum Inner {
     #[cfg(feature = "std")]
-    Io(io::Error),
+    Boxed(std_support::BoxedError),
     Msg(&'static str),
     Fmt,
 }
 
 impl Error {
-    /// Create an error from the given message.
+    /// Create an error from a message.
     pub fn msg(msg: &'static str) -> Self {
         Error {
             inner: Inner::Msg(msg),
@@ -30,7 +28,7 @@ impl fmt::Display for Error {
         use self::Inner::*;
         match &self.inner {
             #[cfg(feature = "std")]
-            &Io(ref err) => err.fmt(f),
+            &Boxed(ref err) => err.fmt(f),
             &Msg(ref msg) => msg.fmt(f),
             &Fmt => fmt::Error.fmt(f),
         }
@@ -56,6 +54,20 @@ mod std_support {
     use super::*;
     use std::{error, io};
 
+    pub(super) type BoxedError = Box<error::Error + Send + Sync>;
+
+    impl Error {
+        /// Create an error from a standard error type.
+        pub fn boxed<E>(err: E) -> Self
+        where
+            E: Into<BoxedError>,
+        {
+            Error {
+                inner: Inner::Boxed(err.into())
+            }
+        }
+    }
+
     impl error::Error for Error {
         fn description(&self) -> &str {
             "key values error"
@@ -64,19 +76,13 @@ mod std_support {
 
     impl From<io::Error> for Error {
         fn from(err: io::Error) -> Self {
-            Error {
-                inner: Inner::Io(err)
-            }
+            Error::boxed(err)
         }
     }
 
     impl From<Error> for io::Error {
         fn from(err: Error) -> Self {
-            if let Inner::Io(err) = err.inner {
-                err
-            } else {
-                io::Error::new(io::ErrorKind::Other, err)
-            }
+            io::Error::new(io::ErrorKind::Other, err)
         }
     }
 }
