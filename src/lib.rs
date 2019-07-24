@@ -271,13 +271,13 @@
 )]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 // When compiled for the rustc compiler itself we want to make sure that this is
 // an unstable crate
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
 #[macro_use]

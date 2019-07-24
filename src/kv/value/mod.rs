@@ -102,26 +102,6 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Get a value from a debuggable type.
-    pub fn from_debug<T>(value: &'v T) -> Self
-    where
-        T: fmt::Debug,
-    {
-        Value {
-            inner: Inner::Debug(value),
-        }
-    }
-
-    /// Get a value from a displayable type.
-    pub fn from_display<T>(value: &'v T) -> Self
-    where
-        T: fmt::Display,
-    {
-        Value {
-            inner: Inner::Display(value),
-        }
-    }
-
     /// Get a value from a fillable slot.
     pub fn from_fill<T>(value: &'v T) -> Self
     where
@@ -134,22 +114,6 @@ impl<'v> Value<'v> {
 
     fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
         self.inner.visit(visitor)
-    }
-}
-
-impl<'v> fmt::Debug for Value<'v> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut self::internal::FmtVisitor(f))?;
-
-        Ok(())
-    }
-}
-
-impl<'v> fmt::Display for Value<'v> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut self::internal::FmtVisitor(f))?;
-
-        Ok(())
     }
 }
 
@@ -169,7 +133,7 @@ mod tests {
             }
         }
 
-        assert_eq!("1", Value::from_fill(&TestFill).to_str_buf());
+        assert_eq!("1", Value::from_fill(&TestFill).to_string());
     }
 
     #[test]
@@ -186,6 +150,6 @@ mod tests {
             }
         }
 
-        let _ = Value::from_fill(&BadFill).to_str_buf();
+        let _ = Value::from_fill(&BadFill).to_string();
     }
 }
