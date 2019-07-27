@@ -669,6 +669,22 @@ impl LevelFilter {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+enum MaybeStaticStr<'a> {
+    Static(&'static str),
+    Borrowed(&'a str),
+}
+
+impl<'a> MaybeStaticStr<'a> {
+    #[inline]
+    fn get(&self) -> &'a str {
+        match *self {
+            MaybeStaticStr::Static(s) => s,
+            MaybeStaticStr::Borrowed(s) => s,
+        }
+    }
+}
+
 /// The "payload" of a log message.
 ///
 /// # Use
@@ -718,8 +734,8 @@ impl LevelFilter {
 pub struct Record<'a> {
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
-    module_path: Option<&'a str>,
-    file: Option<&'a str>,
+    module_path: Option<MaybeStaticStr<'a>>,
+    file: Option<MaybeStaticStr<'a>>,
     line: Option<u32>,
     #[cfg(feature = "kv_unstable")]
     key_values: KeyValues<'a>,
@@ -776,13 +792,31 @@ impl<'a> Record<'a> {
     /// The module path of the message.
     #[inline]
     pub fn module_path(&self) -> Option<&'a str> {
-        self.module_path
+        self.module_path.map(|s| s.get())
+    }
+
+    /// The module path of the message, if it is a `'static` string.
+    #[inline]
+    pub fn module_path_static(&self) -> Option<&'static str> {
+        match self.module_path {
+            Some(MaybeStaticStr::Static(s)) => Some(s),
+            _ => None,
+        }
     }
 
     /// The source file containing the message.
     #[inline]
     pub fn file(&self) -> Option<&'a str> {
-        self.file
+        self.file.map(|s| s.get())
+    }
+
+    /// The module path of the message, if it is a `'static` string.
+    #[inline]
+    pub fn file_static(&self) -> Option<&'static str> {
+        match self.file {
+            Some(MaybeStaticStr::Static(s)) => Some(s),
+            _ => None,
+        }
     }
 
     /// The line containing the message.
@@ -802,8 +836,7 @@ impl<'a> Record<'a> {
     #[cfg(feature = "kv_unstable")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder {
-        #[cfg(feature = "kv_unstable")]
-        return RecordBuilder {
+        RecordBuilder {
             record: Record {
                 metadata: Metadata {
                     level: self.metadata.level,
@@ -815,21 +848,7 @@ impl<'a> Record<'a> {
                 line: self.line,
                 key_values: self.key_values.clone(),
             }
-        };
-
-        #[cfg(not(feature = "kv_unstable"))]
-        return RecordBuilder {
-            record: Record {
-                metadata: Metadata {
-                    level: self.metadata.level,
-                    target: self.metadata.target,
-                },
-                args: self.args,
-                module_path: self.module_path,
-                file: self.file,
-                line: self.line,
-            }
-        };
+        }
     }
 }
 
@@ -948,14 +967,28 @@ impl<'a> RecordBuilder<'a> {
     /// Set [`module_path`](struct.Record.html#method.module_path)
     #[inline]
     pub fn module_path(&mut self, path: Option<&'a str>) -> &mut RecordBuilder<'a> {
-        self.record.module_path = path;
+        self.record.module_path = path.map(MaybeStaticStr::Borrowed);
+        self
+    }
+
+    /// Set [`module_path`](struct.Record.html#method.module_path) to a `'static` string
+    #[inline]
+    pub fn module_path_static(&mut self, path: Option<&'static str>) -> &mut RecordBuilder<'a> {
+        self.record.module_path = path.map(MaybeStaticStr::Static);
         self
     }
 
     /// Set [`file`](struct.Record.html#method.file)
     #[inline]
     pub fn file(&mut self, file: Option<&'a str>) -> &mut RecordBuilder<'a> {
-        self.record.file = file;
+        self.record.file = file.map(MaybeStaticStr::Borrowed);
+        self
+    }
+
+    /// Set [`file`](struct.Record.html#method.file) to a `'static` string.
+    #[inline]
+    pub fn file_static(&mut self, file: Option<&'static str>) -> &mut RecordBuilder<'a> {
+        self.record.file = file.map(MaybeStaticStr::Static);
         self
     }
 
@@ -1355,15 +1388,15 @@ pub fn logger() -> &'static Log {
 pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
-    &(target, module_path, file, line): &(&str, &str, &str, u32),
+    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
 ) {
     logger().log(
         &Record::builder()
             .args(args)
             .level(level)
             .target(target)
-            .module_path(Some(module_path))
-            .file(Some(file))
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
             .line(Some(line))
             .build(),
     );
