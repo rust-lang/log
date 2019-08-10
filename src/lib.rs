@@ -1384,6 +1384,7 @@ pub fn logger() -> &'static dyn Log {
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
+#[cfg(not(feature = "kv_unstable"))]
 #[doc(hidden)]
 pub fn __private_api_log(
     args: fmt::Arguments,
@@ -1400,6 +1401,30 @@ pub fn __private_api_log(
             .line(Some(line))
             .build(),
     );
+}
+
+#[cfg(feature = "kv_unstable")]
+#[doc(hidden)]
+pub fn __private_api_log(
+    args: fmt::Arguments,
+    level: Level,
+    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+    kvs: Option<&dyn kv::Source>,
+) {
+    let mut record = Record::builder();
+    record
+        .args(args)
+        .level(level)
+        .target(target)
+        .module_path_static(Some(module_path))
+        .file_static(Some(file))
+        .line(Some(line));
+
+    if let Some(kvs) = kvs {
+        record.key_values(kvs);
+    }
+
+    logger().log(&record.build());
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time

@@ -27,6 +27,7 @@
 ///     data.0, data.1, private_data);
 /// # }
 /// ```
+#[cfg(not(feature = "kv_unstable"))]
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
@@ -36,6 +37,41 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
+            );
+        }
+    });
+    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
+}
+
+/// TODO: merge docs.
+#[cfg(feature = "kv_unstable")]
+#[macro_export(local_inner_macros)]
+macro_rules! log {
+    (target: $target:expr, $lvl:expr, $($arg:tt, )+ {
+        $($key:ident: $value:tt),+ $(,)*
+    }) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            let kvs = [
+                 $((&$crate::kv::Key::from_str($crate::std::stringify!($key)),
+                    &$crate::kv::Value::from($value)),)+
+            ];
+            $crate::__private_api_log(
+                __log_format_args!($($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                Some(&kvs.as_ref()),
+            );
+        }
+    });
+    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log(
+                __log_format_args!($($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                None,
             );
         }
     });
