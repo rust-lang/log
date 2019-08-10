@@ -54,7 +54,7 @@ mod std_support {
     use super::*;
     use std::{error, io};
 
-    pub(super) type BoxedError = Box<error::Error + Send + Sync>;
+    pub(super) type BoxedError = Box<dyn error::Error + Send + Sync>;
 
     impl Error {
         /// Create an error from a standard error type.

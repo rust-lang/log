@@ -12,19 +12,19 @@ pub(super) enum Inner<'v> {
     /// A simple primitive value that can be copied without allocating.
     Primitive(Primitive<'v>),
     /// A value that can be filled.
-    Fill(&'v Fill),
+    Fill(&'v dyn Fill),
     /// A debuggable value.
-    Debug(&'v fmt::Debug),
+    Debug(&'v dyn fmt::Debug),
     /// A displayable value.
-    Display(&'v fmt::Display),
+    Display(&'v dyn fmt::Display),
 
     #[cfg(feature = "kv_unstable_sval")]
     /// A structured value from `sval`.
-    Sval(&'v sval_support::Value),
+    Sval(&'v dyn sval_support::Value),
 }
 
 impl<'v> Inner<'v> {
-    pub(super) fn visit(&self, visitor: &mut Visitor) -> Result<(), Error> {
+    pub(super) fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
         match *self {
             Inner::Primitive(value) => match value {
                 Primitive::Signed(value) => visitor.i64(value),
@@ -47,8 +47,8 @@ impl<'v> Inner<'v> {
 
 /// The internal serialization contract.
 pub(super) trait Visitor {
-    fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error>;
-    fn display(&mut self, v: &fmt::Display) -> Result<(), Error> {
+    fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error>;
+    fn display(&mut self, v: &dyn fmt::Display) -> Result<(), Error> {
         self.debug(&format_args!("{}",  v))
     }
 
@@ -119,7 +119,7 @@ mod fmt_support {
     struct FmtVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
 
     impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
-        fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
+        fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
             v.fmt(self.0)?;
 
             Ok(())
