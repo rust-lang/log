@@ -832,7 +832,7 @@ impl<'a> Record<'a> {
         self.key_values.0
     }
 
-    /// Create a new [`Builder`](struct.Builder.html) based on this record.
+    /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
     #[cfg(feature = "kv_unstable")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder {
