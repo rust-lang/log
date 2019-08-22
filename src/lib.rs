@@ -195,9 +195,8 @@
 //! # Compile time filters
 //!
 //! Log levels can be statically disabled at compile time via Cargo features. Log invocations at
-//! disabled levels will be skipped and will not even be present in the resulting binary unless the
-//! log level is specified dynamically. This level is configured separately for release and debug
-//! builds. The features are:
+//! disabled levels will be skipped and will not even be present in the resulting binary.
+//! This level is configured separately for release and debug builds. The features are:
 //!
 //! * `max_level_off`
 //! * `max_level_error`
