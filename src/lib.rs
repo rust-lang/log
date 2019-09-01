@@ -1384,6 +1384,7 @@ pub fn logger() -> &'static Log {
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
+#[cfg(not(feature = "kv_unstable"))]
 pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
@@ -1397,6 +1398,55 @@ pub fn __private_api_log(
             .module_path_static(Some(module_path))
             .file_static(Some(file))
             .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[cfg(feature = "kv_unstable")]
+#[doc(hidden)]
+pub fn __private_api_log(
+    args: fmt::Arguments<'_>,
+    level: Level,
+    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &str)]>
+) {
+    // Ideally there would be a `From` impl available for this.
+    struct KeyValues<'a> {
+        inner: &'a [(&'a str, &'a str)],
+    }
+
+    impl<'a> kv::Source for KeyValues<'a> {
+        fn visit<'kvs>(
+            &'kvs self,
+            visitor: &mut dyn kv::Visitor<'kvs>,
+        ) -> Result<(), kv::Error> {
+            for pair in self.inner {
+                visitor.visit_pair(pair.0.into(), pair.1.into())?;
+            }
+            Ok(())
+        }
+
+        #[inline]
+        fn count(&self) -> usize {
+            self.inner.len()
+        }
+    }
+
+    let kvs = match kvs {
+        Some(kvs) => Some(KeyValues { inner: kvs }),
+        None => None,
+    };
+
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .key_values(&kvs)
             .build(),
     );
 }

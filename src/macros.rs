@@ -29,17 +29,63 @@
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        let lvl = $lvl;
+    // log!(target: "...", "...")
+    (target: $target:expr, $lvl:expr, $e:expr) => {
+        $crate::log_impl!(target: $target, $lvl, ($e));
+    };
+
+    // log!(target: "...", "...", args...)
+    (target: $target:expr, $lvl:expr, $e:expr, $($rest:tt)*) => {
+        $crate::log_impl!(target: $target, $lvl, ($e) $($rest)*);
+    };
+
+    // log!("...", args...)
+    ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: __log_module_path!(), $lvl, $($arg)+))
+}
+
+#[macro_export(local_inner_macros)]
+#[doc(hidden)]
+macro_rules! log_impl {
+    // End of macro input
+    (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {
+        let lvl = log::Level::Info;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
-                __log_format_args!($($arg)+),
+                __log_format_args!($($arg),*),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                None,
             );
         }
-    });
-    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
+    };
+
+    // // Trailing k-v pairs containing no trailing comma
+    (target: $target:expr, $lvl:expr, ($($arg:expr),*) { $($key:ident : $value:expr),* }) => {
+        let lvl = log::Level::Info;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log(
+                __log_format_args!($($arg),*),
+                lvl,
+                &(__log_module_path!(), __log_module_path!(), __log_file!(), __log_line!()),
+                Some(&[$((__log_stringify!($key), $value)),*])
+            );
+        }
+    };
+
+    // Trailing k-v pairs with trailing comma
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) { $($key:ident : $value:expr,)* }) => {
+        $crate::log_impl!(target: $target, $lvl, ($($e),*) { $($key : $value),* });
+    };
+
+    // Last expression arg with no trailing comma
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr) => {
+        $crate::log_impl!(target: $target, $lvl, ($($e,)* $arg));
+    };
+
+    // Expression arg
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr, $($rest:tt)*) => {
+        $crate::log_impl!(target: $target, $lvl, ($($e,)* $arg) $($rest)*);
+    };
 }
 
 /// Logs a message at the error level.
