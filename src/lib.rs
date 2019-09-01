@@ -305,7 +305,7 @@ pub mod kv;
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
-static mut LOGGER: &'static Log = &NopLogger;
+static mut LOGGER: &dyn Log = &NopLogger;
 
 #[allow(deprecated)]
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -320,11 +320,11 @@ const INITIALIZED: usize = 2;
 #[allow(deprecated)]
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
-static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
+static SET_LOGGER_ERROR: &str = "attempted to set a logger after the logging system \
                                          was already initialized";
-static LEVEL_PARSE_ERROR: &'static str =
+static LEVEL_PARSE_ERROR: &str =
     "attempted to convert a string that doesn't match an existing log level";
 
 /// An enum representing the available verbosity levels of the logger.
@@ -1267,14 +1267,14 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
 #[cfg(atomic_cas)]
-pub fn set_logger(logger: &'static Log) -> Result<(), SetLoggerError> {
+pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
 #[cfg(atomic_cas)]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
-    F: FnOnce() -> &'static Log,
+    F: FnOnce() -> &'static dyn Log,
 {
     unsafe {
         match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
@@ -1311,7 +1311,7 @@ where
 /// (including all logging macros).
 ///
 /// [`set_logger`]: fn.set_logger.html
-pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
+pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     match STATE.load(Ordering::SeqCst) {
         UNINITIALIZED => {
             LOGGER = logger;
@@ -1371,7 +1371,7 @@ impl error::Error for ParseLevelError {
 /// Returns a reference to the logger.
 ///
 /// If a logger has not been set, a no-op implementation is returned.
-pub fn logger() -> &'static Log {
+pub fn logger() -> &'static dyn Log {
     unsafe {
         if STATE.load(Ordering::SeqCst) != INITIALIZED {
             static NOP: NopLogger = NopLogger;
