@@ -48,7 +48,7 @@ macro_rules! log {
 macro_rules! log_impl {
     // End of macro input
     (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {
-        let lvl = log::Level::Info;
+        let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
                 __log_format_args!($($arg),*),
