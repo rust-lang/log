@@ -334,7 +334,7 @@ static LEVEL_PARSE_ERROR: &'static str =
 /// [`log!`](macro.log.html), and comparing a `Level` directly to a
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
-#[derive(Copy, Eq, Debug, Hash)]
+#[derive(Copy, Eq, Debug)]
 pub enum Level {
     /// The "error" level.
     ///
@@ -522,7 +522,7 @@ impl Level {
 /// [`max_level()`]: fn.max_level.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
-#[derive(Copy, Eq, Debug, Hash)]
+#[derive(Copy, Eq, Debug)]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
@@ -1051,7 +1051,7 @@ impl<'a> RecordBuilder<'a> {
 ///
 /// # fn main(){}
 /// ```
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct Metadata<'a> {
     level: Level,
     target: &'a str,
@@ -1093,7 +1093,7 @@ impl<'a> Metadata<'a> {
 ///                     .target(target)
 ///                     .build();
 /// ```
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct MetadataBuilder<'a> {
     metadata: Metadata<'a>,
 }
