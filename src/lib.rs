@@ -1389,10 +1389,12 @@ pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
-    kvs: Option<&[(&str, &str)]>
+    kvs: Option<&[(&str, &str)]>,
 ) {
     if kvs.is_some() {
-        panic!("key-value support is experimental and must be enabled using the `kv_unstable` feature")
+        panic!(
+            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
+        )
     }
 
     logger().log(
@@ -1414,7 +1416,7 @@ pub fn __private_api_log(
     args: fmt::Arguments<'_>,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
-    kvs: Option<&[(&str, &str)]>
+    kvs: Option<&[(&str, &str)]>,
 ) {
     // Ideally there would be a `From` impl available for this.
     struct KeyValues<'a> {
@@ -1422,10 +1424,7 @@ pub fn __private_api_log(
     }
 
     impl<'a> kv::Source for KeyValues<'a> {
-        fn visit<'kvs>(
-            &'kvs self,
-            visitor: &mut dyn kv::Visitor<'kvs>,
-        ) -> Result<(), kv::Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut kv::Visitor<'kvs>) -> Result<(), kv::Error> {
             for pair in self.inner {
                 visitor.visit_pair(pair.0.into(), pair.1.into())?;
             }
