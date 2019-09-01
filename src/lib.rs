@@ -1416,32 +1416,8 @@ pub fn __private_api_log(
     args: fmt::Arguments<'_>,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
-    kvs: Option<&[(&str, &str)]>,
+    kvs: Option<&[(&str, &kv::ToValue)]>,
 ) {
-    // Ideally there would be a `From` impl available for this.
-    struct KeyValues<'a> {
-        inner: &'a [(&'a str, &'a str)],
-    }
-
-    impl<'a> kv::Source for KeyValues<'a> {
-        fn visit<'kvs>(&'kvs self, visitor: &mut kv::Visitor<'kvs>) -> Result<(), kv::Error> {
-            for pair in self.inner {
-                visitor.visit_pair(pair.0.into(), pair.1.into())?;
-            }
-            Ok(())
-        }
-
-        #[inline]
-        fn count(&self) -> usize {
-            self.inner.len()
-        }
-    }
-
-    let kvs = match kvs {
-        Some(kvs) => Some(KeyValues { inner: kvs }),
-        None => None,
-    };
-
     logger().log(
         &Record::builder()
             .args(args)

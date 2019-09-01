@@ -67,7 +67,7 @@ macro_rules! log_impl {
                 __log_format_args!($($arg),*),
                 lvl,
                 &(__log_module_path!(), __log_module_path!(), __log_file!(), __log_line!()),
-                Some(&[$((__log_stringify!($key), $value)),*])
+                Some(&[$((__log_stringify!($key), &$value)),*])
             );
         }
     };
