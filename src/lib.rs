@@ -1389,7 +1389,12 @@ pub fn __private_api_log(
     args: fmt::Arguments,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &str)]>
 ) {
+    if kvs.is_some() {
+        panic!("key-value support is experimental and must be enabled using the `kv_unstable` feature")
+    }
+
     logger().log(
         &Record::builder()
             .args(args)
