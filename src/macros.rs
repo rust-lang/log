@@ -294,3 +294,11 @@ macro_rules! __log_line {
         line!()
     };
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __log_stringify {
+    ($($args:tt)*) => {
+        stringify!($($args)*)
+    };
+}
