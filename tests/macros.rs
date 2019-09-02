@@ -15,6 +15,11 @@ fn with_args() {
 }
 
 #[test]
+fn named_arg() {
+    info!("hello {value}", value = "cats");
+}
+
+#[test]
 fn kv() {
     info!("hello {}", "cats", {
         cat_1: "chashu",
@@ -23,7 +28,7 @@ fn kv() {
 }
 
 #[test]
-fn kv_interpolated_ident_expr() {
+fn kv_and_named_arg() {
     info!("hello {value}", value = "cats", {
         cat_1: "chashu",
         cat_2: "nori",
