@@ -846,7 +846,7 @@ impl<'a> Record<'a> {
                 file: self.file,
                 line: self.line,
                 key_values: self.key_values.clone(),
-            }
+            },
         }
     }
 }
@@ -1641,24 +1641,17 @@ mod tests {
             fn visit_pair(
                 &mut self,
                 _: kv::Key<'kvs>,
-                _: kv::Value<'kvs>
+                _: kv::Value<'kvs>,
             ) -> Result<(), kv::Error> {
                 self.seen_pairs += 1;
                 Ok(())
             }
         }
 
-        let kvs: &[(&str, i32)] = &[
-            ("a", 1),
-            ("b", 2)
-        ];
-        let record_test = Record::builder()
-            .key_values(&kvs)
-            .build();
+        let kvs: &[(&str, i32)] = &[("a", 1), ("b", 2)];
+        let record_test = Record::builder().key_values(&kvs).build();
 
-        let mut visitor = TestVisitor {
-            seen_pairs: 0,
-        };
+        let mut visitor = TestVisitor { seen_pairs: 0 };
 
         record_test.key_values().visit(&mut visitor).unwrap();
 

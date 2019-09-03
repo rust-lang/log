@@ -1,0 +1,80 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [stable, beta, nightly, macos, win32, win64, mingw]
+        include:
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+          - build: nightly
+            os: ubuntu-latest
+            rust: nightly
+          - build: macos
+            os: macos-latest
+            rust: stable
+          - build: win32
+            os: windows-latest
+            rust: stable-i686
+          - build: win64
+            os: windows-latest
+            rust: stable-x86_64
+          - build: mingw
+            os: windows-latest
+            rust: stable-x86_64-gnu
+    steps:
+    - uses: actions/checkout@master
+    - name: Install Rust (rustup)
+      run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+      if: matrix.os != 'macos-latest'
+    - name: Install Rust (macos)
+      run: |
+        curl https://sh.rustup.rs | sh -s -- -y
+        echo "##[add-path]$HOME/.cargo/bin"
+      if: matrix.os == 'macos-latest'
+    - run: cargo test --verbose
+    - run: cargo test --verbose --features serde
+    - run: cargo test --verbose --features std
+    - run: cargo test --verbose --features kv_unstable
+    - run: cargo test --verbose --features "kv_unstable std"
+    - run: cargo test --verbose --features "kv_unstable_sval"
+    - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
+    - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Install Rust
+      run: rustup update stable && rustup default stable && rustup component add rustfmt
+    - run: cargo fmt -- --check
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Rust
+        run: rustup update 1.16.0 && rustup default 1.16.0
+      - run: cargo build --verbose
+      - run: cargo build --verbose --features serde
+      - run: cargo build --verbose --features std
+
+  embedded:
+    name: Embedded
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - run: rustup target add thumbv6m-none-eabi
+      - run: cargo build --verbose --target=thumbv6m-none-eabi

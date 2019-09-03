@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Fill, Slot, Error};
+use super::{Error, Fill, Slot};
 use kv;
 
 // `Visitor` is an internal API for visiting the structure of a value.
@@ -49,7 +49,7 @@ impl<'v> Inner<'v> {
 pub(super) trait Visitor {
     fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error>;
     fn display(&mut self, v: &fmt::Display) -> Result<(), Error> {
-        self.debug(&format_args!("{}",  v))
+        self.debug(&format_args!("{}", v))
     }
 
     fn u64(&mut self, v: u64) -> Result<(), Error>;
@@ -115,7 +115,7 @@ mod fmt_support {
             Ok(())
         }
     }
-    
+
     struct FmtVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
 
     impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
@@ -197,7 +197,7 @@ pub(super) mod sval_support {
         fn from_sval(_: sval::value::Error) -> Self {
             Error::msg("`sval` serialization failed")
         }
-        
+
         fn into_sval(self) -> sval::value::Error {
             sval::value::Error::msg("`sval` serialization failed")
         }
@@ -207,7 +207,9 @@ pub(super) mod sval_support {
 
     impl<'a, 'b: 'a> Visitor for SvalVisitor<'a, 'b> {
         fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
-            self.0.fmt(format_args!("{:?}", v)).map_err(Error::from_sval)
+            self.0
+                .fmt(format_args!("{:?}", v))
+                .map_err(Error::from_sval)
         }
 
         fn u64(&mut self, v: u64) -> Result<(), Error> {

@@ -3,8 +3,8 @@
 use std::fmt;
 use std::str;
 
-use super::{Value, Error};
 use super::internal;
+use super::{Error, Value};
 
 #[derive(Debug, PartialEq)]
 pub(in kv) enum Token {
