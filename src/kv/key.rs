@@ -1,9 +1,9 @@
 //! Structured keys.
 
-use std::fmt;
-use std::cmp;
-use std::hash;
 use std::borrow::Borrow;
+use std::cmp;
+use std::fmt;
+use std::hash;
 
 /// A type that can be converted into a [`Key`](struct.Key.html).
 pub trait ToKey {
@@ -22,9 +22,7 @@ where
 
 impl<'k> ToKey for Key<'k> {
     fn to_key(&self) -> Key {
-        Key {
-            key: self.key,
-        }
+        Key { key: self.key }
     }
 }
 
@@ -43,9 +41,7 @@ pub struct Key<'k> {
 impl<'k> Key<'k> {
     /// Get a key from a borrowed string.
     pub fn from_str(key: &'k str) -> Self {
-        Key {
-            key: key,
-        }
+        Key { key: key }
     }
 
     /// Get a borrowed string from this key.

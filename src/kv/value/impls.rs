@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{ToValue, Value, Primitive};
+use super::{Primitive, ToValue, Value};
 
 impl ToValue for usize {
     fn to_value(&self) -> Value {
@@ -246,8 +246,14 @@ mod tests {
         assert_eq!(42.01f64.to_value().to_string(), "42.01");
         assert_eq!(true.to_value().to_string(), "true");
         assert_eq!('a'.to_value().to_string(), "'a'");
-        assert_eq!(format_args!("a {}", "value").to_value().to_string(), "a value");
-        assert_eq!("a loong string".to_value().to_string(), "\"a loong string\"");
+        assert_eq!(
+            format_args!("a {}", "value").to_value().to_string(),
+            "a value"
+        );
+        assert_eq!(
+            "a loong string".to_value().to_string(),
+            "\"a loong string\""
+        );
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
         assert_eq!(Option::None::<bool>.to_value().to_string(), "None");
@@ -260,8 +266,14 @@ mod tests {
         assert_eq!(42.01f64.to_value().to_token(), Token::F64(42.01));
         assert_eq!(true.to_value().to_token(), Token::Bool(true));
         assert_eq!('a'.to_value().to_token(), Token::Char('a'));
-        assert_eq!(format_args!("a {}", "value").to_value().to_token(), Token::Str("a value".into()));
-        assert_eq!("a loong string".to_value().to_token(), Token::Str("a loong string".into()));
+        assert_eq!(
+            format_args!("a {}", "value").to_value().to_token(),
+            Token::Str("a value".into())
+        );
+        assert_eq!(
+            "a loong string".to_value().to_token(),
+            Token::Str("a loong string".into())
+        );
         assert_eq!(Some(true).to_value().to_token(), Token::Bool(true));
         assert_eq!(().to_value().to_token(), Token::None);
         assert_eq!(Option::None::<bool>.to_value().to_token(), Token::None);
