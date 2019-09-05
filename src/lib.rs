@@ -896,7 +896,7 @@ impl log::Log for LoggerAdaptor {
                     level: LogLevel::from_new(record.level()),
                     target: record.target(),
                 },
-                // file and module path aren't static in 0.4 so we can't forward them.
+                // Try best effort to forward static file and module path.
                 location: &LogLocation {
                     __file: record.file_static().unwrap_or("<unknown>"),
                     __line: record.line().unwrap_or(0),
