@@ -286,7 +286,6 @@ use std::cmp;
 #[cfg(feature = "std")]
 use std::error;
 use std::fmt;
-use std::mem;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -1192,7 +1191,7 @@ pub fn set_max_level(level: LevelFilter) {
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
-    unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
+    LevelFilter::from_usize(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)).unwrap()
 }
 
 /// Sets the global logger to a `Box<Log>`.
@@ -1210,7 +1209,7 @@ pub fn max_level() -> LevelFilter {
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(all(feature = "std", atomic_cas))]
 pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| unsafe { &*Box::into_raw(logger) })
+    set_logger_inner(|| logger.leak() )
 }
 
 /// Sets the global logger to a `&'static Log`.
@@ -1276,19 +1275,17 @@ fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static Log,
 {
-    unsafe {
-        match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
-            UNINITIALIZED => {
-                LOGGER = make_logger();
-                STATE.store(INITIALIZED, Ordering::SeqCst);
-                Ok(())
-            }
-            INITIALIZING => {
-                while STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                Err(SetLoggerError(()))
-            }
-            _ => Err(SetLoggerError(())),
+    match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
+        UNINITIALIZED => {
+            unsafe { LOGGER = make_logger(); }
+            STATE.store(INITIALIZED, Ordering::SeqCst);
+            Ok(())
         }
+        INITIALIZING => {
+            while STATE.load(Ordering::SeqCst) == INITIALIZING {}
+            Err(SetLoggerError(()))
+        }
+        _ => Err(SetLoggerError(())),
     }
 }
 
@@ -1372,13 +1369,11 @@ impl error::Error for ParseLevelError {
 ///
 /// If a logger has not been set, a no-op implementation is returned.
 pub fn logger() -> &'static Log {
-    unsafe {
-        if STATE.load(Ordering::SeqCst) != INITIALIZED {
-            static NOP: NopLogger = NopLogger;
-            &NOP
-        } else {
-            LOGGER
-        }
+    if STATE.load(Ordering::SeqCst) != INITIALIZED {
+        static NOP: NopLogger = NopLogger;
+        &NOP
+    } else {
+        unsafe { LOGGER }
     }
 }
 
