@@ -191,7 +191,7 @@ mod tests {
     fn level_token(variant: &'static str) -> Token {
         Token::UnitVariant {
             name: "Level",
-            variant: variant,
+            variant,
         }
     }
 
@@ -206,7 +206,7 @@ mod tests {
     fn level_filter_token(variant: &'static str) -> Token {
         Token::UnitVariant {
             name: "LevelFilter",
-            variant: variant,
+            variant,
         }
     }
 
