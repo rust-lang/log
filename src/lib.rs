@@ -323,7 +323,7 @@ static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 static SET_LOGGER_ERROR: &str = "attempted to set a logger after the logging system \
-                                         was already initialized";
+                                 was already initialized";
 static LEVEL_PARSE_ERROR: &str =
     "attempted to convert a string that doesn't match an existing log level";
 
@@ -1088,7 +1088,6 @@ impl<'a> Default for MetadataBuilder<'a> {
         Self::new()
     }
 }
-
 
 /// Builder for [`Metadata`](struct.Metadata.html).
 ///
