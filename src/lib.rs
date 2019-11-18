@@ -305,7 +305,7 @@ pub mod kv;
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
-static mut LOGGER: &dyn Log = &NopLogger;
+static mut LOGGER: &Log = &NopLogger;
 
 #[allow(deprecated)]
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -488,6 +488,12 @@ impl fmt::Display for Level {
     }
 }
 
+impl From<LevelFilter> for Level {
+    fn from(level: LevelFilter) -> Self {
+        Level::from_usize(level as usize).unwrap()
+    }
+}
+
 impl Level {
     fn from_usize(u: usize) -> Option<Level> {
         match u {
@@ -508,8 +514,8 @@ impl Level {
 
     /// Converts the `Level` to the equivalent `LevelFilter`.
     #[inline]
-    pub fn to_level_filter(self) -> LevelFilter {
-        LevelFilter::from_usize(self as usize).unwrap()
+    pub fn to_level_filter(&self) -> LevelFilter {
+        LevelFilter::from_usize(*self as usize).unwrap()
     }
 }
 
@@ -638,6 +644,12 @@ impl FromStr for LevelFilter {
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(LOG_LEVEL_NAMES[*self as usize])
+    }
+}
+
+impl From<Level> for LevelFilter {
+    fn from(level: Level) -> Self {
+        LevelFilter::from_usize(level as usize).unwrap()
     }
 }
 
