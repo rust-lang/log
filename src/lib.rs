@@ -488,12 +488,6 @@ impl fmt::Display for Level {
     }
 }
 
-impl From<LevelFilter> for Level {
-    fn from(level: LevelFilter) -> Self {
-        Level::from_usize(level as usize).unwrap()
-    }
-}
-
 impl Level {
     fn from_usize(u: usize) -> Option<Level> {
         match u {
@@ -675,8 +669,8 @@ impl LevelFilter {
     ///
     /// Returns `None` if `self` is `LevelFilter::Off`.
     #[inline]
-    pub fn to_level(self) -> Option<Level> {
-        Level::from_usize(self as usize)
+    pub fn to_level(&self) -> Option<Level> {
+        Level::from_usize(*self as usize)
     }
 }
 
@@ -1291,14 +1285,14 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
 #[cfg(atomic_cas)]
-pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+pub fn set_logger(logger: &'static Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
 #[cfg(atomic_cas)]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
-    F: FnOnce() -> &'static dyn Log,
+    F: FnOnce() -> &'static Log,
 {
     unsafe {
         match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
@@ -1335,7 +1329,7 @@ where
 /// (including all logging macros).
 ///
 /// [`set_logger`]: fn.set_logger.html
-pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
     match STATE.load(Ordering::SeqCst) {
         UNINITIALIZED => {
             LOGGER = logger;
@@ -1395,7 +1389,7 @@ impl error::Error for ParseLevelError {
 /// Returns a reference to the logger.
 ///
 /// If a logger has not been set, a no-op implementation is returned.
-pub fn logger() -> &'static dyn Log {
+pub fn logger() -> &'static Log {
     unsafe {
         if STATE.load(Ordering::SeqCst) != INITIALIZED {
             static NOP: NopLogger = NopLogger;
