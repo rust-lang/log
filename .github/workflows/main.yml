@@ -72,10 +72,15 @@ jobs:
         run: |
           rustup update 1.16.0
           rustup default 1.16.0
+      - run: |
           cargo update -p cfg-if --precise 0.1.9
-      - run: cargo build --verbose
-      - run: cargo build --verbose --features serde
-      - run: cargo build --verbose --features std
+          cargo build --verbose
+      - run: |
+          cargo update -p cfg-if --precise 0.1.9
+          cargo build --verbose --features serde
+      - run: |
+          cargo update -p cfg-if --precise 0.1.9
+          cargo build --verbose --features std
 
   embedded:
     name: Embedded
