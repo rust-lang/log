@@ -920,7 +920,7 @@ impl<'a> RecordBuilder<'a> {
                 line: None,
                 #[cfg(feature = "kv_unstable")]
                 key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
-            }
+            },
         }
     }
 
