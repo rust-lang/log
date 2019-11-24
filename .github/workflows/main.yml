@@ -33,7 +33,9 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Install Rust (rustup)
-      run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+      run: |
+        rustup update ${{ matrix.rust }}
+        rustup default ${{ matrix.rust }}
       if: matrix.os != 'macos-latest'
     - name: Install Rust (macos)
       run: |
@@ -55,7 +57,10 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
-      run: rustup update stable && rustup default stable && rustup component add rustfmt
+      run: |
+        rustup update stable
+        rustup default stable
+        rustup component add rustfmt
     - run: cargo fmt -- --check
 
   msrv:
@@ -64,7 +69,9 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install Rust
-        run: rustup update 1.16.0 && rustup default 1.16.0
+        run: |
+          rustup update 1.31.0
+          rustup default 1.31.0
       - run: cargo build --verbose
       - run: cargo build --verbose --features serde
       - run: cargo build --verbose --features std
@@ -75,6 +82,8 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install Rust
-        run: rustup update stable && rustup default stable
+        run: |
+          rustup update stable
+          rustup default stable
       - run: rustup target add thumbv6m-none-eabi
       - run: cargo build --verbose --target=thumbv6m-none-eabi
