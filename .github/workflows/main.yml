@@ -72,6 +72,7 @@ jobs:
         run: |
           rustup update 1.16.0
           rustup default 1.16.0
+          cargo update -p cfg-if --precise 0.1.9
       - run: cargo build --verbose
       - run: cargo build --verbose --features serde
       - run: cargo build --verbose --features std
