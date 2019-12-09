@@ -22,6 +22,10 @@ features = ["std", "serde", "kv_unstable_sval"]
 name = "filters"
 harness = false
 
+[[test]]
+name = "macros"
+harness = true
+
 [features]
 max_level_off   = []
 max_level_error = []
