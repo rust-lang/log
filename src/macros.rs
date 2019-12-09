@@ -47,13 +47,25 @@ macro_rules! log {
 #[doc(hidden)]
 macro_rules! log_impl {
     // End of macro input
-    (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {
+    (target: $target:expr, $lvl:expr, ($message:expr)) => {
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log_lit(
+                $message,
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+            );
+        }
+    };
+
+    (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log(
                 __log_format_args!($($arg),*),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                None,
             );
         }
     };
