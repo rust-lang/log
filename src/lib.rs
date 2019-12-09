@@ -1422,6 +1422,25 @@ pub fn __private_api_log(
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
+pub fn __private_api_log_lit(
+    message: &str,
+    level: Level,
+    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+) {
+    logger().log(
+        &Record::builder()
+            .args(format_args!("{}", message))
+            .level(level)
+            .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
 pub fn __private_api_enabled(level: Level, target: &str) -> bool {
     logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
