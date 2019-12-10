@@ -1199,7 +1199,7 @@ pub fn max_level() -> LevelFilter {
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(all(feature = "std", atomic_cas))]
 pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| unsafe { &*Box::into_raw(logger) })
+    set_logger_inner(|| Box::leak(logger))
 }
 
 /// Sets the global logger to a `&'static Log`.
