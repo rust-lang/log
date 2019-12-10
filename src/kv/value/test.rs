@@ -26,7 +26,7 @@ impl<'v> Value<'v> {
         struct TestVisitor(Option<Token>);
 
         impl internal::Visitor for TestVisitor {
-            fn debug(&mut self, v: &fmt::Debug) -> Result<(), Error> {
+            fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
                 self.0 = Some(Token::Str(format!("{:?}", v)));
                 Ok(())
             }
@@ -67,7 +67,7 @@ impl<'v> Value<'v> {
             }
 
             #[cfg(feature = "kv_unstable_sval")]
-            fn sval(&mut self, _: &internal::sval_support::Value) -> Result<(), Error> {
+            fn sval(&mut self, _: &dyn internal::sval_support::Value) -> Result<(), Error> {
                 self.0 = Some(Token::Sval);
                 Ok(())
             }
