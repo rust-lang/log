@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex};
 use log::set_boxed_logger;
 
 #[cfg(not(feature = "std"))]
-fn set_boxed_logger(logger: Box<Log>) -> Result<(), log::SetLoggerError> {
-    log::set_logger(unsafe { &*Box::into_raw(logger) })
+fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
+    log::set_logger(Box::leak(logger))
 }
 
 struct State {
