@@ -30,17 +30,19 @@
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     // log!(target: "...", "...")
-    (target: $target:expr, $lvl:expr, $e:expr) => {
+    (target: $target:expr, $lvl:expr, $e:expr) => (
         $crate::log_impl!(target: $target, $lvl, ($e));
-    };
+    );
 
     // log!(target: "...", "...", args...)
-    (target: $target:expr, $lvl:expr, $e:expr, $($rest:tt)*) => {
+    (target: $target:expr, $lvl:expr, $e:expr, $($rest:tt)*) => (
         $crate::log_impl!(target: $target, $lvl, ($e) $($rest)*);
-    };
+    );
 
     // log!("...", args...)
-    ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: __log_module_path!(), $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => (
+        $crate::log!(target: __log_module_path!(), $lvl, $($arg)+);
+    )
 }
 
 #[macro_export(local_inner_macros)]
@@ -83,19 +85,19 @@ macro_rules! log_impl {
     }};
 
     // Trailing k-v pairs with trailing comma
-    (target: $target:expr, $lvl:expr, ($($e:expr),*) { $($key:ident : $value:expr,)* }) => {
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) { $($key:ident : $value:expr,)* }) => (
         $crate::log_impl!(target: $target, $lvl, ($($e),*) { $($key : $value),* });
-    };
+    );
 
     // Last expression arg with no trailing comma
-    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr) => {
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr) => (
         $crate::log_impl!(target: $target, $lvl, ($($e,)* $arg));
-    };
+    );
 
     // Expression arg
-    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr, $($rest:tt)*) => {
+    (target: $target:expr, $lvl:expr, ($($e:expr),*) $arg:expr, $($rest:tt)*) => (
         $crate::log_impl!(target: $target, $lvl, ($($e,)* $arg) $($rest)*);
-    };
+    )
 }
 
 /// Logs a message at the error level.
