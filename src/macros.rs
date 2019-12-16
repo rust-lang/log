@@ -47,7 +47,7 @@ macro_rules! log {
 #[doc(hidden)]
 macro_rules! log_impl {
     // End of macro input
-    (target: $target:expr, $lvl:expr, ($message:expr)) => {
+    (target: $target:expr, $lvl:expr, ($message:expr)) => {{
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log_lit(
@@ -56,9 +56,8 @@ macro_rules! log_impl {
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
             );
         }
-    };
-
-    (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {
+    }};
+    (target: $target:expr, $lvl:expr, ($($arg:expr),*)) => {{
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
@@ -68,10 +67,10 @@ macro_rules! log_impl {
                 None,
             );
         }
-    };
+    }};
 
     // // Trailing k-v pairs containing no trailing comma
-    (target: $target:expr, $lvl:expr, ($($arg:expr),*) { $($key:ident : $value:expr),* }) => {
+    (target: $target:expr, $lvl:expr, ($($arg:expr),*) { $($key:ident : $value:expr),* }) => {{
         let lvl = log::Level::Info;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
@@ -81,7 +80,7 @@ macro_rules! log_impl {
                 Some(&[$((__log_stringify!($key), &$value)),*])
             );
         }
-    };
+    }};
 
     // Trailing k-v pairs with trailing comma
     (target: $target:expr, $lvl:expr, ($($e:expr),*) { $($key:ident : $value:expr,)* }) => {
