@@ -27,6 +27,15 @@ fn with_args_expr_context() {
 }
 
 #[test]
+fn with_named_args() {
+    let cats = "cats";
+
+    info!("hello {cats}", cats = cats);
+    info!("hello {cats}", cats = cats,);
+    info!("hello {cats}", cats = cats,);
+}
+
+#[test]
 fn kv() {
     info!("hello {}", "cats", {
         cat_1: "chashu",
