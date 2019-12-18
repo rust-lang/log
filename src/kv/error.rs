@@ -66,11 +66,7 @@ mod std_support {
         }
     }
 
-    impl error::Error for Error {
-        fn description(&self) -> &str {
-            "key values error"
-        }
-    }
+    impl error::Error for Error {}
 
     impl From<io::Error> for Error {
         fn from(err: io::Error) -> Self {

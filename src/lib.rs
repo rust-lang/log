@@ -1330,11 +1330,7 @@ impl fmt::Display for SetLoggerError {
 
 // The Error trait is not available in libcore
 #[cfg(feature = "std")]
-impl error::Error for SetLoggerError {
-    fn description(&self) -> &str {
-        SET_LOGGER_ERROR
-    }
-}
+impl error::Error for SetLoggerError {}
 
 /// The type returned by [`from_str`] when the string doesn't match any of the log levels.
 ///
@@ -1351,11 +1347,7 @@ impl fmt::Display for ParseLevelError {
 
 // The Error trait is not available in libcore
 #[cfg(feature = "std")]
-impl error::Error for ParseLevelError {
-    fn description(&self) -> &str {
-        LEVEL_PARSE_ERROR
-    }
-}
+impl error::Error for ParseLevelError {}
 
 /// Returns a reference to the logger.
 ///
@@ -1579,7 +1571,7 @@ mod tests {
         use std::error::Error;
         let e = SetLoggerError(());
         assert_eq!(
-            e.description(),
+            &e.to_string(),
             "attempted to set a logger after the logging system \
              was already initialized"
         );
