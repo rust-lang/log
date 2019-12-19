@@ -27,19 +27,10 @@ fn with_args_expr_context() {
 }
 
 #[test]
-fn kv() {
-    info!("hello {}", "cats", {
-        cat_1: "chashu",
-        cat_2: "nori",
-    });
-}
+fn with_named_args() {
+    let cats = "cats";
 
-#[test]
-fn kv_expr_context() {
-    match "chashu" {
-        cat_1 => info!("hello {}", "cats", {
-            cat_1: cat_1,
-            cat_2: "nori",
-        }),
-    };
+    info!("hello {cats}", cats = cats);
+    info!("hello {cats}", cats = cats,);
+    info!("hello {cats}", cats = cats,);
 }
