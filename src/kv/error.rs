@@ -52,7 +52,7 @@ mod std_support {
     use super::*;
     use std::{error, io};
 
-    pub(super) type BoxedError = Box<error::Error + Send + Sync>;
+    pub(super) type BoxedError = Box<dyn error::Error + Send + Sync>;
 
     impl Error {
         /// Create an error from a standard error type.
@@ -66,11 +66,7 @@ mod std_support {
         }
     }
 
-    impl error::Error for Error {
-        fn description(&self) -> &str {
-            "key values error"
-        }
-    }
+    impl error::Error for Error {}
 
     impl From<io::Error> for Error {
         fn from(err: io::Error) -> Self {

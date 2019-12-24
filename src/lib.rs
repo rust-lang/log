@@ -266,7 +266,7 @@
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
     html_favicon_url = "https://www.rust-lang.org/favicon.ico",
-    html_root_url = "https://docs.rs/log/0.4.9"
+    html_root_url = "https://docs.rs/log/0.4.10"
 )]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations)]
@@ -305,7 +305,7 @@ pub mod kv;
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
-static mut LOGGER: &Log = &NopLogger;
+static mut LOGGER: &dyn Log = &NopLogger;
 
 #[allow(deprecated)]
 static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -752,7 +752,7 @@ pub struct Record<'a> {
 // the underlying `Source`.
 #[cfg(feature = "kv_unstable")]
 #[derive(Clone)]
-struct KeyValues<'a>(&'a kv::Source);
+struct KeyValues<'a>(&'a dyn kv::Source);
 
 #[cfg(feature = "kv_unstable")]
 impl<'a> fmt::Debug for KeyValues<'a> {
@@ -833,7 +833,7 @@ impl<'a> Record<'a> {
     /// The structued key-value pairs associated with the message.
     #[cfg(feature = "kv_unstable")]
     #[inline]
-    pub fn key_values(&self) -> &kv::Source {
+    pub fn key_values(&self) -> &dyn kv::Source {
         self.key_values.0
     }
 
@@ -923,28 +923,17 @@ impl<'a> RecordBuilder<'a> {
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
     #[inline]
     pub fn new() -> RecordBuilder<'a> {
-        #[cfg(feature = "kv_unstable")]
-        return RecordBuilder {
+        RecordBuilder {
             record: Record {
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
                 module_path: None,
                 file: None,
                 line: None,
+                #[cfg(feature = "kv_unstable")]
                 key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
             },
-        };
-
-        #[cfg(not(feature = "kv_unstable"))]
-        return RecordBuilder {
-            record: Record {
-                args: format_args!(""),
-                metadata: Metadata::builder().build(),
-                module_path: None,
-                file: None,
-                line: None,
-            },
-        };
+        }
     }
 
     /// Set [`args`](struct.Record.html#method.args).
@@ -1013,7 +1002,7 @@ impl<'a> RecordBuilder<'a> {
     /// Set [`key_values`](struct.Record.html#method.key_values)
     #[cfg(feature = "kv_unstable")]
     #[inline]
-    pub fn key_values(&mut self, kvs: &'a kv::Source) -> &mut RecordBuilder<'a> {
+    pub fn key_values(&mut self, kvs: &'a dyn kv::Source) -> &mut RecordBuilder<'a> {
         self.record.key_values = KeyValues(kvs);
         self
     }
@@ -1227,8 +1216,8 @@ pub fn max_level() -> LevelFilter {
 ///
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(all(feature = "std", atomic_cas))]
-pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| unsafe { &*Box::into_raw(logger) })
+pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
+    set_logger_inner(|| Box::leak(logger))
 }
 
 /// Sets the global logger to a `&'static Log`.
@@ -1285,14 +1274,14 @@ pub fn set_boxed_logger(logger: Box<Log>) -> Result<(), SetLoggerError> {
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
 #[cfg(atomic_cas)]
-pub fn set_logger(logger: &'static Log) -> Result<(), SetLoggerError> {
+pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
 #[cfg(atomic_cas)]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
-    F: FnOnce() -> &'static Log,
+    F: FnOnce() -> &'static dyn Log,
 {
     unsafe {
         match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
@@ -1329,7 +1318,7 @@ where
 /// (including all logging macros).
 ///
 /// [`set_logger`]: fn.set_logger.html
-pub unsafe fn set_logger_racy(logger: &'static Log) -> Result<(), SetLoggerError> {
+pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     match STATE.load(Ordering::SeqCst) {
         UNINITIALIZED => {
             LOGGER = logger;
@@ -1359,11 +1348,7 @@ impl fmt::Display for SetLoggerError {
 
 // The Error trait is not available in libcore
 #[cfg(feature = "std")]
-impl error::Error for SetLoggerError {
-    fn description(&self) -> &str {
-        SET_LOGGER_ERROR
-    }
-}
+impl error::Error for SetLoggerError {}
 
 /// The type returned by [`from_str`] when the string doesn't match any of the log levels.
 ///
@@ -1380,16 +1365,12 @@ impl fmt::Display for ParseLevelError {
 
 // The Error trait is not available in libcore
 #[cfg(feature = "std")]
-impl error::Error for ParseLevelError {
-    fn description(&self) -> &str {
-        LEVEL_PARSE_ERROR
-    }
-}
+impl error::Error for ParseLevelError {}
 
 /// Returns a reference to the logger.
 ///
 /// If a logger has not been set, a no-op implementation is returned.
-pub fn logger() -> &'static Log {
+pub fn logger() -> &'static dyn Log {
     unsafe {
         if STATE.load(Ordering::SeqCst) != INITIALIZED {
             static NOP: NopLogger = NopLogger;
@@ -1410,6 +1391,25 @@ pub fn __private_api_log(
     logger().log(
         &Record::builder()
             .args(args)
+            .level(level)
+            .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+pub fn __private_api_log_lit(
+    message: &str,
+    level: Level,
+    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+) {
+    logger().log(
+        &Record::builder()
+            .args(format_args!("{}", message))
             .level(level)
             .target(target)
             .module_path_static(Some(module_path))
@@ -1559,7 +1559,7 @@ mod tests {
         use std::error::Error;
         let e = SetLoggerError(());
         assert_eq!(
-            e.description(),
+            &e.to_string(),
             "attempted to set a logger after the logging system \
              was already initialized"
         );

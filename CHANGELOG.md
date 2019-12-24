@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [0.4.10] - 2019-12-16
+
+### Fixed
+
+* Fixed the `log!` macros so they work in expression context (this regressed in `0.4.9`, which has been yanked).
+
+## [0.4.9] - 2019-12-12
+
+### Minimum Supported Rust Version
+
+This release bumps the minimum compiler version to `1.31.0`. This was mainly needed for `cfg-if`,
+but between `1.16.0` and `1.31.0` there are a lot of language and library improvements we now
+take advantage of.
+
+### New
+
+* Unstable support for capturing key-value pairs in a record using the `log!` macros
+
+### Improved
+
+* Better documentation for max level filters.
+* Internal updates to line up with bumped MSRV
+
 ## [0.4.8] - 2019-07-28
 
 ### New
@@ -132,7 +155,9 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.8...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.10...HEAD
+[0.4.10]: https://github.com/rust-lang-nursery/log/compare/0.4.9...0.4.10
+[0.4.9]: https://github.com/rust-lang-nursery/log/compare/0.4.8...0.4.9
 [0.4.8]: https://github.com/rust-lang-nursery/log/compare/0.4.7...0.4.8
 [0.4.7]: https://github.com/rust-lang-nursery/log/compare/0.4.6...0.4.7
 [0.4.6]: https://github.com/rust-lang-nursery/log/compare/0.4.5...0.4.6

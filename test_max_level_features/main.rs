@@ -8,9 +8,7 @@ use log::{Level, LevelFilter, Log, Record, Metadata};
 use log::set_boxed_logger;
 #[cfg(not(feature = "std"))]
 fn set_boxed_logger(logger: Box<Log>) -> Result<(), log::SetLoggerError> {
-    unsafe {
-        log::set_logger(&*Box::into_raw(logger))
-    }
+    log::set_logger(Box::leak(logger))
 }
 
 struct State {
