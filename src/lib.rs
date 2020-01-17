@@ -290,12 +290,6 @@ use std::mem;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-// FIXME: ATOMIC_USIZE_INIT was deprecated in rust 1.34. Silence the
-// deprecation warning until our MSRV >= 1.24, where we can use the
-// replacement const fn `AtomicUsize::new`
-#[allow(deprecated)]
-use std::sync::atomic::ATOMIC_USIZE_INIT;
-
 #[macro_use]
 mod macros;
 mod serde;
@@ -307,8 +301,7 @@ pub mod kv;
 // the STATE static which determines whether LOGGER has been initialized yet.
 static mut LOGGER: &dyn Log = &NopLogger;
 
-#[allow(deprecated)]
-static STATE: AtomicUsize = ATOMIC_USIZE_INIT;
+static STATE: AtomicUsize = AtomicUsize::new(0);
 
 // There are three different states that we care about: the logger's
 // uninitialized, the logger's initializing (set_logger's been called but
@@ -317,8 +310,7 @@ const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 
-#[allow(deprecated)]
-static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
+static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
 
 static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
