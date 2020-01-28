@@ -36,12 +36,6 @@ jobs:
       run: |
         rustup update ${{ matrix.rust }}
         rustup default ${{ matrix.rust }}
-      if: matrix.os != 'macos-latest'
-    - name: Install Rust (macos)
-      run: |
-        curl https://sh.rustup.rs | sh -s -- -y
-        echo "##[add-path]$HOME/.cargo/bin"
-      if: matrix.os == 'macos-latest'
     - run: cargo test --verbose
     - run: cargo test --verbose --features serde
     - run: cargo test --verbose --features std
