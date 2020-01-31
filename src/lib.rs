@@ -728,6 +728,8 @@ pub struct Record<'a> {
     module_path: Option<MaybeStaticStr<'a>>,
     file: Option<MaybeStaticStr<'a>>,
     line: Option<u32>,
+    #[cfg(feature = "std")]
+    error: Option<&'a (dyn std::error::Error + 'static)>,
     #[cfg(feature = "kv_unstable")]
     key_values: KeyValues<'a>,
 }
@@ -816,6 +818,13 @@ impl<'a> Record<'a> {
         self.line
     }
 
+    /// The error associated with the message.
+    #[cfg(feature = "std")]
+    #[inline]
+    pub fn error(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.error
+    }
+
     /// The structued key-value pairs associated with the message.
     #[cfg(feature = "kv_unstable")]
     #[inline]
@@ -837,6 +846,8 @@ impl<'a> Record<'a> {
                 module_path: self.module_path,
                 file: self.file,
                 line: self.line,
+                #[cfg(feature = "std")]
+                error: self.error,
                 key_values: self.key_values.clone(),
             },
         }
@@ -910,6 +921,8 @@ impl<'a> RecordBuilder<'a> {
                 module_path: None,
                 file: None,
                 line: None,
+                #[cfg(feature = "std")]
+                error: None,
                 #[cfg(feature = "kv_unstable")]
                 key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
             },
@@ -976,6 +989,17 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn line(&mut self, line: Option<u32>) -> &mut RecordBuilder<'a> {
         self.record.line = line;
+        self
+    }
+
+    /// Set [`error`](struct.Record.html#method.error)
+    #[cfg(feature = "std")]
+    #[inline]
+    pub fn error(
+        &mut self,
+        error: Option<&'a (dyn std::error::Error + 'static)>,
+    ) -> &mut RecordBuilder<'a> {
+        self.record.error = error;
         self
     }
 
@@ -1648,5 +1672,18 @@ mod tests {
         record_test.key_values().visit(&mut visitor).unwrap();
 
         assert_eq!(2, visitor.seen_pairs);
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_record_error_builder() {
+        use super::Record;
+        use std::error::Error;
+
+        let err: Box<dyn Error> = "something went wrong!".into();
+
+        let record = Record::builder().error(Some(&*err)).build();
+
+        assert!(record.error().is_some());
     }
 }
