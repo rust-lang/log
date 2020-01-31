@@ -1,3 +1,8 @@
+//! Converting standard types into `Value`s.
+//!
+//! This module provides `ToValue` implementations for commonly
+//! logged types from the standard library.
+
 use std::fmt;
 
 use super::{Primitive, ToValue, Value};

@@ -67,7 +67,7 @@ impl<'v> Value<'v> {
             }
 
             #[cfg(feature = "kv_unstable_sval")]
-            fn sval(&mut self, _: &dyn internal::sval_support::Value) -> Result<(), Error> {
+            fn sval(&mut self, _: &dyn internal::sval::Value) -> Result<(), Error> {
                 self.0 = Some(Token::Sval);
                 Ok(())
             }
