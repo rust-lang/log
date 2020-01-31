@@ -110,8 +110,116 @@ impl<'v> Value<'v> {
         }
     }
 
+    /// Try coerce the value into a borrowed string.
+    pub fn as_str(&self) -> Option<&str> {
+        self.inner.as_str()
+    }
+
+    /// Try coerce the value into a `u8`.
+    pub fn as_u8(&self) -> Option<u8> {
+        self.inner.as_u64().map(|v| v as u8)
+    }
+
+    /// Try coerce the value into a `u16`.
+    pub fn as_u16(&self) -> Option<u16> {
+        self.inner.as_u64().map(|v| v as u16)
+    }
+
+    /// Try coerce the value into a `u32`.
+    pub fn as_u32(&self) -> Option<u32> {
+        self.inner.as_u64().map(|v| v as u32)
+    }
+
+    /// Try coerce the value into a `u64`.
+    pub fn as_u64(&self) -> Option<u64> {
+        self.inner.as_u64()
+    }
+
+    /// Try coerce the value into a `i8`.
+    pub fn as_i8(&self) -> Option<i8> {
+        self.inner.as_i64().map(|v| v as i8)
+    }
+
+    /// Try coerce the value into a `i16`.
+    pub fn as_i16(&self) -> Option<i16> {
+        self.inner.as_i64().map(|v| v as i16)
+    }
+
+    /// Try coerce the value into a `i32`.
+    pub fn as_i32(&self) -> Option<i32> {
+        self.inner.as_i64().map(|v| v as i32)
+    }
+
+    /// Try coerce the value into a `i64`.
+    pub fn as_i64(&self) -> Option<i64> {
+        self.inner.as_i64()
+    }
+
+    /// Try coerce the value into a `f32`.
+    pub fn as_f32(&self) -> Option<f32> {
+        self.inner.as_f64().map(|v| v as f32)
+    }
+
+    /// Try coerce the value into a `f64`.
+    pub fn as_f64(&self) -> Option<f64> {
+        self.inner.as_f64()
+    }
+
+    /// Try coerce the vlaue into a `char`.
+    pub fn as_char(&self) -> Option<char> {
+        self.inner.as_char()
+    }
+
+    /// Try coerce the vlaue into a `bool`.
+    pub fn as_bool(&self) -> Option<bool> {
+        self.inner.as_bool()
+    }
+
     fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
         self.inner.visit(visitor)
+    }
+}
+
+#[cfg(feature = "std")]
+mod std_support {
+    use super::*;
+
+    use std::borrow::Cow;
+
+    impl<'v> Value<'v> {
+        /// Try coerce the value into an owned or borrowed string.
+        pub fn to_str(&self) -> Option<Cow<str>> {
+            self.inner.to_str()
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn primtive_coercion() {
+            assert_eq!(
+                "a string",
+                "a string"
+                    .to_owned()
+                    .to_value()
+                    .as_str()
+                    .expect("invalid value")
+            );
+            assert_eq!(
+                "a string",
+                &*"a string".to_value().to_str().expect("invalid value")
+            );
+            assert_eq!(
+                "a string",
+                &*"a string"
+                    .to_owned()
+                    .to_value()
+                    .to_str()
+                    .expect("invalid value")
+            );
+        }
     }
 }
 
@@ -149,5 +257,33 @@ mod tests {
         }
 
         let _ = Value::from_fill(&BadFill).to_string();
+    }
+
+    #[test]
+    fn primitive_coercion() {
+        assert_eq!(
+            "a string",
+            "a string".to_value().as_str().expect("invalid value")
+        );
+        assert_eq!(
+            "a string",
+            Some("a string").to_value().as_str().expect("invalid value")
+        );
+
+        assert_eq!(1u8, 1u64.to_value().as_u8().expect("invalid value"));
+        assert_eq!(1u16, 1u64.to_value().as_u16().expect("invalid value"));
+        assert_eq!(1u32, 1u64.to_value().as_u32().expect("invalid value"));
+        assert_eq!(1u64, 1u64.to_value().as_u64().expect("invalid value"));
+
+        assert_eq!(-1i8, -1i64.to_value().as_i8().expect("invalid value"));
+        assert_eq!(-1i16, -1i64.to_value().as_i16().expect("invalid value"));
+        assert_eq!(-1i32, -1i64.to_value().as_i32().expect("invalid value"));
+        assert_eq!(-1i64, -1i64.to_value().as_i64().expect("invalid value"));
+
+        assert!(1f32.to_value().as_f32().is_some(), "invalid value");
+        assert!(1f64.to_value().as_f64().is_some(), "invalid value");
+
+        assert_eq!('a', 'a'.to_value().as_char().expect("invalid value"));
+        assert_eq!(true, true.to_value().as_bool().expect("invalid value"));
     }
 }

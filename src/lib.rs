@@ -1530,7 +1530,6 @@ mod tests {
     #[cfg(feature = "std")]
     fn test_error_trait() {
         use super::SetLoggerError;
-        use std::error::Error;
         let e = SetLoggerError(());
         assert_eq!(
             &e.to_string(),

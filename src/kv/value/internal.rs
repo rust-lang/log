@@ -75,6 +75,195 @@ pub(super) enum Primitive<'v> {
     None,
 }
 
+mod coerce {
+    use super::*;
+
+    impl<'v> Inner<'v> {
+        pub(in crate::kv::value) fn as_str(&self) -> Option<&str> {
+            if let Inner::Primitive(Primitive::Str(value)) = self {
+                Some(value)
+            } else {
+                self.coerce().into_primitive().into_str()
+            }
+        }
+
+        pub(in crate::kv::value) fn as_u64(&self) -> Option<u64> {
+            self.coerce().into_primitive().into_u64()
+        }
+
+        pub(in crate::kv::value) fn as_i64(&self) -> Option<i64> {
+            self.coerce().into_primitive().into_i64()
+        }
+
+        pub(in crate::kv::value) fn as_f64(&self) -> Option<f64> {
+            self.coerce().into_primitive().into_f64()
+        }
+
+        pub(in crate::kv::value) fn as_char(&self) -> Option<char> {
+            self.coerce().into_primitive().into_char()
+        }
+
+        pub(in crate::kv::value) fn as_bool(&self) -> Option<bool> {
+            self.coerce().into_primitive().into_bool()
+        }
+
+        fn coerce(&self) -> Coerced {
+            struct Coerce<'v>(Coerced<'v>);
+
+            impl<'v> Coerce<'v> {
+                fn new() -> Self {
+                    Coerce(Coerced::Primitive(Primitive::None))
+                }
+            }
+
+            impl<'v> Visitor for Coerce<'v> {
+                fn debug(&mut self, _: &dyn fmt::Debug) -> Result<(), Error> {
+                    Ok(())
+                }
+
+                fn u64(&mut self, v: u64) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Unsigned(v));
+                    Ok(())
+                }
+
+                fn i64(&mut self, v: i64) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Signed(v));
+                    Ok(())
+                }
+
+                fn f64(&mut self, v: f64) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Float(v));
+                    Ok(())
+                }
+
+                fn bool(&mut self, v: bool) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Bool(v));
+                    Ok(())
+                }
+
+                fn char(&mut self, v: char) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Char(v));
+                    Ok(())
+                }
+
+                #[cfg(not(feature = "std"))]
+                fn str(&mut self, v: &str) -> Result<(), Error> {
+                    Ok(())
+                }
+
+                #[cfg(feature = "std")]
+                fn str(&mut self, v: &str) -> Result<(), Error> {
+                    self.0 = Coerced::String(v.into());
+                    Ok(())
+                }
+
+                fn none(&mut self) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::None);
+                    Ok(())
+                }
+
+                #[cfg(feature = "kv_unstable_sval")]
+                fn sval(&mut self, v: &dyn sval_support::Value) -> Result<(), Error> {
+                    self.0 = sval_support::coerce(v);
+                    Ok(())
+                }
+            }
+
+            let mut coerce = Coerce::new();
+            let _ = self.visit(&mut coerce);
+            coerce.0
+        }
+    }
+
+    pub(super) enum Coerced<'v> {
+        Primitive(Primitive<'v>),
+        #[cfg(feature = "std")]
+        String(String),
+    }
+
+    impl<'v> Coerced<'v> {
+        fn into_primitive(self) -> Primitive<'v> {
+            match self {
+                Coerced::Primitive(value) => value,
+                _ => Primitive::None,
+            }
+        }
+    }
+
+    impl<'v> Primitive<'v> {
+        fn into_str(self) -> Option<&'v str> {
+            if let Primitive::Str(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+
+        fn into_u64(self) -> Option<u64> {
+            if let Primitive::Unsigned(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+
+        fn into_i64(self) -> Option<i64> {
+            if let Primitive::Signed(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+
+        fn into_f64(self) -> Option<f64> {
+            if let Primitive::Float(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+
+        fn into_char(self) -> Option<char> {
+            if let Primitive::Char(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+
+        fn into_bool(self) -> Option<bool> {
+            if let Primitive::Bool(value) = self {
+                Some(value)
+            } else {
+                None
+            }
+        }
+    }
+
+    #[cfg(feature = "std")]
+    mod std_support {
+        use super::*;
+
+        use std::borrow::Cow;
+
+        impl<'v> Inner<'v> {
+            pub(in crate::kv::value) fn to_str(&self) -> Option<Cow<str>> {
+                self.coerce().into_string()
+            }
+        }
+
+        impl<'v> Coerced<'v> {
+            pub(super) fn into_string(self) -> Option<Cow<'v, str>> {
+                match self {
+                    Coerced::Primitive(Primitive::Str(value)) => Some(value.into()),
+                    Coerced::String(value) => Some(value.into()),
+                    _ => None,
+                }
+            }
+        }
+    }
+}
+
 mod fmt_support {
     use super::*;
 
@@ -162,6 +351,7 @@ mod fmt_support {
 
 #[cfg(feature = "kv_unstable_sval")]
 pub(super) mod sval_support {
+    use super::coerce::Coerced;
     use super::*;
 
     extern crate sval;
@@ -245,6 +435,48 @@ pub(super) mod sval_support {
         }
     }
 
+    pub(super) fn coerce<'v>(v: &dyn sval::Value) -> Coerced<'v> {
+        struct Coerce<'v>(Coerced<'v>);
+
+        impl<'v> sval::Stream for Coerce<'v> {
+            fn u64(&mut self, v: u64) -> sval::stream::Result {
+                self.0 = Coerced::Primitive(Primitive::Unsigned(v));
+                Ok(())
+            }
+
+            fn i64(&mut self, v: i64) -> sval::stream::Result {
+                self.0 = Coerced::Primitive(Primitive::Signed(v));
+                Ok(())
+            }
+
+            fn f64(&mut self, v: f64) -> sval::stream::Result {
+                self.0 = Coerced::Primitive(Primitive::Float(v));
+                Ok(())
+            }
+
+            fn char(&mut self, v: char) -> sval::stream::Result {
+                self.0 = Coerced::Primitive(Primitive::Char(v));
+                Ok(())
+            }
+
+            fn bool(&mut self, v: bool) -> sval::stream::Result {
+                self.0 = Coerced::Primitive(Primitive::Bool(v));
+                Ok(())
+            }
+
+            #[cfg(feature = "std")]
+            fn str(&mut self, s: &str) -> sval::stream::Result {
+                self.0 = Coerced::String(s.into());
+                Ok(())
+            }
+        }
+
+        let mut coerce = Coerce(Coerced::Primitive(Primitive::None));
+        let _ = sval::stream(&mut coerce, v);
+
+        coerce.0
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -261,6 +493,26 @@ pub(super) mod sval_support {
             let expected = vec![sval::test::Token::Unsigned(42)];
 
             assert_eq!(sval::test::tokens(value), expected);
+        }
+
+        #[test]
+        fn coersion() {
+            assert_eq!(
+                42u64,
+                kv::Value::from_sval(&42u64)
+                    .as_u64()
+                    .expect("invalid value")
+            );
+
+            assert!(kv::Value::from_sval(&"a string").as_str().is_none());
+
+            #[cfg(feature = "std")]
+            assert_eq!(
+                "a string",
+                &*kv::Value::from_sval(&"a string")
+                    .to_str()
+                    .expect("invalid value")
+            );
         }
     }
 }
