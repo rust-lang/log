@@ -1654,16 +1654,16 @@ mod tests {
     fn test_record_key_values_get_coerce() {
         use super::Record;
 
-        let kvs: &[(&str, i32)] = &[("a", 1), ("b", 2)];
+        let kvs: &[(&str, &str)] = &[("a", "1"), ("b", "2")];
         let record = Record::builder().key_values(&kvs).build();
 
         assert_eq!(
-            1,
+            "2",
             record
                 .key_values()
-                .get("a".into())
+                .get("b".into())
                 .expect("missing key")
-                .get_i32()
+                .get_str()
                 .expect("invalid value")
         );
     }
