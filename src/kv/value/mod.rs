@@ -53,23 +53,33 @@ where
 }
 
 /// A value slot to fill using the [`Fill`](trait.Fill.html) trait.
-pub struct Slot<'a> {
+pub struct Slot<'s, 'f> {
     filled: bool,
-    visitor: &'a mut dyn Visitor,
+    visitor: &'s mut dyn Visitor<'f>,
 }
 
-impl<'a> fmt::Debug for Slot<'a> {
+impl<'s, 'f> fmt::Debug for Slot<'s, 'f> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Slot").finish()
     }
 }
 
-impl<'a> Slot<'a> {
-    fn new(visitor: &'a mut dyn Visitor) -> Self {
+impl<'s, 'f> Slot<'s, 'f> {
+    fn new(visitor: &'s mut dyn Visitor<'f>) -> Self {
         Slot {
             visitor,
             filled: false,
         }
+    }
+
+    fn fill<F>(&mut self, f: F) -> Result<(), Error>
+    where
+        F: FnOnce(&mut dyn Visitor<'f>) -> Result<(), Error>,
+    {
+        assert!(!self.filled, "the slot has already been filled");
+        self.filled = true;
+
+        f(self.visitor)
     }
 
     /// Fill the slot with a value.
@@ -78,12 +88,12 @@ impl<'a> Slot<'a> {
     ///
     /// # Panics
     ///
-    /// Calling `fill` more than once will panic.
-    pub fn fill(&mut self, value: Value) -> Result<(), Error> {
-        assert!(!self.filled, "the slot has already been filled");
-        self.filled = true;
-
-        value.visit(self.visitor)
+    /// Calling more than a single `fill` method on this slot will panic.
+    pub fn fill_any<T>(&mut self, value: T) -> Result<(), Error>
+    where
+        T: Into<Value<'f>>,
+    {
+        self.fill(|visitor| value.into().inner.visit(visitor))
     }
 }
 
@@ -111,71 +121,71 @@ impl<'v> Value<'v> {
     }
 
     /// Try coerce the value into a borrowed string.
-    pub fn as_str(&self) -> Option<&str> {
-        self.inner.as_str()
+    pub fn get_str(&self) -> Option<&str> {
+        self.inner.get_str()
     }
 
     /// Try coerce the value into a `u8`.
-    pub fn as_u8(&self) -> Option<u8> {
-        self.inner.as_u64().map(|v| v as u8)
+    pub fn get_u8(&self) -> Option<u8> {
+        self.inner.get_u64().map(|v| v as u8)
     }
 
     /// Try coerce the value into a `u16`.
-    pub fn as_u16(&self) -> Option<u16> {
-        self.inner.as_u64().map(|v| v as u16)
+    pub fn get_u16(&self) -> Option<u16> {
+        self.inner.get_u64().map(|v| v as u16)
     }
 
     /// Try coerce the value into a `u32`.
-    pub fn as_u32(&self) -> Option<u32> {
-        self.inner.as_u64().map(|v| v as u32)
+    pub fn get_u32(&self) -> Option<u32> {
+        self.inner.get_u64().map(|v| v as u32)
     }
 
     /// Try coerce the value into a `u64`.
-    pub fn as_u64(&self) -> Option<u64> {
-        self.inner.as_u64()
+    pub fn get_u64(&self) -> Option<u64> {
+        self.inner.get_u64()
     }
 
     /// Try coerce the value into a `i8`.
-    pub fn as_i8(&self) -> Option<i8> {
-        self.inner.as_i64().map(|v| v as i8)
+    pub fn get_i8(&self) -> Option<i8> {
+        self.inner.get_i64().map(|v| v as i8)
     }
 
     /// Try coerce the value into a `i16`.
-    pub fn as_i16(&self) -> Option<i16> {
-        self.inner.as_i64().map(|v| v as i16)
+    pub fn get_i16(&self) -> Option<i16> {
+        self.inner.get_i64().map(|v| v as i16)
     }
 
     /// Try coerce the value into a `i32`.
-    pub fn as_i32(&self) -> Option<i32> {
-        self.inner.as_i64().map(|v| v as i32)
+    pub fn get_i32(&self) -> Option<i32> {
+        self.inner.get_i64().map(|v| v as i32)
     }
 
     /// Try coerce the value into a `i64`.
-    pub fn as_i64(&self) -> Option<i64> {
-        self.inner.as_i64()
+    pub fn get_i64(&self) -> Option<i64> {
+        self.inner.get_i64()
     }
 
     /// Try coerce the value into a `f32`.
-    pub fn as_f32(&self) -> Option<f32> {
-        self.inner.as_f64().map(|v| v as f32)
+    pub fn get_f32(&self) -> Option<f32> {
+        self.inner.get_f64().map(|v| v as f32)
     }
 
     /// Try coerce the value into a `f64`.
-    pub fn as_f64(&self) -> Option<f64> {
-        self.inner.as_f64()
+    pub fn get_f64(&self) -> Option<f64> {
+        self.inner.get_f64()
     }
 
-    /// Try coerce the vlaue into a `char`.
-    pub fn as_char(&self) -> Option<char> {
-        self.inner.as_char()
+    /// Try coerce the value into a `char`.
+    pub fn get_char(&self) -> Option<char> {
+        self.inner.get_char()
     }
 
-    /// Try coerce the vlaue into a `bool`.
-    pub fn as_bool(&self) -> Option<bool> {
-        self.inner.as_bool()
+    /// Try coerce the value into a `bool`.
+    pub fn get_bool(&self) -> Option<bool> {
+        self.inner.get_bool()
     }
 
-    fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
+    fn visit<'a>(&'a self, visitor: &mut dyn Visitor<'a>) -> Result<(), Error> {
         self.inner.visit(visitor)
     }
 }
@@ -188,8 +198,8 @@ mod std_support {
 
     impl<'v> Value<'v> {
         /// Try coerce the value into an owned or borrowed string.
-        pub fn to_str(&self) -> Option<Cow<str>> {
-            self.inner.to_str()
+        pub fn get_string(&self) -> Option<Cow<str>> {
+            self.inner.get_string()
         }
     }
 
@@ -204,19 +214,19 @@ mod std_support {
                 "a string"
                     .to_owned()
                     .to_value()
-                    .as_str()
+                    .get_str()
                     .expect("invalid value")
             );
             assert_eq!(
                 "a string",
-                &*"a string".to_value().to_str().expect("invalid value")
+                &*"a string".to_value().get_string().expect("invalid value")
             );
             assert_eq!(
                 "a string",
                 &*"a string"
                     .to_owned()
                     .to_value()
-                    .to_str()
+                    .get_string()
                     .expect("invalid value")
             );
         }
@@ -228,18 +238,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fill_value() {
+    fn fill_value_borrowed() {
         struct TestFill;
 
         impl Fill for TestFill {
             fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
                 let dbg: &dyn fmt::Debug = &1;
 
-                slot.fill(Value::from_debug(&dbg))
+                slot.fill_debug(&dbg)
             }
         }
 
         assert_eq!("1", Value::from_fill(&TestFill).to_string());
+    }
+
+    #[test]
+    fn fill_value_owned() {
+        struct TestFill;
+
+        impl Fill for TestFill {
+            fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+                slot.fill_any("a string")
+            }
+        }
     }
 
     #[test]
@@ -249,8 +270,8 @@ mod tests {
 
         impl Fill for BadFill {
             fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
-                slot.fill(42.into())?;
-                slot.fill(6789.into())?;
+                slot.fill_any(42)?;
+                slot.fill_any(6789)?;
 
                 Ok(())
             }
@@ -263,27 +284,48 @@ mod tests {
     fn primitive_coercion() {
         assert_eq!(
             "a string",
-            "a string".to_value().as_str().expect("invalid value")
+            "a string".to_value().get_str().expect("invalid value")
         );
         assert_eq!(
             "a string",
-            Some("a string").to_value().as_str().expect("invalid value")
+            Some("a string")
+                .to_value()
+                .get_str()
+                .expect("invalid value")
         );
 
-        assert_eq!(1u8, 1u64.to_value().as_u8().expect("invalid value"));
-        assert_eq!(1u16, 1u64.to_value().as_u16().expect("invalid value"));
-        assert_eq!(1u32, 1u64.to_value().as_u32().expect("invalid value"));
-        assert_eq!(1u64, 1u64.to_value().as_u64().expect("invalid value"));
+        assert_eq!(1u8, 1u64.to_value().get_u8().expect("invalid value"));
+        assert_eq!(1u16, 1u64.to_value().get_u16().expect("invalid value"));
+        assert_eq!(1u32, 1u64.to_value().get_u32().expect("invalid value"));
+        assert_eq!(1u64, 1u64.to_value().get_u64().expect("invalid value"));
 
-        assert_eq!(-1i8, -1i64.to_value().as_i8().expect("invalid value"));
-        assert_eq!(-1i16, -1i64.to_value().as_i16().expect("invalid value"));
-        assert_eq!(-1i32, -1i64.to_value().as_i32().expect("invalid value"));
-        assert_eq!(-1i64, -1i64.to_value().as_i64().expect("invalid value"));
+        assert_eq!(-1i8, -1i64.to_value().get_i8().expect("invalid value"));
+        assert_eq!(-1i16, -1i64.to_value().get_i16().expect("invalid value"));
+        assert_eq!(-1i32, -1i64.to_value().get_i32().expect("invalid value"));
+        assert_eq!(-1i64, -1i64.to_value().get_i64().expect("invalid value"));
 
-        assert!(1f32.to_value().as_f32().is_some(), "invalid value");
-        assert!(1f64.to_value().as_f64().is_some(), "invalid value");
+        assert!(1f32.to_value().get_f32().is_some(), "invalid value");
+        assert!(1f64.to_value().get_f64().is_some(), "invalid value");
 
-        assert_eq!('a', 'a'.to_value().as_char().expect("invalid value"));
-        assert_eq!(true, true.to_value().as_bool().expect("invalid value"));
+        assert_eq!('a', 'a'.to_value().get_char().expect("invalid value"));
+        assert_eq!(true, true.to_value().get_bool().expect("invalid value"));
+    }
+
+    #[test]
+    fn fill_coercion() {
+        struct TestFill;
+
+        impl Fill for TestFill {
+            fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+                slot.fill_any("a string")
+            }
+        }
+
+        assert_eq!(
+            "a string",
+            Value::from_fill(&TestFill)
+                .get_str()
+                .expect("invalid value")
+        );
     }
 }

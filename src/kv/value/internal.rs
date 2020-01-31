@@ -24,17 +24,9 @@ pub(super) enum Inner<'v> {
 }
 
 impl<'v> Inner<'v> {
-    pub(super) fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Error> {
-        match *self {
-            Inner::Primitive(value) => match value {
-                Primitive::Signed(value) => visitor.i64(value),
-                Primitive::Unsigned(value) => visitor.u64(value),
-                Primitive::Float(value) => visitor.f64(value),
-                Primitive::Bool(value) => visitor.bool(value),
-                Primitive::Char(value) => visitor.char(value),
-                Primitive::Str(value) => visitor.str(value),
-                Primitive::None => visitor.none(),
-            },
+    pub(super) fn visit(self, visitor: &mut dyn Visitor<'v>) -> Result<(), Error> {
+        match self {
+            Inner::Primitive(value) => value.visit(visitor),
             Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
             Inner::Debug(value) => visitor.debug(value),
             Inner::Display(value) => visitor.display(value),
@@ -46,7 +38,7 @@ impl<'v> Inner<'v> {
 }
 
 /// The internal serialization contract.
-pub(super) trait Visitor {
+pub(super) trait Visitor<'v> {
     fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error>;
     fn display(&mut self, v: &dyn fmt::Display) -> Result<(), Error> {
         self.debug(&format_args!("{}", v))
@@ -57,7 +49,12 @@ pub(super) trait Visitor {
     fn f64(&mut self, v: f64) -> Result<(), Error>;
     fn bool(&mut self, v: bool) -> Result<(), Error>;
     fn char(&mut self, v: char) -> Result<(), Error>;
+
     fn str(&mut self, v: &str) -> Result<(), Error>;
+    fn borrowed_str(&mut self, v: &'v str) -> Result<(), Error> {
+        self.str(v)
+    }
+
     fn none(&mut self) -> Result<(), Error>;
 
     #[cfg(feature = "kv_unstable_sval")]
@@ -75,35 +72,45 @@ pub(super) enum Primitive<'v> {
     None,
 }
 
+impl<'v> Primitive<'v> {
+    fn visit(self, visitor: &mut dyn Visitor<'v>) -> Result<(), Error> {
+        match self {
+            Primitive::Signed(value) => visitor.i64(value),
+            Primitive::Unsigned(value) => visitor.u64(value),
+            Primitive::Float(value) => visitor.f64(value),
+            Primitive::Bool(value) => visitor.bool(value),
+            Primitive::Char(value) => visitor.char(value),
+            Primitive::Str(value) => visitor.borrowed_str(value),
+            Primitive::None => visitor.none(),
+        }
+    }
+}
+
 mod coerce {
     use super::*;
 
     impl<'v> Inner<'v> {
-        pub(in crate::kv::value) fn as_str(&self) -> Option<&str> {
-            if let Inner::Primitive(Primitive::Str(value)) = self {
-                Some(value)
-            } else {
-                self.coerce().into_primitive().into_str()
-            }
+        pub(in crate::kv::value) fn get_str(&self) -> Option<&str> {
+            self.coerce().into_primitive().into_str()
         }
 
-        pub(in crate::kv::value) fn as_u64(&self) -> Option<u64> {
+        pub(in crate::kv::value) fn get_u64(&self) -> Option<u64> {
             self.coerce().into_primitive().into_u64()
         }
 
-        pub(in crate::kv::value) fn as_i64(&self) -> Option<i64> {
+        pub(in crate::kv::value) fn get_i64(&self) -> Option<i64> {
             self.coerce().into_primitive().into_i64()
         }
 
-        pub(in crate::kv::value) fn as_f64(&self) -> Option<f64> {
+        pub(in crate::kv::value) fn get_f64(&self) -> Option<f64> {
             self.coerce().into_primitive().into_f64()
         }
 
-        pub(in crate::kv::value) fn as_char(&self) -> Option<char> {
+        pub(in crate::kv::value) fn get_char(&self) -> Option<char> {
             self.coerce().into_primitive().into_char()
         }
 
-        pub(in crate::kv::value) fn as_bool(&self) -> Option<bool> {
+        pub(in crate::kv::value) fn get_bool(&self) -> Option<bool> {
             self.coerce().into_primitive().into_bool()
         }
 
@@ -116,7 +123,7 @@ mod coerce {
                 }
             }
 
-            impl<'v> Visitor for Coerce<'v> {
+            impl<'v> Visitor<'v> for Coerce<'v> {
                 fn debug(&mut self, _: &dyn fmt::Debug) -> Result<(), Error> {
                     Ok(())
                 }
@@ -146,8 +153,13 @@ mod coerce {
                     Ok(())
                 }
 
+                fn borrowed_str(&mut self, v: &'v str) -> Result<(), Error> {
+                    self.0 = Coerced::Primitive(Primitive::Str(v));
+                    Ok(())
+                }
+
                 #[cfg(not(feature = "std"))]
-                fn str(&mut self, v: &str) -> Result<(), Error> {
+                fn str(&mut self, _: &str) -> Result<(), Error> {
                     Ok(())
                 }
 
@@ -185,6 +197,7 @@ mod coerce {
         fn into_primitive(self) -> Primitive<'v> {
             match self {
                 Coerced::Primitive(value) => value,
+                #[cfg(feature = "std")]
                 _ => Primitive::None,
             }
         }
@@ -247,7 +260,7 @@ mod coerce {
         use std::borrow::Cow;
 
         impl<'v> Inner<'v> {
-            pub(in crate::kv::value) fn to_str(&self) -> Option<Cow<str>> {
+            pub(in crate::kv::value) fn get_string(&self) -> Option<Cow<str>> {
                 self.coerce().into_string()
             }
         }
@@ -289,6 +302,36 @@ mod fmt_support {
         }
     }
 
+    impl<'s, 'f> Slot<'s, 'f> {
+        /// Fill the slot with a debuggable value.
+        ///
+        /// The given value doesn't need to satisfy any particular lifetime constraints.
+        ///
+        /// # Panics
+        ///
+        /// Calling more than a single `fill` method on this slot will panic.
+        pub fn fill_debug<T>(&mut self, value: T) -> Result<(), Error>
+        where
+            T: fmt::Debug,
+        {
+            self.fill(|visitor| visitor.debug(&value))
+        }
+
+        /// Fill the slot with a displayable value.
+        ///
+        /// The given value doesn't need to satisfy any particular lifetime constraints.
+        ///
+        /// # Panics
+        ///
+        /// Calling more than a single `fill` method on this slot will panic.
+        pub fn fill_display<T>(&mut self, value: T) -> Result<(), Error>
+        where
+            T: fmt::Display,
+        {
+            self.fill(|visitor| visitor.display(&value))
+        }
+    }
+
     impl<'v> fmt::Debug for kv::Value<'v> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             self.visit(&mut FmtVisitor(f))?;
@@ -307,7 +350,7 @@ mod fmt_support {
 
     struct FmtVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
 
-    impl<'a, 'b: 'a> Visitor for FmtVisitor<'a, 'b> {
+    impl<'a, 'b: 'a, 'v> Visitor<'v> for FmtVisitor<'a, 'b> {
         fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
             v.fmt(self.0)?;
 
@@ -368,6 +411,22 @@ pub(super) mod sval_support {
         }
     }
 
+    impl<'s, 'f> Slot<'s, 'f> {
+        /// Fill the slot with a structured value.
+        ///
+        /// The given value doesn't need to satisfy any particular lifetime constraints.
+        ///
+        /// # Panics
+        ///
+        /// Calling more than a single `fill` method on this slot will panic.
+        pub fn fill_sval<T>(&mut self, value: T) -> Result<(), Error>
+        where
+            T: sval::Value,
+        {
+            self.fill(|visitor| visitor.sval(&value))
+        }
+    }
+
     impl<'v> sval::Value for kv::Value<'v> {
         fn stream(&self, s: &mut sval::value::Stream) -> sval::value::Result {
             self.visit(&mut SvalVisitor(s)).map_err(Error::into_sval)?;
@@ -395,7 +454,7 @@ pub(super) mod sval_support {
 
     struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
 
-    impl<'a, 'b: 'a> Visitor for SvalVisitor<'a, 'b> {
+    impl<'a, 'b: 'a, 'v> Visitor<'v> for SvalVisitor<'a, 'b> {
         fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
             self.0
                 .fmt(format_args!("{:?}", v))
@@ -496,21 +555,21 @@ pub(super) mod sval_support {
         }
 
         #[test]
-        fn coersion() {
+        fn sval_coersion() {
             assert_eq!(
                 42u64,
                 kv::Value::from_sval(&42u64)
-                    .as_u64()
+                    .get_u64()
                     .expect("invalid value")
             );
 
-            assert!(kv::Value::from_sval(&"a string").as_str().is_none());
+            assert!(kv::Value::from_sval(&"a string").get_str().is_none());
 
             #[cfg(feature = "std")]
             assert_eq!(
                 "a string",
                 &*kv::Value::from_sval(&"a string")
-                    .to_str()
+                    .get_string()
                     .expect("invalid value")
             );
         }

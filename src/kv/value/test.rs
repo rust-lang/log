@@ -25,7 +25,7 @@ impl<'v> Value<'v> {
     pub(in kv) fn to_token(&self) -> Token {
         struct TestVisitor(Option<Token>);
 
-        impl internal::Visitor for TestVisitor {
+        impl<'v> internal::Visitor<'v> for TestVisitor {
             fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
                 self.0 = Some(Token::Str(format!("{:?}", v)));
                 Ok(())
