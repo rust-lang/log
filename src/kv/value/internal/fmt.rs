@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use super::{Inner, Visitor};
+use super::{Erased, Inner, Visitor};
 use crate::kv;
 use crate::kv::value::{Error, Slot};
 
@@ -13,20 +13,20 @@ impl<'v> kv::Value<'v> {
     /// Get a value from a debuggable type.
     pub fn from_debug<T>(value: &'v T) -> Self
     where
-        T: fmt::Debug,
+        T: fmt::Debug + 'static,
     {
         kv::Value {
-            inner: Inner::Debug(value),
+            inner: Inner::Debug(unsafe { Erased::new_unchecked::<T>(value) }),
         }
     }
 
     /// Get a value from a displayable type.
     pub fn from_display<T>(value: &'v T) -> Self
     where
-        T: fmt::Display,
+        T: fmt::Display + 'static,
     {
         kv::Value {
-            inner: Inner::Display(value),
+            inner: Inner::Display(unsafe { Erased::new_unchecked::<T>(value) }),
         }
     }
 }
@@ -61,7 +61,7 @@ impl<'s, 'f> Slot<'s, 'f> {
     }
 }
 
-pub(in kv::value) use self::fmt::{Debug, Display};
+pub(in kv::value) use self::fmt::{Arguments, Debug, Display};
 
 impl<'v> fmt::Debug for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -119,5 +119,27 @@ impl<'a, 'b: 'a, 'v> Visitor<'v> for FmtVisitor<'a, 'b> {
     #[cfg(feature = "kv_unstable_sval")]
     fn sval(&mut self, v: &dyn super::sval::Value) -> Result<(), Error> {
         super::sval::fmt(self.0, v)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fmt_cast() {
+        assert_eq!(
+            42u32,
+            kv::Value::from_debug(&42u64)
+                .to_u32()
+                .expect("invalid value")
+        );
+
+        assert_eq!(
+            "a string",
+            kv::Value::from_display(&"a string")
+                .to_borrowed_str()
+                .expect("invalid value")
+        );
     }
 }

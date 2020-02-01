@@ -40,9 +40,12 @@ pub struct Value<'v> {
 
 impl<'v> Value<'v> {
     /// Get a value from an internal primitive.
-    fn from_primitive(value: Primitive<'v>) -> Self {
+    fn from_primitive<T>(value: T) -> Self
+    where
+        T: Into<Primitive<'v>>,
+    {
         Value {
-            inner: Inner::Primitive(value),
+            inner: Inner::Primitive(value.into()),
         }
     }
 

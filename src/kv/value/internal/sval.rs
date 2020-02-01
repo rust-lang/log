@@ -7,8 +7,8 @@ extern crate sval;
 
 use std::fmt;
 
-use super::coerce::Coerced;
-use super::{Inner, Primitive, Visitor};
+use super::cast::Cast;
+use super::{Erased, Inner, Primitive, Visitor};
 use crate::kv;
 use crate::kv::value::{Error, Slot};
 
@@ -16,10 +16,10 @@ impl<'v> kv::Value<'v> {
     /// Get a value from a structured type.
     pub fn from_sval<T>(value: &'v T) -> Self
     where
-        T: sval::Value,
+        T: sval::Value + 'static,
     {
         kv::Value {
-            inner: Inner::Sval(value),
+            inner: Inner::Sval(unsafe { Erased::new_unchecked::<T>(value) }),
         }
     }
 }
@@ -55,46 +55,46 @@ pub(super) fn fmt(f: &mut fmt::Formatter, v: &dyn sval::Value) -> Result<(), Err
     Ok(())
 }
 
-pub(super) fn coerce<'v>(v: &dyn sval::Value) -> Coerced<'v> {
-    struct Coerce<'v>(Coerced<'v>);
+pub(super) fn cast<'v>(v: &dyn sval::Value) -> Cast<'v> {
+    struct CastStream<'v>(Cast<'v>);
 
-    impl<'v> sval::Stream for Coerce<'v> {
+    impl<'v> sval::Stream for CastStream<'v> {
         fn u64(&mut self, v: u64) -> sval::stream::Result {
-            self.0 = Coerced::Primitive(Primitive::Unsigned(v));
+            self.0 = Cast::Primitive(Primitive::Unsigned(v));
             Ok(())
         }
 
         fn i64(&mut self, v: i64) -> sval::stream::Result {
-            self.0 = Coerced::Primitive(Primitive::Signed(v));
+            self.0 = Cast::Primitive(Primitive::Signed(v));
             Ok(())
         }
 
         fn f64(&mut self, v: f64) -> sval::stream::Result {
-            self.0 = Coerced::Primitive(Primitive::Float(v));
+            self.0 = Cast::Primitive(Primitive::Float(v));
             Ok(())
         }
 
         fn char(&mut self, v: char) -> sval::stream::Result {
-            self.0 = Coerced::Primitive(Primitive::Char(v));
+            self.0 = Cast::Primitive(Primitive::Char(v));
             Ok(())
         }
 
         fn bool(&mut self, v: bool) -> sval::stream::Result {
-            self.0 = Coerced::Primitive(Primitive::Bool(v));
+            self.0 = Cast::Primitive(Primitive::Bool(v));
             Ok(())
         }
 
         #[cfg(feature = "std")]
         fn str(&mut self, s: &str) -> sval::stream::Result {
-            self.0 = Coerced::String(s.into());
+            self.0 = Cast::String(s.into());
             Ok(())
         }
     }
 
-    let mut coerce = Coerce(Coerced::Primitive(Primitive::None));
-    let _ = sval::stream(&mut coerce, v);
+    let mut cast = CastStream(Cast::Primitive(Primitive::None));
+    let _ = sval::stream(&mut cast, v);
 
-    coerce.0
+    cast.0
 }
 
 impl Error {
@@ -168,21 +168,26 @@ mod tests {
     }
 
     #[test]
-    fn sval_coersion() {
+    fn sval_cast() {
         assert_eq!(
-            42u64,
+            42u32,
             kv::Value::from_sval(&42u64)
-                .get_u64()
+                .to_u32()
                 .expect("invalid value")
         );
 
-        assert!(kv::Value::from_sval(&"a string").get_str().is_none());
+        assert_eq!(
+            "a string",
+            kv::Value::from_sval(&"a string")
+                .to_borrowed_str()
+                .expect("invalid value")
+        );
 
         #[cfg(feature = "std")]
         assert_eq!(
             "a string",
-            &*kv::Value::from_sval(&"a string")
-                .get_string()
+            kv::Value::from_sval(&"a string")
+                .to_str()
                 .expect("invalid value")
         );
     }

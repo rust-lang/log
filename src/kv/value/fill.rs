@@ -2,17 +2,17 @@
 
 use std::fmt;
 
-use super::internal::{Inner, Visitor};
+use super::internal::{Erased, Inner, Visitor};
 use super::{Error, Value};
 
 impl<'v> Value<'v> {
     /// Get a value from a fillable slot.
     pub fn from_fill<T>(value: &'v T) -> Self
     where
-        T: Fill,
+        T: Fill + 'static,
     {
         Value {
-            inner: Inner::Fill(value),
+            inner: Inner::Fill(unsafe { Erased::new_unchecked::<T>(value) }),
         }
     }
 }
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn fill_coercion() {
+    fn fill_cast() {
         struct TestFill;
 
         impl Fill for TestFill {
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(
             "a string",
             Value::from_fill(&TestFill)
-                .get_str()
+                .to_borrowed_str()
                 .expect("invalid value")
         );
     }

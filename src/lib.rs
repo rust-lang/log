@@ -1663,7 +1663,7 @@ mod tests {
                 .key_values()
                 .get("b".into())
                 .expect("missing key")
-                .get_str()
+                .to_borrowed_str()
                 .expect("invalid value")
         );
     }
