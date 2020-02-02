@@ -1,173 +1,28 @@
+//! Converting standard types into `Value`s.
+//!
+//! This module provides `ToValue` implementations for commonly
+//! logged types from the standard library.
+
 use std::fmt;
 
 use super::{Primitive, ToValue, Value};
 
-impl ToValue for usize {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
+macro_rules! impl_into_owned {
+    ($($into_ty:ty => $convert:ident,)*) => {
+        $(
+            impl ToValue for $into_ty {
+                fn to_value(&self) -> Value {
+                    Value::from(*self)
+                }
+            }
 
-impl<'v> From<usize> for Value<'v> {
-    fn from(value: usize) -> Self {
-        Value::from_primitive(Primitive::Unsigned(value as u64))
-    }
-}
-
-impl ToValue for isize {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<isize> for Value<'v> {
-    fn from(value: isize) -> Self {
-        Value::from_primitive(Primitive::Signed(value as i64))
-    }
-}
-
-impl ToValue for u8 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<u8> for Value<'v> {
-    fn from(value: u8) -> Self {
-        Value::from_primitive(Primitive::Unsigned(value as u64))
-    }
-}
-
-impl ToValue for u16 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<u16> for Value<'v> {
-    fn from(value: u16) -> Self {
-        Value::from_primitive(Primitive::Unsigned(value as u64))
-    }
-}
-
-impl ToValue for u32 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<u32> for Value<'v> {
-    fn from(value: u32) -> Self {
-        Value::from_primitive(Primitive::Unsigned(value as u64))
-    }
-}
-
-impl ToValue for u64 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<u64> for Value<'v> {
-    fn from(value: u64) -> Self {
-        Value::from_primitive(Primitive::Unsigned(value))
-    }
-}
-
-impl ToValue for i8 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<i8> for Value<'v> {
-    fn from(value: i8) -> Self {
-        Value::from_primitive(Primitive::Signed(value as i64))
-    }
-}
-
-impl ToValue for i16 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<i16> for Value<'v> {
-    fn from(value: i16) -> Self {
-        Value::from_primitive(Primitive::Signed(value as i64))
-    }
-}
-
-impl ToValue for i32 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<i32> for Value<'v> {
-    fn from(value: i32) -> Self {
-        Value::from_primitive(Primitive::Signed(value as i64))
-    }
-}
-
-impl ToValue for i64 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<i64> for Value<'v> {
-    fn from(value: i64) -> Self {
-        Value::from_primitive(Primitive::Signed(value))
-    }
-}
-
-impl ToValue for f32 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<f32> for Value<'v> {
-    fn from(value: f32) -> Self {
-        Value::from_primitive(Primitive::Float(value as f64))
-    }
-}
-
-impl ToValue for f64 {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<f64> for Value<'v> {
-    fn from(value: f64) -> Self {
-        Value::from_primitive(Primitive::Float(value))
-    }
-}
-
-impl ToValue for bool {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<bool> for Value<'v> {
-    fn from(value: bool) -> Self {
-        Value::from_primitive(Primitive::Bool(value))
-    }
-}
-
-impl ToValue for char {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<char> for Value<'v> {
-    fn from(value: char) -> Self {
-        Value::from_primitive(Primitive::Char(value))
-    }
+            impl<'v> From<$into_ty> for Value<'v> {
+                fn from(value: $into_ty) -> Self {
+                    Value::from_primitive(value as $convert)
+                }
+            }
+        )*
+    };
 }
 
 impl<'v> ToValue for &'v str {
@@ -178,7 +33,19 @@ impl<'v> ToValue for &'v str {
 
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
-        Value::from_primitive(Primitive::Str(value))
+        Value::from_primitive(value)
+    }
+}
+
+impl<'v> ToValue for fmt::Arguments<'v> {
+    fn to_value(&self) -> Value {
+        Value::from(*self)
+    }
+}
+
+impl<'v> From<fmt::Arguments<'v>> for Value<'v> {
+    fn from(value: fmt::Arguments<'v>) -> Self {
+        Value::from_primitive(value)
     }
 }
 
@@ -200,11 +67,25 @@ where
     }
 }
 
-impl<'v> ToValue for fmt::Arguments<'v> {
-    fn to_value(&self) -> Value {
-        Value::from_debug(self)
-    }
-}
+impl_into_owned! [
+    usize => u64,
+    u8 => u64,
+    u16 => u64,
+    u32 => u64,
+    u64 => u64,
+
+    isize => i64,
+    i8 => i64,
+    i16 => i64,
+    i32 => i64,
+    i64 => i64,
+
+    f32 => f64,
+    f64 => f64,
+
+    char => char,
+    bool => bool,
+];
 
 #[cfg(feature = "std")]
 mod std_support {

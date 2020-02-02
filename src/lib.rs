@@ -1530,7 +1530,6 @@ mod tests {
     #[cfg(feature = "std")]
     fn test_error_trait() {
         use super::SetLoggerError;
-        use std::error::Error;
         let e = SetLoggerError(());
         assert_eq!(
             &e.to_string(),
@@ -1648,5 +1647,24 @@ mod tests {
         record_test.key_values().visit(&mut visitor).unwrap();
 
         assert_eq!(2, visitor.seen_pairs);
+    }
+
+    #[test]
+    #[cfg(feature = "kv_unstable")]
+    fn test_record_key_values_get_coerce() {
+        use super::Record;
+
+        let kvs: &[(&str, &str)] = &[("a", "1"), ("b", "2")];
+        let record = Record::builder().key_values(&kvs).build();
+
+        assert_eq!(
+            "2",
+            record
+                .key_values()
+                .get("b".into())
+                .expect("missing key")
+                .to_borrowed_str()
+                .expect("invalid value")
+        );
     }
 }
