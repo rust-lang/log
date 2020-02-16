@@ -226,7 +226,7 @@
 //! ```
 //! # Crate Feature Flags
 //!
-//! The following crate feature flags are avaliable in addition to the filters. They are
+//! The following crate feature flags are available in addition to the filters. They are
 //! configured in your `Cargo.toml`.
 //!
 //! * `std` allows use of `std` crate instead of the default `core`. Enables using `std::error` and
