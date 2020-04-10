@@ -331,7 +331,10 @@ pub enum Level {
     /// The "error" level.
     ///
     /// Designates very serious errors.
-    Error = 1, // This way these line up with the discriminants for LevelFilter below
+    // This way these line up with the discriminants for LevelFilter below
+    // This works because Rust treats field-less enums the same way as C does:
+    // https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-field-less-enumerations
+    Error = 1,
     /// The "warn" level.
     ///
     /// Designates hazardous situations.
@@ -1173,6 +1176,12 @@ pub fn set_max_level(level: LevelFilter) {
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
+    // Since `LevelFilter` is `repr(usize)`,
+    // this transmute is sound if and only if `MAX_LOG_LEVEL_FILTER`
+    // is set to a usize that is a valid discriminant for `LevelFilter`.
+    // Since `MAX_LOG_LEVEL_FILTER` is private, the only time it's set
+    // is by `set_max_level` above, i.e. by casting a `LevelFilter` to `usize`.
+    // So any usize stored in `MAX_LOG_LEVEL_FILTER` is a valid discriminant.
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
 }
 
