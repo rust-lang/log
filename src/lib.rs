@@ -1257,19 +1257,21 @@ fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
 {
-    unsafe {
-        match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
-            UNINITIALIZED => {
+    match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
+        UNINITIALIZED => {
+            unsafe {
                 LOGGER = make_logger();
-                STATE.store(INITIALIZED, Ordering::SeqCst);
-                Ok(())
             }
-            INITIALIZING => {
-                while STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                Err(SetLoggerError(()))
-            }
-            _ => Err(SetLoggerError(())),
+            STATE.store(INITIALIZED, Ordering::SeqCst);
+            Ok(())
         }
+        INITIALIZING => {
+            while STATE.load(Ordering::SeqCst) == INITIALIZING {
+                std::sync::atomic::spin_loop_hint();
+            }
+            Err(SetLoggerError(()))
+        }
+        _ => Err(SetLoggerError(())),
     }
 }
 
@@ -1345,13 +1347,11 @@ impl error::Error for ParseLevelError {}
 ///
 /// If a logger has not been set, a no-op implementation is returned.
 pub fn logger() -> &'static dyn Log {
-    unsafe {
-        if STATE.load(Ordering::SeqCst) != INITIALIZED {
-            static NOP: NopLogger = NopLogger;
-            &NOP
-        } else {
-            LOGGER
-        }
+    if STATE.load(Ordering::SeqCst) != INITIALIZED {
+        static NOP: NopLogger = NopLogger;
+        &NOP
+    } else {
+        unsafe { LOGGER }
     }
 }
 
