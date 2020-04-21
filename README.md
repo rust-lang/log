@@ -74,6 +74,7 @@ There are many available implementations to chose from, here are some of the mos
     * [`syslog`](https://docs.rs/syslog/*/syslog/)
     * [`slog-stdlog`](https://docs.rs/slog-stdlog/*/slog_stdlog/)
     * [`android_log`](https://docs.rs/android_log/*/android_log/)
+    * [`win_dbg_logger`](https://docs.rs/win_dbg_logger/*/win_dbg_logger/)
 * For WebAssembly binaries:
     * [`console_log`](https://docs.rs/console_log/*/console_log/)
 
