@@ -26,6 +26,10 @@ harness = false
 name = "macros"
 harness = true
 
+[[test]]
+name = "expansion"
+harness = false
+
 [features]
 max_level_off   = []
 max_level_error = []
