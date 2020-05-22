@@ -276,6 +276,8 @@
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
+#![feature(const_type_id)]
+
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 

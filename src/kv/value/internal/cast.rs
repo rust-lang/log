@@ -4,7 +4,7 @@
 //! but may end up executing arbitrary caller code if the value is complex.
 //! They will also attempt to downcast erased types into a primitive where possible.
 
-use std::any::Any;
+use std::any::{TypeId, Any};
 use std::fmt;
 
 use super::{Inner, Primitive, Visitor};
@@ -168,8 +168,10 @@ impl<'v> Value<'v> {
     }
 }
 
+/*
 // NOTE: With specialization we could potentially avoid this call using a blanket
 // `ToPrimitive` trait that defaults to `None` except for these specific types
+// It won't work with `&str` though in the `min_specialization` case
 pub(super) fn into_primitive<'v>(value: &'v (dyn Any + 'static)) -> Option<Primitive<'v>> {
     macro_rules! type_ids {
         ($($value:ident : $ty:ty => $cast:expr,)*) => {{
@@ -214,6 +216,67 @@ pub(super) fn into_primitive<'v>(value: &'v (dyn Any + 'static)) -> Option<Primi
 
         value: &str => *value,
     ]
+}
+*/
+
+pub(super) fn into_primitive<'v>(value: &'v (dyn Any + 'static)) -> Option<Primitive<'v>> {
+    unsafe fn downcast_unchecked<'a, T: 'static>(value: &'a (dyn Any + 'static)) -> &'a T {
+        &*(value as *const dyn Any as *const T)
+    }
+
+    macro_rules! type_ids {
+        ($($value:ident : $ty:ty => $cast:expr,)*) => {
+            [
+                $(
+                    (TypeId::of::<$ty>(), |value: &(dyn Any + 'static)| {
+                        let $value = unsafe { downcast_unchecked::<$ty>(value) };
+                        Primitive::from($cast)
+                    }),
+                )*
+
+                $(
+                    (TypeId::of::<Option<$ty>>(), |value: &(dyn Any + 'static)| {
+                        let value = unsafe { downcast_unchecked::<Option<$ty>>(value) };
+                        if let Some($value) = value {
+                            Primitive::from($cast)
+                        } else {
+                            Primitive::None
+                        }
+                    }),
+                )*
+            ]
+        };
+    }
+
+    let type_ids: &mut [(TypeId, for<'a> fn(&'a (dyn Any + 'static)) -> Primitive<'a>)] = &mut type_ids![
+        value: usize => *value as u64,
+        value: u8 => *value as u64,
+        value: u16 => *value as u64,
+        value: u32 => *value as u64,
+        value: u64 => *value,
+
+        value: isize => *value as i64,
+        value: i8 => *value as i64,
+        value: i16 => *value as i64,
+        value: i32 => *value as i64,
+        value: i64 => *value,
+
+        value: f32 => *value as f64,
+        value: f64 => *value,
+
+        value: char => *value,
+        value: bool => *value,
+
+        value: &str => *value,
+    ];
+
+    type_ids.sort_unstable_by_key(|&(k, _)| k);
+
+    if let Ok(i) = type_ids.binary_search_by_key(&value.type_id(), |&(k, _)| k) {
+        Some((type_ids[i].1)(value))
+    } else {
+        None
+    }
 }
 
 impl<'v> Inner<'v> {
