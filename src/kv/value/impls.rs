@@ -7,24 +7,6 @@ use std::fmt;
 
 use super::{Primitive, ToValue, Value};
 
-macro_rules! impl_into_owned {
-    ($($into_ty:ty => $convert:ident,)*) => {
-        $(
-            impl ToValue for $into_ty {
-                fn to_value(&self) -> Value {
-                    Value::from(*self)
-                }
-            }
-
-            impl<'v> From<$into_ty> for Value<'v> {
-                fn from(value: $into_ty) -> Self {
-                    Value::from_primitive(value as $convert)
-                }
-            }
-        )*
-    };
-}
-
 impl<'v> ToValue for &'v str {
     fn to_value(&self) -> Value {
         Value::from(*self)
@@ -67,24 +49,42 @@ where
     }
 }
 
-impl_into_owned! [
-    usize => u64,
-    u8 => u64,
-    u16 => u64,
-    u32 => u64,
-    u64 => u64,
+macro_rules! impl_to_value_primitive {
+    ($($into_ty:ty,)*) => {
+        $(
+            impl ToValue for $into_ty {
+                fn to_value(&self) -> Value {
+                    Value::from(*self)
+                }
+            }
 
-    isize => i64,
-    i8 => i64,
-    i16 => i64,
-    i32 => i64,
-    i64 => i64,
+            impl<'v> From<$into_ty> for Value<'v> {
+                fn from(value: $into_ty) -> Self {
+                    Value::from_primitive(value)
+                }
+            }
+        )*
+    };
+}
 
-    f32 => f64,
-    f64 => f64,
+impl_to_value_primitive! [
+    usize,
+    u8,
+    u16,
+    u32,
+    u64,
 
-    char => char,
-    bool => bool,
+    isize,
+    i8,
+    i16,
+    i32,
+    i64,
+
+    f32,
+    f64,
+
+    char,
+    bool,
 ];
 
 #[cfg(feature = "std")]

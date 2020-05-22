@@ -26,3 +26,13 @@ fn str_to_value_debug(b: &mut test::Bencher) {
         Value::from_debug(&"a string")
     })
 }
+
+#[bench]
+fn custom_to_value_debug(b: &mut test::Bencher) {
+    #[derive(Debug)]
+    struct A;
+
+    b.iter(|| {
+        Value::from_debug(&A);
+    })
+}

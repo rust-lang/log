@@ -97,15 +97,69 @@ impl<'v> Primitive<'v> {
     }
 }
 
+impl<'v> From<u8> for Primitive<'v> {
+    fn from(v: u8) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<u16> for Primitive<'v> {
+    fn from(v: u16) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<u32> for Primitive<'v> {
+    fn from(v: u32) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
 impl<'v> From<u64> for Primitive<'v> {
     fn from(v: u64) -> Self {
         Primitive::Unsigned(v)
     }
 }
 
+impl<'v> From<usize> for Primitive<'v> {
+    fn from(v: usize) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<i8> for Primitive<'v> {
+    fn from(v: i8) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<i16> for Primitive<'v> {
+    fn from(v: i16) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<i32> for Primitive<'v> {
+    fn from(v: i32) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
 impl<'v> From<i64> for Primitive<'v> {
     fn from(v: i64) -> Self {
         Primitive::Signed(v)
+    }
+}
+
+impl<'v> From<isize> for Primitive<'v> {
+    fn from(v: isize) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<f32> for Primitive<'v> {
+    fn from(v: f32) -> Self {
+        Primitive::Float(v as f64)
     }
 }
 
