@@ -4,10 +4,10 @@
 //! but may end up executing arbitrary caller code if the value is complex.
 //! They will also attempt to downcast erased types into a primitive where possible.
 
-use std::any::TypeId;
+use std::any::Any;
 use std::fmt;
 
-use super::{Erased, Inner, Primitive, Visitor};
+use super::{Inner, Primitive, Visitor};
 use crate::kv::value::{Error, Value};
 
 impl<'v> Value<'v> {
@@ -168,6 +168,54 @@ impl<'v> Value<'v> {
     }
 }
 
+// NOTE: With specialization we could potentially avoid this call using a blanket
+// `ToPrimitive` trait that defaults to `None` except for these specific types
+pub(super) fn into_primitive<'v>(value: &'v (dyn Any + 'static)) -> Option<Primitive<'v>> {
+    macro_rules! type_ids {
+        ($($value:ident : $ty:ty => $cast:expr,)*) => {{
+            $(
+                if let Some($value) = $value.downcast_ref::<$ty>() {
+                    return Some(Primitive::from($cast));
+                }
+            )*
+
+            $(
+                if let Some($value) = $value.downcast_ref::<Option<$ty>>() {
+                    return Some(if let Some($value) = $value {
+                        Primitive::from($cast)
+                    } else {
+                        Primitive::None
+                    });
+                }
+            )*
+
+            None
+        }};
+    }
+
+    type_ids![
+        value: usize => *value as u64,
+        value: u8 => *value as u64,
+        value: u16 => *value as u64,
+        value: u32 => *value as u64,
+        value: u64 => *value,
+
+        value: isize => *value as i64,
+        value: i8 => *value as i64,
+        value: i16 => *value as i64,
+        value: i32 => *value as i64,
+        value: i64 => *value,
+
+        value: f32 => *value as f64,
+        value: f64 => *value,
+
+        value: char => *value,
+        value: bool => *value,
+
+        value: &str => *value,
+    ]
+}
+
 impl<'v> Inner<'v> {
     /// Cast the inner value to another type.
     fn cast(self) -> Cast<'v> {
@@ -203,8 +251,8 @@ impl<'v> Inner<'v> {
                 Ok(())
             }
 
-            fn borrowed_str(&mut self, v: &'v str) -> Result<(), Error> {
-                self.0 = Cast::Primitive(Primitive::Str(v));
+            #[cfg(feature = "std")]
+            fn str(&mut self, _: &str) -> Result<(), Error> {
                 Ok(())
             }
 
@@ -213,9 +261,8 @@ impl<'v> Inner<'v> {
                 Ok(())
             }
 
-            #[cfg(feature = "std")]
-            fn str(&mut self, v: &str) -> Result<(), Error> {
-                self.0 = Cast::String(v.into());
+            fn borrowed_str(&mut self, v: &'v str) -> Result<(), Error> {
+                self.0 = Cast::Primitive(Primitive::Str(v));
                 Ok(())
             }
 
@@ -231,28 +278,18 @@ impl<'v> Inner<'v> {
             }
         }
 
-        // Try downcast an erased value first
-        // It also lets us avoid the Visitor infrastructure for simple primitives
-        let primitive = match self {
-            Inner::Primitive(value) => Some(value),
-            Inner::Fill(value) => value.downcast_primitive(),
-            Inner::Debug(value) => value.downcast_primitive(),
-            Inner::Display(value) => value.downcast_primitive(),
-
-            #[cfg(feature = "sval")]
-            Inner::Sval(value) => value.downcast_primitive(),
-        };
-
-        primitive.map(Cast::Primitive).unwrap_or_else(|| {
+        if let Inner::Primitive(value) = self {
+            Cast::Primitive(value)
+        } else {
             // If the erased value isn't a primitive then we visit it
             let mut cast = CastVisitor(Cast::Primitive(Primitive::None));
             let _ = self.visit(&mut cast);
             cast.0
-        })
+        }
     }
 }
 
-pub(super) enum Cast<'v> {
+enum Cast<'v> {
     Primitive(Primitive<'v>),
     #[cfg(feature = "std")]
     String(String),
@@ -318,57 +355,6 @@ impl<'v> Primitive<'v> {
         } else {
             None
         }
-    }
-}
-
-impl<'v, T: ?Sized + 'static> Erased<'v, T> {
-    // NOTE: This function is a perfect candidate for memoization
-    // The outcome could be stored in a `Cell<Primitive>`
-    fn downcast_primitive(self) -> Option<Primitive<'v>> {
-        macro_rules! type_ids {
-            ($($value:ident : $ty:ty => $cast:expr,)*) => {{
-                struct TypeIds;
-
-                impl TypeIds {
-                    fn downcast_primitive<'v, T: ?Sized>(&self, value: Erased<'v, T>) -> Option<Primitive<'v>> {
-                        $(
-                            if TypeId::of::<$ty>() == value.type_id {
-                                let $value = unsafe { value.downcast_unchecked::<$ty>() };
-                                return Some(Primitive::from($cast));
-                            }
-                        )*
-
-                        None
-                    }
-                }
-
-                TypeIds
-            }};
-        }
-
-        let type_ids = type_ids![
-            value: usize => *value as u64,
-            value: u8 => *value as u64,
-            value: u16 => *value as u64,
-            value: u32 => *value as u64,
-            value: u64 => *value,
-
-            value: isize => *value as i64,
-            value: i8 => *value as i64,
-            value: i16 => *value as i64,
-            value: i32 => *value as i64,
-            value: i64 => *value,
-
-            value: f32 => *value as f64,
-            value: f64 => *value,
-
-            value: char => *value,
-            value: bool => *value,
-
-            value: &str => *value,
-        ];
-
-        type_ids.downcast_primitive(self)
     }
 }
 

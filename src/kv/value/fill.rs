@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::internal::{Erased, Inner, Visitor};
+use super::internal::{Inner, Visitor};
 use super::{Error, Value};
 
 impl<'v> Value<'v> {
@@ -12,7 +12,7 @@ impl<'v> Value<'v> {
         T: Fill + 'static,
     {
         Value {
-            inner: Inner::Fill(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: Inner::Fill(value),
         }
     }
 }

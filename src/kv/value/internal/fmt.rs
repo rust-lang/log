@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use super::{Erased, Inner, Visitor};
+use super::{Inner, Visitor, cast};
 use crate::kv;
 use crate::kv::value::{Error, Slot};
 
@@ -15,8 +15,15 @@ impl<'v> kv::Value<'v> {
     where
         T: fmt::Debug + 'static,
     {
+        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
+        // This makes `Value`s produced by `from_debug` more useful, which is worthwhile since the
+        // trait appears in the standard library so is widely implemented
         kv::Value {
-            inner: Inner::Debug(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: if let Some(primitive) = cast::into_primitive(value) {
+                Inner::Primitive(primitive)
+            } else {
+                Inner::Debug(value)
+            },
         }
     }
 
@@ -25,8 +32,15 @@ impl<'v> kv::Value<'v> {
     where
         T: fmt::Display + 'static,
     {
+        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
+        // This makes `Value`s produced by `from_display` more useful, which is worthwhile since the
+        // trait appears in the standard library so is widely implemented
         kv::Value {
-            inner: Inner::Display(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: if let Some(primitive) = cast::into_primitive(value) {
+                Inner::Primitive(primitive)
+            } else {
+                Inner::Display(value)
+            },
         }
     }
 }
@@ -125,6 +139,7 @@ impl<'a, 'b: 'a, 'v> Visitor<'v> for FmtVisitor<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kv::value::test::Token;
 
     #[test]
     fn fmt_cast() {
@@ -141,5 +156,13 @@ mod tests {
                 .to_borrowed_str()
                 .expect("invalid value")
         );
+    }
+
+    #[test]
+    fn fmt_capture() {
+        assert_eq!(kv::Value::from_debug(&1u16).to_token(), Token::U64(1));
+        assert_eq!(kv::Value::from_display(&1u16).to_token(), Token::U64(1));
+
+        assert_eq!(kv::Value::from_debug(&Some(1u16)).to_token(), Token::U64(1));
     }
 }
