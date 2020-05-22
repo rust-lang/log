@@ -4,11 +4,14 @@
 //! but may end up executing arbitrary caller code if the value is complex.
 //! They will also attempt to downcast erased types into a primitive where possible.
 
-use std::any::{Any, TypeId};
 use std::fmt;
 
 use super::{Inner, Primitive, Visitor};
 use crate::kv::value::{Error, Value};
+
+mod into_primitive;
+
+pub(super) use self::into_primitive::into_primitive;
 
 impl<'v> Value<'v> {
     /// Try get a `usize` from this value.
@@ -165,24 +168,6 @@ impl<'v> Value<'v> {
     /// `String` if the value is a complex type.
     pub fn to_borrowed_str(&self) -> Option<&str> {
         self.inner.cast().into_primitive().into_borrowed_str()
-    }
-}
-
-// NOTE: With specialization we could potentially avoid this call using a blanket
-// `ToPrimitive` trait that defaults to `None` except for these specific types
-// It won't work with `&str` though in the `min_specialization` case
-pub(super) fn into_primitive<'v>(value: &'v (dyn Any + 'static)) -> Option<Primitive<'v>> {
-    // The set of type ids that map to primitives are generated at build-time
-    // by the contents of `sorted_type_ids.expr`. These type ids are pre-sorted
-    // so that they can be searched efficiently. See the `sorted_type_ids.expr.rs`
-    // file for the set of types that appear in this list
-    static TYPE_IDS: [(TypeId, for<'a> fn(&'a (dyn Any + 'static)) -> Primitive<'a>); 30] = include!(concat!(env!("OUT_DIR"), "/sorted_type_ids.expr.rs"));
-
-    debug_assert!(TYPE_IDS.is_sorted_by_key(|&(k, _)| k));
-    if let Ok(i) = TYPE_IDS.binary_search_by_key(&value.type_id(), |&(k, _)| k) {
-        Some((TYPE_IDS[i].1)(value))
-    } else {
-        None
     }
 }
 

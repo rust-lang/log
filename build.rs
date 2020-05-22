@@ -2,8 +2,10 @@
 //! atomics and sets `cfg` flags accordingly.
 
 use std::env;
-use std::fs;
-use std::path::Path;
+
+#[cfg(feature = "kv_unstable")]
+#[path = "src/kv/value/internal/cast/into_primitive.rs"]
+mod into_primitive;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -13,11 +15,9 @@ fn main() {
     }
 
     #[cfg(feature = "kv_unstable")]
-    {
-        let path = Path::new(&env::var_os("OUT_DIR").unwrap()).join("sorted_type_ids.expr.rs");
+    into_primitive::generate();
 
-        fs::write(path, include!("src/kv/value/internal/sorted_type_ids.expr.rs")).unwrap();
-    }
+    println!("cargo:rustc-cfg=src_build");
 
     println!("cargo:rerun-if-changed=build.rs");
 }
