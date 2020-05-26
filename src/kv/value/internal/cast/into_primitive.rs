@@ -7,7 +7,7 @@ pub(in kv::value) fn into_primitive<'v>(value: &'v (dyn std::any::Any + 'static)
     // by the contents of `sorted_type_ids.expr`. These type ids are pre-sorted
     // so that they can be searched efficiently. See the `sorted_type_ids.expr.rs`
     // file for the set of types that appear in this list
-    static TYPE_IDS: [(std::any::TypeId, for<'a> fn(&'a (dyn std::any::Any + 'static)) -> crate::kv::value::internal::Primitive<'a>); 30] = include!(concat!(env!("OUT_DIR"), "/into_primitive.rs"));
+    const TYPE_IDS: [(std::any::TypeId, for<'a> fn(&'a (dyn std::any::Any + 'static)) -> crate::kv::value::internal::Primitive<'a>); 30] = include!(concat!(env!("OUT_DIR"), "/into_primitive.rs"));
 
     debug_assert!(TYPE_IDS.is_sorted_by_key(|&(k, _)| k));
     if let Ok(i) = TYPE_IDS.binary_search_by_key(&value.type_id(), |&(k, _)| k) {
