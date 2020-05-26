@@ -33,6 +33,6 @@ fn custom_to_value_debug(b: &mut test::Bencher) {
     struct A;
 
     b.iter(|| {
-        Value::from_debug(&A);
+        Value::from_debug(&A)
     })
 }
