@@ -48,8 +48,14 @@ impl<'v> sval::Value for kv::Value<'v> {
 
 impl ToValue for dyn sval::Value {
     fn to_value(&self) -> kv::Value {
+        kv::Value::from(self)
+    }
+}
+
+impl<'v> From<&'v (dyn sval::Value + 'static)> for kv::Value<'v> {
+    fn from(value: &'v (dyn sval::Value + 'static)) -> kv::Value<'v> {
         kv::Value {
-            inner: Inner::Sval(self)
+            inner: Inner::Sval(value)
         }
     }
 }
