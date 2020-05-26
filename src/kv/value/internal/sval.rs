@@ -18,7 +18,6 @@ impl<'v> kv::Value<'v> {
     where
         T: sval::Value + 'static,
     {
-        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
         cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Sval(value) })
     }
 }

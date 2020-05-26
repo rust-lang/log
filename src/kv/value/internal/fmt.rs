@@ -15,9 +15,6 @@ impl<'v> kv::Value<'v> {
     where
         T: fmt::Debug + 'static,
     {
-        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
-        // This makes `Value`s produced by `from_debug` more useful, which is worthwhile since the
-        // trait appears in the standard library so is widely implemented
         cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Debug(value) })
     }
 
@@ -26,9 +23,6 @@ impl<'v> kv::Value<'v> {
     where
         T: fmt::Display + 'static,
     {
-        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
-        // This makes `Value`s produced by `from_display` more useful, which is worthwhile since the
-        // trait appears in the standard library so is widely implemented
         cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Display(value) })
     }
 }

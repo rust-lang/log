@@ -11,6 +11,10 @@ use crate::kv::value::{Error, Value};
 
 mod into_primitive;
 
+/// Attempt to capture a primitive from some generic value.
+///
+/// If the value is a primitive type, then cast it here, avoiding needing to erase its value
+/// This makes `Value`s produced by `Value::from_*` more useful
 pub(super) fn try_from_primitive<'v, T: 'static>(value: &'v T) -> Option<Value<'v>> {
     into_primitive::into_primitive(value).map(|primitive| Value {
         inner: Inner::Primitive(primitive)
