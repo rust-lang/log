@@ -7,7 +7,7 @@ use std::fmt;
 
 use super::{Inner, Visitor, cast};
 use crate::kv;
-use crate::kv::value::{Error, Slot};
+use crate::kv::value::{Error, Slot, ToValue};
 
 impl<'v> kv::Value<'v> {
     /// Get a value from a debuggable type.
@@ -18,13 +18,7 @@ impl<'v> kv::Value<'v> {
         // If the value is a primitive type, then cast it here, avoiding needing to erase its value
         // This makes `Value`s produced by `from_debug` more useful, which is worthwhile since the
         // trait appears in the standard library so is widely implemented
-        kv::Value {
-            inner: if let Some(primitive) = cast::into_primitive(value) {
-                Inner::Primitive(primitive)
-            } else {
-                Inner::Debug(value)
-            },
-        }
+        cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Debug(value) })
     }
 
     /// Get a value from a displayable type.
@@ -35,13 +29,7 @@ impl<'v> kv::Value<'v> {
         // If the value is a primitive type, then cast it here, avoiding needing to erase its value
         // This makes `Value`s produced by `from_display` more useful, which is worthwhile since the
         // trait appears in the standard library so is widely implemented
-        kv::Value {
-            inner: if let Some(primitive) = cast::into_primitive(value) {
-                Inner::Primitive(primitive)
-            } else {
-                Inner::Display(value)
-            },
-        }
+        cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Display(value) })
     }
 }
 
@@ -90,6 +78,22 @@ impl<'v> fmt::Display for kv::Value<'v> {
         self.visit(&mut FmtVisitor(f))?;
 
         Ok(())
+    }
+}
+
+impl ToValue for dyn fmt::Debug {
+    fn to_value(&self) -> kv::Value {
+        kv::Value {
+            inner: Inner::Debug(self)
+        }
+    }
+}
+
+impl ToValue for dyn fmt::Display {
+    fn to_value(&self) -> kv::Value {
+        kv::Value {
+            inner: Inner::Display(self)
+        }
     }
 }
 

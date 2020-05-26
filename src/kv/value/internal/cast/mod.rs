@@ -11,7 +11,11 @@ use crate::kv::value::{Error, Value};
 
 mod into_primitive;
 
-pub(super) use self::into_primitive::into_primitive;
+pub(super) fn try_from_primitive<'v, T: 'static>(value: &'v T) -> Option<Value<'v>> {
+    into_primitive::into_primitive(value).map(|primitive| Value {
+        inner: Inner::Primitive(primitive)
+    })
+}
 
 impl<'v> Value<'v> {
     /// Try get a `usize` from this value.
@@ -244,7 +248,7 @@ impl<'v> Inner<'v> {
     }
 }
 
-enum Cast<'v> {
+pub(super) enum Cast<'v> {
     Primitive(Primitive<'v>),
     #[cfg(feature = "std")]
     String(String),

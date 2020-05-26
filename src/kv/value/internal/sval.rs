@@ -7,10 +7,10 @@ extern crate sval;
 
 use std::fmt;
 
-use super::cast::Cast;
-use super::{Erased, Inner, Primitive, Visitor};
+use super::cast::{self, Cast};
+use super::{Inner, Primitive, Visitor};
 use crate::kv;
-use crate::kv::value::{Error, Slot};
+use crate::kv::value::{Error, Slot, ToValue};
 
 impl<'v> kv::Value<'v> {
     /// Get a value from a structured type.
@@ -18,9 +18,8 @@ impl<'v> kv::Value<'v> {
     where
         T: sval::Value + 'static,
     {
-        kv::Value {
-            inner: Inner::Sval(unsafe { Erased::new_unchecked::<T>(value) }),
-        }
+        // If the value is a primitive type, then cast it here, avoiding needing to erase its value
+        cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Sval(value) })
     }
 }
 
@@ -45,6 +44,14 @@ impl<'v> sval::Value for kv::Value<'v> {
         self.visit(&mut SvalVisitor(s)).map_err(Error::into_sval)?;
 
         Ok(())
+    }
+}
+
+impl ToValue for dyn sval::Value {
+    fn to_value(&self) -> kv::Value {
+        kv::Value {
+            inner: Inner::Sval(self)
+        }
     }
 }
 
@@ -156,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_from_sval() {
-        assert_eq!(kv::Value::from_sval(&42u64).to_token(), Token::Sval);
+        assert_eq!(kv::Value::from_sval(&42u64).to_token(), Token::U64(42));
     }
 
     #[test]
