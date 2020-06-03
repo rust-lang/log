@@ -98,96 +98,112 @@ impl<'v> Primitive<'v> {
 }
 
 impl<'v> From<u8> for Primitive<'v> {
+    #[inline]
     fn from(v: u8) -> Self {
         Primitive::Unsigned(v as u64)
     }
 }
 
 impl<'v> From<u16> for Primitive<'v> {
+    #[inline]
     fn from(v: u16) -> Self {
         Primitive::Unsigned(v as u64)
     }
 }
 
 impl<'v> From<u32> for Primitive<'v> {
+    #[inline]
     fn from(v: u32) -> Self {
         Primitive::Unsigned(v as u64)
     }
 }
 
 impl<'v> From<u64> for Primitive<'v> {
+    #[inline]
     fn from(v: u64) -> Self {
         Primitive::Unsigned(v)
     }
 }
 
 impl<'v> From<usize> for Primitive<'v> {
+    #[inline]
     fn from(v: usize) -> Self {
         Primitive::Unsigned(v as u64)
     }
 }
 
 impl<'v> From<i8> for Primitive<'v> {
+    #[inline]
     fn from(v: i8) -> Self {
         Primitive::Signed(v as i64)
     }
 }
 
 impl<'v> From<i16> for Primitive<'v> {
+    #[inline]
     fn from(v: i16) -> Self {
         Primitive::Signed(v as i64)
     }
 }
 
 impl<'v> From<i32> for Primitive<'v> {
+    #[inline]
     fn from(v: i32) -> Self {
         Primitive::Signed(v as i64)
     }
 }
 
 impl<'v> From<i64> for Primitive<'v> {
+    #[inline]
     fn from(v: i64) -> Self {
         Primitive::Signed(v)
     }
 }
 
 impl<'v> From<isize> for Primitive<'v> {
+    #[inline]
     fn from(v: isize) -> Self {
         Primitive::Signed(v as i64)
     }
 }
 
 impl<'v> From<f32> for Primitive<'v> {
+    #[inline]
     fn from(v: f32) -> Self {
         Primitive::Float(v as f64)
     }
 }
 
 impl<'v> From<f64> for Primitive<'v> {
+    #[inline]
     fn from(v: f64) -> Self {
         Primitive::Float(v)
     }
 }
 
 impl<'v> From<bool> for Primitive<'v> {
+    #[inline]
     fn from(v: bool) -> Self {
         Primitive::Bool(v)
     }
 }
 
 impl<'v> From<char> for Primitive<'v> {
+    #[inline]
     fn from(v: char) -> Self {
         Primitive::Char(v)
     }
 }
 
 impl<'v> From<&'v str> for Primitive<'v> {
+    #[inline]
     fn from(v: &'v str) -> Self {
         Primitive::Str(v)
     }
 }
 
 impl<'v> From<fmt::Arguments<'v>> for Primitive<'v> {
+    #[inline]
     fn from(v: fmt::Arguments<'v>) -> Self {
         Primitive::Fmt(v)
     }
