@@ -1,7 +1,57 @@
+#[cfg(all(src_build, feature = "kv_unstable_const_primitive"))]
+pub(super) fn into_primitive<'v, T: 'static>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
+    use std::any::TypeId;
+
+    use crate::kv::value::internal::Primitive;
+    
+    trait ToPrimitive where Self: 'static {
+        const CALL: fn(&Self) -> Option<Primitive> = {
+            const U8: TypeId = TypeId::of::<u8>();
+            const U16: TypeId = TypeId::of::<u16>();
+            const U32: TypeId = TypeId::of::<u32>();
+            const U64: TypeId = TypeId::of::<u64>();
+    
+            const I8: TypeId = TypeId::of::<i8>();
+            const I16: TypeId = TypeId::of::<i16>();
+            const I32: TypeId = TypeId::of::<i32>();
+            const I64: TypeId = TypeId::of::<i64>();
+    
+            const STR: TypeId = TypeId::of::<&'static str>();
+    
+            match TypeId::of::<Self>() {
+                U8 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const u8) })),
+                U16 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const u16) })),
+                U32 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const u32) })),
+                U64 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const u64) })),
+    
+                I8 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const i8) })),
+                I16 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const i16) })),
+                I32 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const i32) })),
+                I64 => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const i64) })),
+    
+                STR => |v| Some(Primitive::from(unsafe { *(v as *const Self as *const &'static str) })),
+    
+                _ => |_| None,
+            }
+        };
+    
+        fn to_primitive(&self) -> Option<Primitive> {
+            (Self::CALL)(self)
+        }
+    }
+    
+    impl<T: 'static> ToPrimitive for T { }
+
+    value.to_primitive()
+}
+
+#[cfg(all(not(src_build), feature = "kv_unstable_const_primitive"))]
+pub fn generate() { }
+
 // NOTE: With specialization we could potentially avoid this call using a blanket
 // `ToPrimitive` trait that defaults to `None` except for these specific types
 // It won't work with `&str` though in the `min_specialization` case
-#[cfg(src_build)]
+#[cfg(all(src_build, not(feature = "kv_unstable_const_primitive")))]
 pub(in kv::value) fn into_primitive<'v>(value: &'v (dyn std::any::Any + 'static)) -> Option<crate::kv::value::internal::Primitive<'v>> {
     // The set of type ids that map to primitives are generated at build-time
     // by the contents of `sorted_type_ids.expr`. These type ids are pre-sorted
@@ -19,7 +69,7 @@ pub(in kv::value) fn into_primitive<'v>(value: &'v (dyn std::any::Any + 'static)
 
 // When the `src_build` config is not set then we're in the build script
 // This function will generate an expression fragment used by `into_primitive`
-#[cfg(not(src_build))]
+#[cfg(all(not(src_build), not(feature = "kv_unstable_const_primitive")))]
 pub fn generate() {
     use std::path::Path;
     use std::{fs, env};
