@@ -75,28 +75,28 @@ impl<'v> fmt::Display for kv::Value<'v> {
     }
 }
 
-impl ToValue for dyn fmt::Debug {
+impl<'v> ToValue for dyn fmt::Debug + 'v {
     fn to_value(&self) -> kv::Value {
         kv::Value::from(self)
     }
 }
 
-impl ToValue for dyn fmt::Display {
+impl<'v> ToValue for dyn fmt::Display + 'v {
     fn to_value(&self) -> kv::Value {
         kv::Value::from(self)
     }
 }
 
-impl<'v> From<&'v (dyn fmt::Debug + 'static)> for kv::Value<'v> {
-    fn from(value: &'v (dyn fmt::Debug + 'static)) -> kv::Value<'v> {
+impl<'v> From<&'v (dyn fmt::Debug)> for kv::Value<'v> {
+    fn from(value: &'v (dyn fmt::Debug)) -> kv::Value<'v> {
         kv::Value {
             inner: Inner::Debug(value)
         }
     }
 }
 
-impl<'v> From<&'v (dyn fmt::Display + 'static)> for kv::Value<'v> {
-    fn from(value: &'v (dyn fmt::Display + 'static)) -> kv::Value<'v> {
+impl<'v> From<&'v (dyn fmt::Display)> for kv::Value<'v> {
+    fn from(value: &'v (dyn fmt::Display)) -> kv::Value<'v> {
         kv::Value {
             inner: Inner::Display(value)
         }

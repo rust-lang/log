@@ -16,15 +16,15 @@ pub(super) enum Inner<'v> {
     /// A simple primitive value that can be copied without allocating.
     Primitive(Primitive<'v>),
     /// A value that can be filled.
-    Fill(&'v (dyn Fill + 'static)),
+    Fill(&'v (dyn Fill)),
     /// A debuggable value.
-    Debug(&'v (dyn fmt::Debug + 'static)),
+    Debug(&'v (dyn fmt::Debug)),
     /// A displayable value.
-    Display(&'v (dyn fmt::Display + 'static)),
+    Display(&'v (dyn fmt::Display)),
 
     #[cfg(feature = "kv_unstable_sval")]
     /// A structured value from `sval`.
-    Sval(&'v (dyn sval::Value + 'static)),
+    Sval(&'v (dyn sval::Value)),
 }
 
 impl<'v> Inner<'v> {
