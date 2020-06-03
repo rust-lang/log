@@ -2,7 +2,7 @@
 // Pros: fast, will work on stable soon (possibly 1.45.0)
 // Cons: requires a `'static` bound
 #[cfg(all(src_build, feature = "kv_unstable_const_primitive"))]
-pub(super) fn into_primitive<'v, T: 'static>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
+pub(super) fn from_any<'v, T: 'static>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
     use std::any::TypeId;
 
     use crate::kv::value::internal::Primitive;
@@ -55,7 +55,7 @@ pub fn generate() { }
 // Pros: fast, doesn't require `'static` bound
 // Cons: might not stabilize for a long time, doesn't work with `&str`
 #[cfg(all(src_build, feature = "kv_unstable_spec_primitive"))]
-pub(super) fn into_primitive<'v, T>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
+pub(super) fn from_any<'v, T>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
     use std::any::TypeId;
 
     use crate::kv::value::internal::Primitive;
@@ -143,7 +143,7 @@ pub fn generate() { }
 // Pros: works on stable
 // Cons: not 'free', complicates build script, requires `'static` bound
 #[cfg(all(src_build, not(any(feature = "kv_unstable_const_primitive", feature = "kv_unstable_spec_primitive"))))]
-pub(in kv::value) fn into_primitive<'v>(value: &'v (dyn std::any::Any + 'static)) -> Option<crate::kv::value::internal::Primitive<'v>> {
+pub(in kv::value) fn from_any<'v>(value: &'v (dyn std::any::Any + 'static)) -> Option<crate::kv::value::internal::Primitive<'v>> {
     // The set of type ids that map to primitives are generated at build-time
     // by the contents of `sorted_type_ids.expr`. These type ids are pre-sorted
     // so that they can be searched efficiently. See the `sorted_type_ids.expr.rs`

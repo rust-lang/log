@@ -34,6 +34,92 @@ impl<'v> ToValue for Value<'v> {
 }
 
 /// A value in a structured key-value pair.
+/// 
+/// # Capturing values
+/// 
+/// There are a few ways to capture a value:
+/// 
+/// - Using the `Value::from_*` methods.
+/// - Using the `ToValue` trait.
+/// - Using the standard `From` trait.
+/// - Using the `Fill` API.
+/// 
+/// ## Using the `Value::from_*` methods
+/// 
+/// `Value` offers a few constructor methods that capture values of different kinds.
+/// These methods typically require a `T: 'static`.
+/// 
+/// ```
+/// let value = Value::from_debug(&42i32);
+/// 
+/// assert_eq!(Some(42), value.to_i32());
+/// ```
+/// 
+/// ## Using the `ToValue` trait
+/// 
+/// The `ToValue` trait can be used to capture values generically.
+/// It's the bound used by `Source`.
+/// 
+/// ```
+/// let value = 42i32.to_value();
+/// 
+/// assert_eq!(Some(42), value.to_i32());
+/// ```
+/// 
+/// ```
+/// let value = (&42i32 as &dyn Debug).to_value();
+/// 
+/// assert_eq!(None, value.to_i32());
+/// ```
+/// 
+/// ## Using the standard `From` trait
+/// 
+/// Standard types that implement `ToValue` also implement `From`.
+/// 
+/// ```
+/// let value = Value::from(42i32);
+/// 
+/// assert_eq!(Some(42), value.to_i32());
+/// ```
+/// 
+/// ```
+/// let value = Value::from(&42i32 as &dyn Debug);
+/// 
+/// assert_eq!(None, value.to_i32());
+/// ```
+/// 
+/// ## Using the `Fill` API
+/// 
+/// The `Fill` trait is a way to bridge APIs that may not be directly
+/// compatible with other constructor methods.
+/// 
+/// ```
+/// struct FillSigned;
+/// 
+/// impl Fill for FillSigned {
+///     fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+///         slot.fill_any(42i32)
+///     }
+/// }
+/// 
+/// let value = Value::from(&FillSigned);
+/// 
+/// assert_eq!(Some(42), value.to_i32());
+/// ```
+/// 
+/// ```
+/// struct FillDebug;
+/// 
+/// impl Fill for FillDebug {
+///     fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+///         slot.fill_debug(&42i32 as &dyn Debug)
+///     }
+/// }
+/// 
+/// let value = Value::from(&FillDebug);
+/// 
+/// assert_eq!(None, value.to_i32());
+/// ```
 pub struct Value<'v> {
     inner: Inner<'v>,
 }

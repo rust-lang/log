@@ -4,8 +4,8 @@
 use std::env;
 
 #[cfg(feature = "kv_unstable")]
-#[path = "src/kv/value/internal/cast/into_primitive.rs"]
-mod into_primitive;
+#[path = "src/kv/value/internal/cast/primitive.rs"]
+mod primitive;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -15,7 +15,7 @@ fn main() {
     }
 
     #[cfg(feature = "kv_unstable")]
-    into_primitive::generate();
+    primitive::generate();
 
     println!("cargo:rustc-cfg=src_build");
 
