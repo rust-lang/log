@@ -50,6 +50,12 @@ impl<'v> ToValue for Value<'v> {
 /// These methods typically require a `T: 'static`.
 /// 
 /// ```
+/// let value = Value::from_any(&42i32);
+/// 
+/// assert_eq!(Some(42), value.to_i32());
+/// ```
+/// 
+/// ```
 /// let value = Value::from_debug(&42i32);
 /// 
 /// assert_eq!(Some(42), value.to_i32());
@@ -125,6 +131,14 @@ pub struct Value<'v> {
 }
 
 impl<'v> Value<'v> {
+    /// Get a value from a type implementing `ToValue`.
+    pub fn from_any<T>(value: &'v T) -> Self
+    where
+        T: ToValue,
+    {
+        value.to_value()
+    }
+
     /// Get a value from an internal primitive.
     fn from_primitive<T>(value: T) -> Self
     where
