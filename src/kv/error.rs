@@ -67,10 +67,4 @@ mod std_support {
             Error::boxed(err)
         }
     }
-
-    impl From<Error> for io::Error {
-        fn from(err: Error) -> Self {
-            io::Error::new(io::ErrorKind::Other, err)
-        }
-    }
 }
