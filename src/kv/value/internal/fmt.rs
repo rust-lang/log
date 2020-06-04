@@ -244,9 +244,6 @@ mod tests {
             format!("{}", "a string".to_value()),
         );
 
-        assert_eq!(
-            format!("{:04}", 42u64),
-            format!("{:04}", 42u64.to_value()),
-        );
+        assert_eq!(format!("{:04}", 42u64), format!("{:04}", 42u64.to_value()),);
     }
 }
