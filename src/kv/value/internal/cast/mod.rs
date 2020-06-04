@@ -215,7 +215,8 @@ impl<'v> Inner<'v> {
             }
 
             #[cfg(feature = "std")]
-            fn str(&mut self, _: &str) -> Result<(), Error> {
+            fn str(&mut self, s: &str) -> Result<(), Error> {
+                self.0 = Cast::String(s.to_owned());
                 Ok(())
             }
 

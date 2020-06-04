@@ -2,7 +2,7 @@
 // Pros: fast, will work on stable soon (possibly 1.45.0)
 // Cons: requires a `'static` bound
 #[cfg(all(src_build, feature = "kv_unstable_const_primitive"))]
-pub(super) fn from_any<'v, T: 'static>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
+pub(super) fn from_any<'v, T: ?Sized + 'static>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
     use std::any::TypeId;
 
     use crate::kv::value::internal::Primitive;
@@ -43,7 +43,7 @@ pub(super) fn from_any<'v, T: 'static>(value: &'v T) -> Option<crate::kv::value:
         }
     }
     
-    impl<T: 'static> ToPrimitive for T { }
+    impl<T: ?Sized + 'static> ToPrimitive for T { }
 
     value.to_primitive()
 }
@@ -55,7 +55,7 @@ pub fn generate() { }
 // Pros: fast, doesn't require `'static` bound
 // Cons: might not stabilize for a long time, doesn't work with `&str`
 #[cfg(all(src_build, feature = "kv_unstable_spec_primitive"))]
-pub(super) fn from_any<'v, T>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
+pub(super) fn from_any<'v, T: ?Sized>(value: &'v T) -> Option<crate::kv::value::internal::Primitive<'v>> {
     use std::any::TypeId;
 
     use crate::kv::value::internal::Primitive;
@@ -63,8 +63,8 @@ pub(super) fn from_any<'v, T>(value: &'v T) -> Option<crate::kv::value::internal
     trait ToPrimitive {
         fn to_primitive(&self) -> Option<Primitive>;
     }
-    
-    impl<T> ToPrimitive for T {
+
+    impl<T: ?Sized> ToPrimitive for T {
         default fn to_primitive(&self) -> Option<Primitive> {
             None
         }

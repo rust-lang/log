@@ -203,4 +203,19 @@ mod tests {
                 .expect("invalid value")
         );
     }
+
+    #[cfg(feature = "std")]
+    mod std_support {
+        use super::*;
+
+        #[test]
+        fn sval_cast() {
+            assert_eq!(
+                "a string",
+                kv::Value::from_sval(&"a string".to_owned())
+                    .to_str()
+                    .expect("invalid value")
+            );
+        }
+    }
 }
