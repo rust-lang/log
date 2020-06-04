@@ -41,12 +41,6 @@ impl From<fmt::Error> for Error {
     }
 }
 
-impl From<Error> for fmt::Error {
-    fn from(_: Error) -> Self {
-        fmt::Error
-    }
-}
-
 #[cfg(feature = "std")]
 mod std_support {
     use super::*;

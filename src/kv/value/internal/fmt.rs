@@ -65,7 +65,7 @@ pub(in kv::value) use self::fmt::{Arguments, Debug, Display};
 
 impl<'v> fmt::Debug for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut FmtVisitor(f))?;
+        self.visit(&mut FmtVisitor(f)).map_err(|_| fmt::Error)?;
 
         Ok(())
     }
@@ -73,7 +73,7 @@ impl<'v> fmt::Debug for kv::Value<'v> {
 
 impl<'v> fmt::Display for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut FmtVisitor(f))?;
+        self.visit(&mut FmtVisitor(f)).map_err(|_| fmt::Error)?;
 
         Ok(())
     }
