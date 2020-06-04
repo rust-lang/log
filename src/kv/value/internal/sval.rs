@@ -42,6 +42,48 @@ impl<'s, 'f> Slot<'s, 'f> {
 
 impl<'v> sval::Value for kv::Value<'v> {
     fn stream(&self, s: &mut sval::value::Stream) -> sval::value::Result {
+        struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
+
+        impl<'a, 'b: 'a, 'v> Visitor<'v> for SvalVisitor<'a, 'b> {
+            fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
+                self.0
+                    .fmt(format_args!("{:?}", v))
+                    .map_err(Error::from_sval)
+            }
+
+            fn u64(&mut self, v: u64) -> Result<(), Error> {
+                self.0.u64(v).map_err(Error::from_sval)
+            }
+
+            fn i64(&mut self, v: i64) -> Result<(), Error> {
+                self.0.i64(v).map_err(Error::from_sval)
+            }
+
+            fn f64(&mut self, v: f64) -> Result<(), Error> {
+                self.0.f64(v).map_err(Error::from_sval)
+            }
+
+            fn bool(&mut self, v: bool) -> Result<(), Error> {
+                self.0.bool(v).map_err(Error::from_sval)
+            }
+
+            fn char(&mut self, v: char) -> Result<(), Error> {
+                self.0.char(v).map_err(Error::from_sval)
+            }
+
+            fn str(&mut self, v: &str) -> Result<(), Error> {
+                self.0.str(v).map_err(Error::from_sval)
+            }
+
+            fn none(&mut self) -> Result<(), Error> {
+                self.0.none().map_err(Error::from_sval)
+            }
+
+            fn sval(&mut self, v: &dyn sval::Value) -> Result<(), Error> {
+                self.0.any(v).map_err(Error::from_sval)
+            }
+        }
+
         self.visit(&mut SvalVisitor(s)).map_err(Error::into_sval)?;
 
         Ok(())
@@ -107,48 +149,6 @@ impl Error {
     }
 }
 
-struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
-
-impl<'a, 'b: 'a, 'v> Visitor<'v> for SvalVisitor<'a, 'b> {
-    fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
-        self.0
-            .fmt(format_args!("{:?}", v))
-            .map_err(Error::from_sval)
-    }
-
-    fn u64(&mut self, v: u64) -> Result<(), Error> {
-        self.0.u64(v).map_err(Error::from_sval)
-    }
-
-    fn i64(&mut self, v: i64) -> Result<(), Error> {
-        self.0.i64(v).map_err(Error::from_sval)
-    }
-
-    fn f64(&mut self, v: f64) -> Result<(), Error> {
-        self.0.f64(v).map_err(Error::from_sval)
-    }
-
-    fn bool(&mut self, v: bool) -> Result<(), Error> {
-        self.0.bool(v).map_err(Error::from_sval)
-    }
-
-    fn char(&mut self, v: char) -> Result<(), Error> {
-        self.0.char(v).map_err(Error::from_sval)
-    }
-
-    fn str(&mut self, v: &str) -> Result<(), Error> {
-        self.0.str(v).map_err(Error::from_sval)
-    }
-
-    fn none(&mut self) -> Result<(), Error> {
-        self.0.none().map_err(Error::from_sval)
-    }
-
-    fn sval(&mut self, v: &dyn sval::Value) -> Result<(), Error> {
-        self.0.any(v).map_err(Error::from_sval)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,6 +189,22 @@ mod tests {
             kv::Value::from_sval(&"a string")
                 .to_str()
                 .expect("invalid value")
+        );
+    }
+
+    #[test]
+    fn sval_debug() {
+        struct TestSval;
+
+        impl sval::Value for TestSval {
+            fn stream(&self, stream: &mut sval::value::Stream) -> sval::value::Result {
+                stream.u64(42)
+            }
+        }
+
+        assert_eq!(
+            format!("{:04?}", 42u64),
+            format!("{:04?}", kv::Value::from_sval(&TestSval)),
         );
     }
 }

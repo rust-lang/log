@@ -65,7 +65,68 @@ pub(in kv::value) use self::fmt::{Arguments, Debug, Display};
 
 impl<'v> fmt::Debug for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut FmtVisitor(f)).map_err(|_| fmt::Error)?;
+        struct DebugVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+
+        impl<'a, 'b: 'a, 'v> Visitor<'v> for DebugVisitor<'a, 'b> {
+            fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
+                fmt::Debug::fmt(v, self.0)?;
+
+                Ok(())
+            }
+
+            fn display(&mut self, v: &dyn fmt::Display) -> Result<(), Error> {
+                fmt::Display::fmt(v, self.0)?;
+
+                Ok(())
+            }
+
+            fn u64(&mut self, v: u64) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn i64(&mut self, v: i64) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn f64(&mut self, v: f64) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn bool(&mut self, v: bool) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn char(&mut self, v: char) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn str(&mut self, v: &str) -> Result<(), Error> {
+                fmt::Debug::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn none(&mut self) -> Result<(), Error> {
+                self.debug(&format_args!("None"))
+            }
+
+            #[cfg(feature = "kv_unstable_sval")]
+            fn sval(&mut self, v: &dyn super::sval::Value) -> Result<(), Error> {
+                super::sval::fmt(self.0, v)
+            }
+        }
+
+        self.visit(&mut DebugVisitor(f)).map_err(|_| fmt::Error)?;
 
         Ok(())
     }
@@ -73,58 +134,78 @@ impl<'v> fmt::Debug for kv::Value<'v> {
 
 impl<'v> fmt::Display for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.visit(&mut FmtVisitor(f)).map_err(|_| fmt::Error)?;
+        struct DisplayVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
+
+        impl<'a, 'b: 'a, 'v> Visitor<'v> for DisplayVisitor<'a, 'b> {
+            fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
+                fmt::Debug::fmt(v, self.0)?;
+
+                Ok(())
+            }
+
+            fn display(&mut self, v: &dyn fmt::Display) -> Result<(), Error> {
+                fmt::Display::fmt(v, self.0)?;
+
+                Ok(())
+            }
+
+            fn u64(&mut self, v: u64) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn i64(&mut self, v: i64) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn f64(&mut self, v: f64) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn bool(&mut self, v: bool) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn char(&mut self, v: char) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn str(&mut self, v: &str) -> Result<(), Error> {
+                fmt::Display::fmt(&v, self.0)?;
+
+                Ok(())
+            }
+
+            fn none(&mut self) -> Result<(), Error> {
+                self.debug(&format_args!("None"))
+            }
+
+            #[cfg(feature = "kv_unstable_sval")]
+            fn sval(&mut self, v: &dyn super::sval::Value) -> Result<(), Error> {
+                super::sval::fmt(self.0, v)
+            }
+        }
+
+        self.visit(&mut DisplayVisitor(f)).map_err(|_| fmt::Error)?;
 
         Ok(())
-    }
-}
-
-struct FmtVisitor<'a, 'b: 'a>(&'a mut fmt::Formatter<'b>);
-
-impl<'a, 'b: 'a, 'v> Visitor<'v> for FmtVisitor<'a, 'b> {
-    fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
-        v.fmt(self.0)?;
-
-        Ok(())
-    }
-
-    fn u64(&mut self, v: u64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn i64(&mut self, v: i64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn f64(&mut self, v: f64) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn bool(&mut self, v: bool) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn char(&mut self, v: char) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn str(&mut self, v: &str) -> Result<(), Error> {
-        self.debug(&format_args!("{:?}", v))
-    }
-
-    fn none(&mut self) -> Result<(), Error> {
-        self.debug(&format_args!("None"))
-    }
-
-    #[cfg(feature = "kv_unstable_sval")]
-    fn sval(&mut self, v: &dyn super::sval::Value) -> Result<(), Error> {
-        super::sval::fmt(self.0, v)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::kv::value::ToValue;
 
     #[test]
     fn fmt_cast() {
@@ -140,6 +221,32 @@ mod tests {
             kv::Value::from_display(&"a string")
                 .to_borrowed_str()
                 .expect("invalid value")
+        );
+    }
+
+    #[test]
+    fn fmt_debug() {
+        assert_eq!(
+            format!("{:?}", "a string"),
+            format!("{:?}", "a string".to_value()),
+        );
+
+        assert_eq!(
+            format!("{:04?}", 42u64),
+            format!("{:04?}", 42u64.to_value()),
+        );
+    }
+
+    #[test]
+    fn fmt_display() {
+        assert_eq!(
+            format!("{}", "a string"),
+            format!("{}", "a string".to_value()),
+        );
+
+        assert_eq!(
+            format!("{:04}", 42u64),
+            format!("{:04}", 42u64.to_value()),
         );
     }
 }
