@@ -145,4 +145,20 @@ mod tests {
                 .expect("invalid value")
         );
     }
+
+    #[test]
+    fn fill_debug() {
+        struct TestFill;
+
+        impl Fill for TestFill {
+            fn fill(&self, slot: &mut Slot) -> Result<(), Error> {
+                slot.fill_any(42u64)
+            }
+        }
+
+        assert_eq!(
+            format!("{:04?}", 42u64),
+            format!("{:04?}", Value::from_fill(&TestFill)),
+        )
+    }
 }
