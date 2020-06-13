@@ -58,7 +58,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
 ## In executables
 
 In order to produce log output, executables have to use a logger implementation compatible with the facade.
-There are many available implementations to chose from, here are some of the most popular ones:
+There are many available implementations to choose from, here are some of the most popular ones:
 
 * Simple minimal loggers:
     * [`env_logger`](https://docs.rs/env_logger/*/env_logger/)
