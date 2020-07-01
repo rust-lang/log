@@ -167,7 +167,7 @@ pub(super) fn cast<'v>(v: &dyn sval::Value) -> Cast<'v> {
 }
 
 impl Error {
-    fn capture_sval(_: sval::value::Error) -> Self {
+    fn from_sval(_: sval::value::Error) -> Self {
         Error::msg("`sval` serialization failed")
     }
 
