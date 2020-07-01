@@ -750,7 +750,7 @@ struct KeyValues<'a>(&'a dyn kv::Source);
 impl<'a> fmt::Debug for KeyValues<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut visitor = f.debug_map();
-        self.0.visit(&mut visitor)?;
+        self.0.visit(&mut visitor).map_err(|_| fmt::Error)?;
         visitor.finish()
     }
 }

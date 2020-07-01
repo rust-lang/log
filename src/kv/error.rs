@@ -41,12 +41,6 @@ impl From<fmt::Error> for Error {
     }
 }
 
-impl From<Error> for fmt::Error {
-    fn from(_: Error) -> Self {
-        fmt::Error
-    }
-}
-
 #[cfg(feature = "std")]
 mod std_support {
     use super::*;
@@ -71,12 +65,6 @@ mod std_support {
     impl From<io::Error> for Error {
         fn from(err: io::Error) -> Self {
             Error::boxed(err)
-        }
-    }
-
-    impl From<Error> for io::Error {
-        fn from(err: Error) -> Self {
-            io::Error::new(io::ErrorKind::Other, err)
         }
     }
 }
