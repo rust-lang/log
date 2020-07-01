@@ -47,8 +47,6 @@ std = []
 # this will have a tighter MSRV before stabilization
 kv_unstable = []
 kv_unstable_sval = ["kv_unstable", "sval/fmt"]
-kv_unstable_const_primitive = []
-kv_unstable_spec_primitive = []
 
 [dependencies]
 cfg-if = "0.1.2"
