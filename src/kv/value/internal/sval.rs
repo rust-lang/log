@@ -14,11 +14,26 @@ use crate::kv::value::{Error, Slot, ToValue};
 
 impl<'v> kv::Value<'v> {
     /// Get a value from a structured type.
-    pub fn from_sval<T>(value: &'v T) -> Self
+    ///
+    /// This method will attempt to capture the given value as a well-known primitive
+    /// before resorting to using its `Value` implementation.
+    pub fn capture_sval<T>(value: &'v T) -> Self
     where
         T: sval::Value + 'static,
     {
-        cast::try_from_primitive(value).unwrap_or(kv::Value { inner: Inner::Sval(value) })
+        cast::try_from_primitive(value).unwrap_or(kv::Value {
+            inner: Inner::Sval(value),
+        })
+    }
+
+    /// Get a value from a structured type.
+    pub fn from_sval<T>(value: &'v T) -> Self
+    where
+        T: sval::Value,
+    {
+        kv::Value {
+            inner: Inner::Sval(value),
+        }
     }
 }
 
@@ -55,7 +70,7 @@ impl<'v> ToValue for dyn sval::Value + 'v {
 impl<'v> From<&'v (dyn sval::Value)> for kv::Value<'v> {
     fn from(value: &'v (dyn sval::Value)) -> kv::Value<'v> {
         kv::Value {
-            inner: Inner::Sval(value)
+            inner: Inner::Sval(value),
         }
     }
 }
@@ -110,7 +125,7 @@ pub(super) fn cast<'v>(v: &dyn sval::Value) -> Cast<'v> {
 }
 
 impl Error {
-    fn from_sval(_: sval::value::Error) -> Self {
+    fn capture_sval(_: sval::value::Error) -> Self {
         Error::msg("`sval` serialization failed")
     }
 
@@ -167,8 +182,8 @@ mod tests {
     use kv::value::test::Token;
 
     #[test]
-    fn test_from_sval() {
-        assert_eq!(kv::Value::from_sval(&42u64).to_token(), Token::U64(42));
+    fn test_capture_sval() {
+        assert_eq!(kv::Value::capture_sval(&42u64).to_token(), Token::U64(42));
     }
 
     #[test]
@@ -183,14 +198,14 @@ mod tests {
     fn sval_cast() {
         assert_eq!(
             42u32,
-            kv::Value::from_sval(&42u64)
+            kv::Value::capture_sval(&42u64)
                 .to_u32()
                 .expect("invalid value")
         );
 
         assert_eq!(
             "a string",
-            kv::Value::from_sval(&"a string")
+            kv::Value::capture_sval(&"a string")
                 .to_borrowed_str()
                 .expect("invalid value")
         );
@@ -198,7 +213,7 @@ mod tests {
         #[cfg(feature = "std")]
         assert_eq!(
             "a string",
-            kv::Value::from_sval(&"a string")
+            kv::Value::capture_sval(&"a string")
                 .to_str()
                 .expect("invalid value")
         );
@@ -212,7 +227,7 @@ mod tests {
         fn sval_cast() {
             assert_eq!(
                 "a string",
-                kv::Value::from_sval(&"a string".to_owned())
+                kv::Value::capture_sval(&"a string".to_owned())
                     .to_str()
                     .expect("invalid value")
             );

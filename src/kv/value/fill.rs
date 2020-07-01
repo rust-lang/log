@@ -9,7 +9,7 @@ impl<'v> Value<'v> {
     /// Get a value from a fillable slot.
     pub fn from_fill<T>(value: &'v T) -> Self
     where
-        T: Fill + 'static,
+        T: Fill,
     {
         Value {
             inner: Inner::Fill(value),
