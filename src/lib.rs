@@ -275,7 +275,6 @@
 // an unstable crate
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
-
 // TODO: Remove once https://github.com/rust-lang/rust/pull/72488 is merged
 #![cfg_attr(const_type_id, feature(const_type_id))]
 

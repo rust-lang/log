@@ -17,7 +17,7 @@ fn main() {
 
     let target = match rustc_target() {
         Some(target) => target,
-        None => return
+        None => return,
     };
 
     // If the target isn't thumbv6 then we can use atomic CAS

@@ -17,7 +17,7 @@ mod primitive;
 /// This makes `Value`s produced by `Value::from_*` more useful
 pub(super) fn try_from_primitive<'v, T: 'static>(value: &'v T) -> Option<Value<'v>> {
     primitive::from_any(value).map(|primitive| Value {
-        inner: Inner::Primitive(primitive)
+        inner: Inner::Primitive(primitive),
     })
 }
 

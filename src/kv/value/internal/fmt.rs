@@ -227,7 +227,6 @@ impl<'v> fmt::Display for kv::Value<'v> {
     }
 }
 
-
 impl<'v> ToValue for dyn fmt::Debug + 'v {
     fn to_value(&self) -> kv::Value {
         kv::Value::from(self)
