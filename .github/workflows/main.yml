@@ -34,7 +34,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Rust (rustup)
       run: |
-        rustup update ${{ matrix.rust }}
+        rustup update ${{ matrix.rust }} --no-self-update
         rustup default ${{ matrix.rust }}
     - run: cargo test --verbose
     - run: cargo test --verbose --features serde
@@ -52,7 +52,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Rust
       run: |
-        rustup update stable
+        rustup update stable --no-self-update
         rustup default stable
         rustup component add rustfmt
     - run: cargo fmt -- --check
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@master
       - name: Install Rust
         run: |
-          rustup update 1.31.0
+          rustup update 1.31.0 --no-self-update
           rustup default 1.31.0
       - run: cargo build --verbose
       - run: cargo build --verbose --features serde
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@master
       - name: Install Rust
         run: |
-          rustup update stable
+          rustup update stable --no-self-update
           rustup default stable
       - run: rustup target add thumbv6m-none-eabi
       - run: cargo build --verbose --target=thumbv6m-none-eabi
