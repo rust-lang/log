@@ -2,13 +2,28 @@
 
 ## [Unreleased]
 
-## [0.4.10] - 2019-12-16
+## [0.4.11] - 2020-07-09
+
+### New
+
+* Support coercing structured values into concrete types.
+* Reference the `win_dbg_logger` in the readme.
+
+### Fixed
+
+* Updates a few deprecated items used internally.
+* Fixed issues in docs and expands sections.
+* Show the correct build badge in the readme.
+* Fix up a possible inference breakage with structured value errors.
+* Respect formatting flags in structured value formatting.
+
+## [0.4.10] - 2019-12-16 (yanked)
 
 ### Fixed
 
 * Fixed the `log!` macros so they work in expression context (this regressed in `0.4.9`, which has been yanked).
 
-## [0.4.9] - 2019-12-12
+## [0.4.9] - 2019-12-12 (yanked)
 
 ### Minimum Supported Rust Version
 
@@ -155,7 +170,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.10...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.11...HEAD
+[0.4.11]: https://github.com/rust-lang-nursery/log/compare/0.4.10...0.4.11
 [0.4.10]: https://github.com/rust-lang-nursery/log/compare/0.4.9...0.4.10
 [0.4.9]: https://github.com/rust-lang-nursery/log/compare/0.4.8...0.4.9
 [0.4.8]: https://github.com/rust-lang-nursery/log/compare/0.4.7...0.4.8
