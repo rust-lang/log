@@ -60,6 +60,17 @@ impl<'de> Deserialize<'de> for Level {
 
                 self.visit_str(variant)
             }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                let variant: &str = LOG_LEVEL_NAMES[1..]
+                    .get(v as usize)
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
+
+                self.visit_str(variant)
+            }
         }
 
         impl<'de> DeserializeSeed<'de> for LevelIdentifier {
@@ -141,6 +152,17 @@ impl<'de> Deserialize<'de> for LevelFilter {
             {
                 let variant = str::from_utf8(value)
                     .map_err(|_| Error::invalid_value(Unexpected::Bytes(value), &self))?;
+
+                self.visit_str(variant)
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                let variant: &str = LOG_LEVEL_NAMES
+                    .get(v as usize)
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
 
                 self.visit_str(variant)
             }
