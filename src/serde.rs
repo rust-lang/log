@@ -61,13 +61,13 @@ impl<'de> Deserialize<'de> for Level {
                 self.visit_str(variant)
             }
 
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                let variant: &str = LOG_LEVEL_NAMES[1..]
+                let variant = LOG_LEVEL_NAMES[1..]
                     .get(v as usize)
-                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v as u64), &self))?;
 
                 self.visit_str(variant)
             }
@@ -156,13 +156,13 @@ impl<'de> Deserialize<'de> for LevelFilter {
                 self.visit_str(variant)
             }
 
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                let variant: &str = LOG_LEVEL_NAMES
+                let variant = LOG_LEVEL_NAMES
                     .get(v as usize)
-                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v as u64), &self))?;
 
                 self.visit_str(variant)
             }
@@ -225,6 +225,14 @@ mod tests {
         ]
     }
 
+    fn level_variant_tokens(variant: u32) -> [Token; 3] {
+        [
+            Token::Enum { name: "Level" },
+            Token::U32(variant),
+            Token::Unit,
+        ]
+    }
+
     fn level_filter_token(variant: &'static str) -> Token {
         Token::UnitVariant {
             name: "LevelFilter",
@@ -238,6 +246,16 @@ mod tests {
                 name: "LevelFilter",
             },
             Token::Bytes(variant),
+            Token::Unit,
+        ]
+    }
+
+    fn level_filter_variant_tokens(variant: u32) -> [Token; 3] {
+        [
+            Token::Enum {
+                name: "LevelFilter",
+            },
+            Token::U32(variant),
             Token::Unit,
         ]
     }
@@ -280,6 +298,21 @@ mod tests {
             (Level::Info, level_bytes_tokens(b"INFO")),
             (Level::Debug, level_bytes_tokens(b"DEBUG")),
             (Level::Trace, level_bytes_tokens(b"TRACE")),
+        ];
+
+        for &(value, tokens) in &cases {
+            assert_de_tokens(&value, &tokens);
+        }
+    }
+
+    #[test]
+    fn test_level_de_variant_index() {
+        let cases = [
+            (Level::Error, level_variant_tokens(0)),
+            (Level::Warn, level_variant_tokens(1)),
+            (Level::Info, level_variant_tokens(2)),
+            (Level::Debug, level_variant_tokens(3)),
+            (Level::Trace, level_variant_tokens(4)),
         ];
 
         for &(value, tokens) in &cases {
@@ -335,6 +368,22 @@ mod tests {
             (LevelFilter::Info, level_filter_bytes_tokens(b"INFO")),
             (LevelFilter::Debug, level_filter_bytes_tokens(b"DEBUG")),
             (LevelFilter::Trace, level_filter_bytes_tokens(b"TRACE")),
+        ];
+
+        for &(value, tokens) in &cases {
+            assert_de_tokens(&value, &tokens);
+        }
+    }
+
+    #[test]
+    fn test_level_filter_de_variant_index() {
+        let cases = [
+            (LevelFilter::Off, level_filter_variant_tokens(0)),
+            (LevelFilter::Error, level_filter_variant_tokens(1)),
+            (LevelFilter::Warn, level_filter_variant_tokens(2)),
+            (LevelFilter::Info, level_filter_variant_tokens(3)),
+            (LevelFilter::Debug, level_filter_variant_tokens(4)),
+            (LevelFilter::Trace, level_filter_variant_tokens(5)),
         ];
 
         for &(value, tokens) in &cases {
