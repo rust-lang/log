@@ -61,13 +61,13 @@ impl<'de> Deserialize<'de> for Level {
                 self.visit_str(variant)
             }
 
-            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
                 let variant = LOG_LEVEL_NAMES[1..]
                     .get(v as usize)
-                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v as u64), &self))?;
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
 
                 self.visit_str(variant)
             }
@@ -156,13 +156,13 @@ impl<'de> Deserialize<'de> for LevelFilter {
                 self.visit_str(variant)
             }
 
-            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
                 let variant = LOG_LEVEL_NAMES
                     .get(v as usize)
-                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v as u64), &self))?;
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
 
                 self.visit_str(variant)
             }
