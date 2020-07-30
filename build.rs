@@ -26,7 +26,7 @@ fn main() {
     }
 
     // If the Rust version is at least 1.46.0 then we can use type ids at compile time
-    if minor >= 46 {
+    if minor >= 47 {
         println!("cargo:rustc-cfg=const_type_id");
     }
 
