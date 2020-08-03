@@ -5,28 +5,54 @@
 
 use std::fmt;
 
-use super::{Erased, Inner, Visitor};
+use super::{cast, Inner, Visitor};
 use crate::kv;
-use crate::kv::value::{Error, Slot};
+use crate::kv::value::{Error, Slot, ToValue};
 
 impl<'v> kv::Value<'v> {
     /// Get a value from a debuggable type.
-    pub fn from_debug<T>(value: &'v T) -> Self
+    ///
+    /// This method will attempt to capture the given value as a well-known primitive
+    /// before resorting to using its `Debug` implementation.
+    pub fn capture_debug<T>(value: &'v T) -> Self
     where
         T: fmt::Debug + 'static,
     {
+        cast::try_from_primitive(value).unwrap_or(kv::Value {
+            inner: Inner::Debug(value),
+        })
+    }
+
+    /// Get a value from a debuggable type.
+    pub fn from_debug<T>(value: &'v T) -> Self
+    where
+        T: fmt::Debug,
+    {
         kv::Value {
-            inner: Inner::Debug(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: Inner::Debug(value),
         }
+    }
+
+    /// Get a value from a displayable type.
+    ///
+    /// This method will attempt to capture the given value as a well-known primitive
+    /// before resorting to using its `Display` implementation.
+    pub fn capture_display<T>(value: &'v T) -> Self
+    where
+        T: fmt::Display + 'static,
+    {
+        cast::try_from_primitive(value).unwrap_or(kv::Value {
+            inner: Inner::Display(value),
+        })
     }
 
     /// Get a value from a displayable type.
     pub fn from_display<T>(value: &'v T) -> Self
     where
-        T: fmt::Display + 'static,
+        T: fmt::Display,
     {
         kv::Value {
-            inner: Inner::Display(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: Inner::Display(value),
         }
     }
 }
@@ -201,24 +227,64 @@ impl<'v> fmt::Display for kv::Value<'v> {
     }
 }
 
+impl<'v> ToValue for dyn fmt::Debug + 'v {
+    fn to_value(&self) -> kv::Value {
+        kv::Value::from(self)
+    }
+}
+
+impl<'v> ToValue for dyn fmt::Display + 'v {
+    fn to_value(&self) -> kv::Value {
+        kv::Value::from(self)
+    }
+}
+
+impl<'v> From<&'v (dyn fmt::Debug)> for kv::Value<'v> {
+    fn from(value: &'v (dyn fmt::Debug)) -> kv::Value<'v> {
+        kv::Value {
+            inner: Inner::Debug(value),
+        }
+    }
+}
+
+impl<'v> From<&'v (dyn fmt::Display)> for kv::Value<'v> {
+    fn from(value: &'v (dyn fmt::Display)) -> kv::Value<'v> {
+        kv::Value {
+            inner: Inner::Display(value),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kv::value::test::Token;
 
     use crate::kv::value::ToValue;
+
+    #[test]
+    fn fmt_capture() {
+        assert_eq!(kv::Value::capture_debug(&1u16).to_token(), Token::U64(1));
+        assert_eq!(kv::Value::capture_display(&1u16).to_token(), Token::U64(1));
+
+        assert_eq!(
+            kv::Value::capture_debug(&Some(1u16)).to_token(),
+            Token::U64(1)
+        );
+    }
 
     #[test]
     fn fmt_cast() {
         assert_eq!(
             42u32,
-            kv::Value::from_debug(&42u64)
+            kv::Value::capture_debug(&42u64)
                 .to_u32()
                 .expect("invalid value")
         );
 
         assert_eq!(
             "a string",
-            kv::Value::from_display(&"a string")
+            kv::Value::capture_display(&"a string")
                 .to_borrowed_str()
                 .expect("invalid value")
         );

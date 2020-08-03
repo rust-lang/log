@@ -3,8 +3,6 @@
 //! This implementation isn't intended to be public. It may need to change
 //! for optimizations or to support new external serialization frameworks.
 
-use std::any::TypeId;
-
 use super::{Error, Fill, Slot};
 
 pub(super) mod cast;
@@ -18,27 +16,29 @@ pub(super) enum Inner<'v> {
     /// A simple primitive value that can be copied without allocating.
     Primitive(Primitive<'v>),
     /// A value that can be filled.
-    Fill(Erased<'v, dyn Fill + 'static>),
+    Fill(&'v (dyn Fill)),
     /// A debuggable value.
-    Debug(Erased<'v, dyn fmt::Debug + 'static>),
+    Debug(&'v (dyn fmt::Debug)),
     /// A displayable value.
-    Display(Erased<'v, dyn fmt::Display + 'static>),
+    Display(&'v (dyn fmt::Display)),
 
     #[cfg(feature = "kv_unstable_sval")]
     /// A structured value from `sval`.
-    Sval(Erased<'v, dyn sval::Value + 'static>),
+    Sval(&'v (dyn sval::Value)),
 }
 
 impl<'v> Inner<'v> {
     pub(super) fn visit(self, visitor: &mut dyn Visitor<'v>) -> Result<(), Error> {
         match self {
             Inner::Primitive(value) => value.visit(visitor),
-            Inner::Fill(value) => value.get().fill(&mut Slot::new(visitor)),
-            Inner::Debug(value) => visitor.debug(value.get()),
-            Inner::Display(value) => visitor.display(value.get()),
+
+            Inner::Debug(value) => visitor.debug(value),
+            Inner::Display(value) => visitor.display(value),
+
+            Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
 
             #[cfg(feature = "kv_unstable_sval")]
-            Inner::Sval(value) => visitor.sval(value.get()),
+            Inner::Sval(value) => visitor.sval(value),
         }
     }
 }
@@ -97,85 +97,114 @@ impl<'v> Primitive<'v> {
     }
 }
 
+impl<'v> From<u8> for Primitive<'v> {
+    #[inline]
+    fn from(v: u8) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<u16> for Primitive<'v> {
+    #[inline]
+    fn from(v: u16) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<u32> for Primitive<'v> {
+    #[inline]
+    fn from(v: u32) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
 impl<'v> From<u64> for Primitive<'v> {
+    #[inline]
     fn from(v: u64) -> Self {
         Primitive::Unsigned(v)
     }
 }
 
+impl<'v> From<usize> for Primitive<'v> {
+    #[inline]
+    fn from(v: usize) -> Self {
+        Primitive::Unsigned(v as u64)
+    }
+}
+
+impl<'v> From<i8> for Primitive<'v> {
+    #[inline]
+    fn from(v: i8) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<i16> for Primitive<'v> {
+    #[inline]
+    fn from(v: i16) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<i32> for Primitive<'v> {
+    #[inline]
+    fn from(v: i32) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
 impl<'v> From<i64> for Primitive<'v> {
+    #[inline]
     fn from(v: i64) -> Self {
         Primitive::Signed(v)
     }
 }
 
+impl<'v> From<isize> for Primitive<'v> {
+    #[inline]
+    fn from(v: isize) -> Self {
+        Primitive::Signed(v as i64)
+    }
+}
+
+impl<'v> From<f32> for Primitive<'v> {
+    #[inline]
+    fn from(v: f32) -> Self {
+        Primitive::Float(v as f64)
+    }
+}
+
 impl<'v> From<f64> for Primitive<'v> {
+    #[inline]
     fn from(v: f64) -> Self {
         Primitive::Float(v)
     }
 }
 
 impl<'v> From<bool> for Primitive<'v> {
+    #[inline]
     fn from(v: bool) -> Self {
         Primitive::Bool(v)
     }
 }
 
 impl<'v> From<char> for Primitive<'v> {
+    #[inline]
     fn from(v: char) -> Self {
         Primitive::Char(v)
     }
 }
 
 impl<'v> From<&'v str> for Primitive<'v> {
+    #[inline]
     fn from(v: &'v str) -> Self {
         Primitive::Str(v)
     }
 }
 
 impl<'v> From<fmt::Arguments<'v>> for Primitive<'v> {
+    #[inline]
     fn from(v: fmt::Arguments<'v>) -> Self {
         Primitive::Fmt(v)
-    }
-}
-
-/// A downcastable dynamic type.
-pub(super) struct Erased<'v, T: ?Sized> {
-    type_id: TypeId,
-    inner: &'v T,
-}
-
-impl<'v, T: ?Sized> Clone for Erased<'v, T> {
-    fn clone(&self) -> Self {
-        Erased {
-            type_id: self.type_id,
-            inner: self.inner,
-        }
-    }
-}
-
-impl<'v, T: ?Sized> Copy for Erased<'v, T> {}
-
-impl<'v, T: ?Sized> Erased<'v, T> {
-    // SAFETY: `U: Unsize<T>` and the underlying value `T` must not change
-    // We could add a safe variant of this method with the `Unsize` trait
-    pub(super) unsafe fn new_unchecked<U>(inner: &'v T) -> Self
-    where
-        U: 'static,
-        T: 'static,
-    {
-        Erased {
-            type_id: TypeId::of::<U>(),
-            inner,
-        }
-    }
-
-    pub(super) fn get(self) -> &'v T {
-        self.inner
-    }
-
-    // SAFETY: The underlying type of `T` is `U`
-    pub(super) unsafe fn downcast_unchecked<U>(self) -> &'v U {
-        &*(self.inner as *const T as *const U)
     }
 }

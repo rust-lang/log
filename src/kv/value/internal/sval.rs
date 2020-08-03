@@ -7,19 +7,32 @@ extern crate sval;
 
 use std::fmt;
 
-use super::cast::Cast;
-use super::{Erased, Inner, Primitive, Visitor};
+use super::cast::{self, Cast};
+use super::{Inner, Primitive, Visitor};
 use crate::kv;
-use crate::kv::value::{Error, Slot};
+use crate::kv::value::{Error, Slot, ToValue};
 
 impl<'v> kv::Value<'v> {
     /// Get a value from a structured type.
-    pub fn from_sval<T>(value: &'v T) -> Self
+    ///
+    /// This method will attempt to capture the given value as a well-known primitive
+    /// before resorting to using its `Value` implementation.
+    pub fn capture_sval<T>(value: &'v T) -> Self
     where
         T: sval::Value + 'static,
     {
+        cast::try_from_primitive(value).unwrap_or(kv::Value {
+            inner: Inner::Sval(value),
+        })
+    }
+
+    /// Get a value from a structured type.
+    pub fn from_sval<T>(value: &'v T) -> Self
+    where
+        T: sval::Value,
+    {
         kv::Value {
-            inner: Inner::Sval(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: Inner::Sval(value),
         }
     }
 }
@@ -90,6 +103,20 @@ impl<'v> sval::Value for kv::Value<'v> {
     }
 }
 
+impl<'v> ToValue for dyn sval::Value + 'v {
+    fn to_value(&self) -> kv::Value {
+        kv::Value::from(self)
+    }
+}
+
+impl<'v> From<&'v (dyn sval::Value)> for kv::Value<'v> {
+    fn from(value: &'v (dyn sval::Value)) -> kv::Value<'v> {
+        kv::Value {
+            inner: Inner::Sval(value),
+        }
+    }
+}
+
 pub(in kv::value) use self::sval::Value;
 
 pub(super) fn fmt(f: &mut fmt::Formatter, v: &dyn sval::Value) -> Result<(), Error> {
@@ -155,30 +182,22 @@ mod tests {
     use kv::value::test::Token;
 
     #[test]
-    fn test_from_sval() {
-        assert_eq!(kv::Value::from_sval(&42u64).to_token(), Token::Sval);
-    }
-
-    #[test]
-    fn test_sval_structured() {
-        let value = kv::Value::from(42u64);
-        let expected = vec![sval::test::Token::Unsigned(42)];
-
-        assert_eq!(sval::test::tokens(value), expected);
+    fn sval_capture() {
+        assert_eq!(kv::Value::capture_sval(&42u64).to_token(), Token::U64(42));
     }
 
     #[test]
     fn sval_cast() {
         assert_eq!(
             42u32,
-            kv::Value::from_sval(&42u64)
+            kv::Value::capture_sval(&42u64)
                 .to_u32()
                 .expect("invalid value")
         );
 
         assert_eq!(
             "a string",
-            kv::Value::from_sval(&"a string")
+            kv::Value::capture_sval(&"a string")
                 .to_borrowed_str()
                 .expect("invalid value")
         );
@@ -186,10 +205,18 @@ mod tests {
         #[cfg(feature = "std")]
         assert_eq!(
             "a string",
-            kv::Value::from_sval(&"a string")
+            kv::Value::capture_sval(&"a string")
                 .to_str()
                 .expect("invalid value")
         );
+    }
+
+    #[test]
+    fn sval_structured() {
+        let value = kv::Value::from(42u64);
+        let expected = vec![sval::test::Token::Unsigned(42)];
+
+        assert_eq!(sval::test::tokens(value), expected);
     }
 
     #[test]
@@ -206,5 +233,20 @@ mod tests {
             format!("{:04?}", 42u64),
             format!("{:04?}", kv::Value::from_sval(&TestSval)),
         );
+    }
+
+    #[cfg(feature = "std")]
+    mod std_support {
+        use super::*;
+
+        #[test]
+        fn sval_cast() {
+            assert_eq!(
+                "a string",
+                kv::Value::capture_sval(&"a string".to_owned())
+                    .to_str()
+                    .expect("invalid value")
+            );
+        }
     }
 }

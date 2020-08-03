@@ -2,17 +2,17 @@
 
 use std::fmt;
 
-use super::internal::{Erased, Inner, Visitor};
+use super::internal::{Inner, Visitor};
 use super::{Error, Value};
 
 impl<'v> Value<'v> {
     /// Get a value from a fillable slot.
     pub fn from_fill<T>(value: &'v T) -> Self
     where
-        T: Fill + 'static,
+        T: Fill,
     {
         Value {
-            inner: Inner::Fill(unsafe { Erased::new_unchecked::<T>(value) }),
+            inner: Inner::Fill(value),
         }
     }
 }
