@@ -83,17 +83,17 @@ pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> O
 pub(crate) fn count_default(source: impl Source) -> usize {
     struct Count(usize);
 
-        impl<'kvs> Visitor<'kvs> for Count {
-            fn visit_pair(&mut self, _: Key<'kvs>, _: Value<'kvs>) -> Result<(), Error> {
-                self.0 += 1;
+    impl<'kvs> Visitor<'kvs> for Count {
+        fn visit_pair(&mut self, _: Key<'kvs>, _: Value<'kvs>) -> Result<(), Error> {
+            self.0 += 1;
 
-                Ok(())
-            }
+            Ok(())
         }
+    }
 
-        let mut count = Count(0);
-        let _ = source.visit(&mut count);
-        count.0
+    let mut count = Count(0);
+    let _ = source.visit(&mut count);
+    count.0
 }
 
 impl<'a, T> Source for &'a T
