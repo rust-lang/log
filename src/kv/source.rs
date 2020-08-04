@@ -30,27 +30,13 @@ pub trait Source {
     ///
     /// A source that can provide a more efficient implementation of this method
     /// should override it.
+    #[cfg(not(test))]
     fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
-        struct Get<'k, 'v> {
-            key: Key<'k>,
-            found: Option<Value<'v>>,
-        }
-
-        impl<'k, 'kvs> Visitor<'kvs> for Get<'k, 'kvs> {
-            fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
-                if self.key == key {
-                    self.found = Some(value);
-                }
-
-                Ok(())
-            }
-        }
-
-        let mut get = Get { key, found: None };
-
-        let _ = self.visit(&mut get);
-        get.found
+        get_default(self, key)
     }
+
+    #[cfg(test)]
+    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>>;
 
     /// Count the number of key-value pairs that can be visited.
     ///
@@ -61,21 +47,53 @@ pub trait Source {
     ///
     /// A subsequent call to `visit` should yield the same number of key-value pairs
     /// to the visitor, unless that visitor fails part way through.
+    #[cfg(not(test))]
     fn count(&self) -> usize {
-        struct Count(usize);
-
-        impl<'kvs> Visitor<'kvs> for Count {
-            fn visit_pair(&mut self, _: Key<'kvs>, _: Value<'kvs>) -> Result<(), Error> {
-                self.0 += 1;
-
-                Ok(())
-            }
-        }
-
-        let mut count = Count(0);
-        let _ = self.visit(&mut count);
-        count.0
+        count_default(self)
     }
+
+    #[cfg(test)]
+    fn count(&self) -> usize;
+}
+
+/// The default implemention of `Source::get`
+pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
+    struct Get<'k, 'v> {
+        key: Key<'k>,
+        found: Option<Value<'v>>,
+    }
+
+    impl<'k, 'kvs> Visitor<'kvs> for Get<'k, 'kvs> {
+        fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+            if self.key == key {
+                self.found = Some(value);
+            }
+
+            Ok(())
+        }
+    }
+
+    let mut get = Get { key, found: None };
+
+    let _ = source.visit(&mut get);
+    get.found
+}
+
+/// The default implementation of `Source::count`.
+pub(crate) fn count_default(source: impl Source) -> usize {
+    struct Count(usize);
+
+    impl<'kvs> Visitor<'kvs> for Count {
+        fn visit_pair(&mut self, _: Key<'kvs>, _: Value<'kvs>) -> Result<(), Error> {
+            self.0 += 1;
+
+            Ok(())
+        }
+    }
+
+    let mut count = Count(0);
+    let _ = source.visit(&mut count);
+    count.0
 }
 
 impl<'a, T> Source for &'a T
@@ -129,6 +147,16 @@ where
         Ok(())
     }
 
+    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        for source in self {
+            if let Some(found) = source.get(key.clone()) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
     fn count(&self) -> usize {
         self.len()
     }
@@ -144,6 +172,10 @@ where
         }
 
         Ok(())
+    }
+
+    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        self.as_ref().and_then(|s| s.get(key))
     }
 
     fn count(&self) -> usize {
@@ -365,6 +397,14 @@ mod tests {
         impl Source for OnePair {
             fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
                 visitor.visit_pair(self.key.to_key(), self.value.to_value())
+            }
+
+            fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+                get_default(self, key)
+            }
+
+            fn count(&self) -> usize {
+                count_default(self)
             }
         }
 
