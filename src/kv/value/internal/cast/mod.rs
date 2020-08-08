@@ -177,6 +177,15 @@ impl<'v> Value<'v> {
     pub fn to_borrowed_str(&self) -> Option<&str> {
         self.inner.cast().into_primitive().into_borrowed_str()
     }
+
+    #[cfg(feature = "std")]
+    /// Try get an error from this value.
+    pub fn to_error(&self) -> Option<&dyn super::error::Error> {
+        match self.inner {
+            Inner::Error(value) => Some(value),
+            _ => None,
+        }
+    }
 }
 
 impl<'v> Inner<'v> {
@@ -232,6 +241,11 @@ impl<'v> Inner<'v> {
 
             fn none(&mut self) -> Result<(), Error> {
                 self.0 = Cast::Primitive(Primitive::None);
+                Ok(())
+            }
+
+            #[cfg(feature = "std")]
+            fn error(&mut self, _: &dyn super::error::Error) -> Result<(), Error> {
                 Ok(())
             }
 

@@ -7,6 +7,8 @@ use super::{Error, Fill, Slot};
 
 pub(super) mod cast;
 pub(super) mod fmt;
+#[cfg(feature = "std")]
+pub(super) mod error;
 #[cfg(feature = "kv_unstable_sval")]
 pub(super) mod sval;
 
@@ -22,6 +24,10 @@ pub(super) enum Inner<'v> {
     /// A displayable value.
     Display(&'v (dyn fmt::Display)),
 
+    #[cfg(feature = "std")]
+    /// An error.
+    Error(&'v (dyn error::Error)),
+
     #[cfg(feature = "kv_unstable_sval")]
     /// A structured value from `sval`.
     Sval(&'v (dyn sval::Value)),
@@ -36,6 +42,9 @@ impl<'v> Inner<'v> {
             Inner::Display(value) => visitor.display(value),
 
             Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
+
+            #[cfg(feature = "std")]
+            Inner::Error(value) => visitor.error(value),
 
             #[cfg(feature = "kv_unstable_sval")]
             Inner::Sval(value) => visitor.sval(value),
@@ -62,6 +71,9 @@ pub(super) trait Visitor<'v> {
     }
 
     fn none(&mut self) -> Result<(), Error>;
+
+    #[cfg(feature = "std")]
+    fn error(&mut self, v: &dyn error::Error) -> Result<(), Error>;
 
     #[cfg(feature = "kv_unstable_sval")]
     fn sval(&mut self, v: &dyn sval::Value) -> Result<(), Error>;

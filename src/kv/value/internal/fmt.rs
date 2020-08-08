@@ -146,6 +146,13 @@ impl<'v> fmt::Debug for kv::Value<'v> {
                 self.debug(&format_args!("None"))
             }
 
+            #[cfg(feature = "std")]
+            fn error(&mut self, v: &dyn std::error::Error) -> Result<(), Error> {
+                fmt::Debug::fmt(v, self.0)?;
+
+                Ok(())
+            }
+
             #[cfg(feature = "kv_unstable_sval")]
             fn sval(&mut self, v: &dyn super::sval::Value) -> Result<(), Error> {
                 super::sval::fmt(self.0, v)
@@ -213,6 +220,13 @@ impl<'v> fmt::Display for kv::Value<'v> {
 
             fn none(&mut self) -> Result<(), Error> {
                 self.debug(&format_args!("None"))
+            }
+
+            #[cfg(feature = "std")]
+            fn error(&mut self, v: &dyn std::error::Error) -> Result<(), Error> {
+                fmt::Display::fmt(v, self.0)?;
+
+                Ok(())
             }
 
             #[cfg(feature = "kv_unstable_sval")]

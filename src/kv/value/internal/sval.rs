@@ -92,6 +92,11 @@ impl<'v> sval::Value for kv::Value<'v> {
                 self.0.none().map_err(Error::from_sval)
             }
 
+            #[cfg(feature = "std")]
+            fn error(&mut self, v: &dyn std::error::Error) -> Result<(), Error> {
+                self.0.error(sval::stream::Source::from(v))
+            }
+
             fn sval(&mut self, v: &dyn sval::Value) -> Result<(), Error> {
                 self.0.any(v).map_err(Error::from_sval)
             }

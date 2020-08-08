@@ -51,8 +51,8 @@ kv_unstable_sval = ["kv_unstable", "sval/fmt"]
 [dependencies]
 cfg-if = "0.1.2"
 serde = { version = "1.0", optional = true, default-features = false }
-sval = { version = "0.5.2", optional = true, default-features = false }
+sval = { git = "https://github.com/sval-rs/sval", branch = "feat/error", version = "1.0.0-alpha.1", optional = true, default-features = false }
 
 [dev-dependencies]
 serde_test = "1.0"
-sval = { version = "0.5.2", features = ["test"] }
+sval = { git = "https://github.com/sval-rs/sval", branch = "feat/error", version = "1.0.0-alpha.1", features = ["test"] }
