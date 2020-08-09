@@ -21,9 +21,7 @@ pub(super) fn type_id<T: 'static>() -> TypeId {
 /// This makes `Value`s produced by `Value::from_*` more useful
 pub(super) fn try_from_primitive<'v, T: 'static>(value: &'v T) -> Option<Value<'v>> {
     primitive::from_any(value).map(|primitive| Value {
-        inner: Inner::Primitive {
-            value: primitive,
-        },
+        inner: Inner::Primitive { value: primitive },
     })
 }
 
@@ -193,12 +191,24 @@ impl<'v> Value<'v> {
     pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
         let target = TypeId::of::<T>();
         match self.inner {
-            Inner::Debug { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
-            Inner::Display { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            Inner::Debug {
+                type_id: Some(type_id),
+                value,
+            } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            Inner::Display {
+                type_id: Some(type_id),
+                value,
+            } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
             #[cfg(feature = "std")]
-            Inner::Error { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            Inner::Error {
+                type_id: Some(type_id),
+                value,
+            } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
             #[cfg(feature = "kv_unstable_sval")]
-            Inner::Sval { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            Inner::Sval {
+                type_id: Some(type_id),
+                value,
+            } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
             _ => None,
         }
     }

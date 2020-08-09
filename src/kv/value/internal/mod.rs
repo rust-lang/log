@@ -8,9 +8,9 @@ use std::any::TypeId;
 use super::{Error, Fill, Slot};
 
 pub(super) mod cast;
-pub(super) mod fmt;
 #[cfg(feature = "std")]
 pub(super) mod error;
+pub(super) mod fmt;
 #[cfg(feature = "kv_unstable_sval")]
 pub(super) mod sval;
 
@@ -21,13 +21,9 @@ pub(super) mod sval;
 #[derive(Clone, Copy)]
 pub(super) enum Inner<'v> {
     /// A simple primitive value that can be copied without allocating.
-    Primitive {
-        value: Primitive<'v>,
-    },
+    Primitive { value: Primitive<'v> },
     /// A value that can be filled.
-    Fill {
-        value: &'v dyn Fill,
-    },
+    Fill { value: &'v dyn Fill },
     /// A debuggable value.
     Debug {
         value: &'v dyn fmt::Debug,

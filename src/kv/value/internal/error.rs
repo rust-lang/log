@@ -1,4 +1,4 @@
-use std::{fmt, error};
+use std::{error, fmt};
 
 use super::{cast, Inner};
 use crate::kv;
@@ -35,12 +35,12 @@ impl<'v> kv::Value<'v> {
                 fmt::Debug::fmt(self.0, f)
             }
         }
-    
+
         impl<'a> fmt::Display for RefError<'a> {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 fmt::Display::fmt(self.0, f)
             }
-        }    
+        }
 
         match self.inner {
             Inner::Error { value, .. } => Some(RefError(value)),
@@ -94,13 +94,21 @@ mod tests {
     fn error_capture() {
         let err = io::Error::from(io::ErrorKind::Other);
 
-        assert_eq!(err.to_string(), kv::Value::capture_error(&err).to_error().expect("invalid value").to_string());
+        assert_eq!(
+            err.to_string(),
+            kv::Value::capture_error(&err)
+                .to_error()
+                .expect("invalid value")
+                .to_string()
+        );
     }
 
     #[test]
     fn error_downcast() {
         let err = io::Error::from(io::ErrorKind::Other);
 
-        assert!(kv::Value::capture_error(&err).downcast_ref::<io::Error>().is_some());
+        assert!(kv::Value::capture_error(&err)
+            .downcast_ref::<io::Error>()
+            .is_some());
     }
 }

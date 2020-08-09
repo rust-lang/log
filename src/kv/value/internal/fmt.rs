@@ -317,9 +317,19 @@ mod tests {
 
         let ts = Timestamp(42);
 
-        assert_eq!(&ts, kv::Value::capture_debug(&ts).downcast_ref::<Timestamp>().expect("invalid value"));
+        assert_eq!(
+            &ts,
+            kv::Value::capture_debug(&ts)
+                .downcast_ref::<Timestamp>()
+                .expect("invalid value")
+        );
 
-        assert_eq!(&ts, kv::Value::capture_display(&ts).downcast_ref::<Timestamp>().expect("invalid value"));
+        assert_eq!(
+            &ts,
+            kv::Value::capture_display(&ts)
+                .downcast_ref::<Timestamp>()
+                .expect("invalid value")
+        );
     }
 
     #[test]
