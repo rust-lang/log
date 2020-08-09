@@ -110,7 +110,6 @@ pub(super) enum Primitive<'v> {
     Bool(bool),
     Char(char),
     Str(&'v str),
-    Fmt(fmt::Arguments<'v>),
     None,
 }
 
@@ -123,7 +122,6 @@ impl<'v> Primitive<'v> {
             Primitive::Bool(value) => visitor.bool(value),
             Primitive::Char(value) => visitor.char(value),
             Primitive::Str(value) => visitor.borrowed_str(value),
-            Primitive::Fmt(value) => visitor.debug(&value),
             Primitive::None => visitor.none(),
         }
     }
@@ -231,12 +229,5 @@ impl<'v> From<&'v str> for Primitive<'v> {
     #[inline]
     fn from(v: &'v str) -> Self {
         Primitive::Str(v)
-    }
-}
-
-impl<'v> From<fmt::Arguments<'v>> for Primitive<'v> {
-    #[inline]
-    fn from(v: fmt::Arguments<'v>) -> Self {
-        Primitive::Fmt(v)
     }
 }

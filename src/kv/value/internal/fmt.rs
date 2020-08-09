@@ -73,7 +73,7 @@ impl<'s, 'f> Slot<'s, 'f> {
     }
 }
 
-pub(in kv::value) use self::fmt::{Arguments, Debug, Display};
+pub(in kv::value) use self::fmt::{Debug, Display};
 
 impl<'v> fmt::Debug for kv::Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -276,6 +276,14 @@ mod tests {
         assert_eq!(
             kv::Value::capture_debug(&Some(1u16)).to_token(),
             Token::U64(1)
+        );
+    }
+
+    #[test]
+    fn fmt_capture_args() {
+        assert_eq!(
+            kv::Value::from(&format_args!("a {}", "value") as &dyn Debug).to_string(),
+            "a value"
         );
     }
 

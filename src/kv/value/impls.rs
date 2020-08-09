@@ -3,8 +3,6 @@
 //! This module provides `ToValue` implementations for commonly
 //! logged types from the standard library.
 
-use std::fmt;
-
 use super::{Primitive, ToValue, Value};
 
 impl<'v> ToValue for &'v str {
@@ -15,18 +13,6 @@ impl<'v> ToValue for &'v str {
 
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
-        Value::from_primitive(value)
-    }
-}
-
-impl<'v> ToValue for fmt::Arguments<'v> {
-    fn to_value(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<'v> From<fmt::Arguments<'v>> for Value<'v> {
-    fn from(value: fmt::Arguments<'v>) -> Self {
         Value::from_primitive(value)
     }
 }
@@ -109,10 +95,6 @@ mod tests {
         assert_eq!(42.01f64.to_value().to_string(), "42.01");
         assert_eq!(true.to_value().to_string(), "true");
         assert_eq!('a'.to_value().to_string(), "a");
-        assert_eq!(
-            format_args!("a {}", "value").to_value().to_string(),
-            "a value"
-        );
         assert_eq!("a loong string".to_value().to_string(), "a loong string");
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
@@ -126,10 +108,6 @@ mod tests {
         assert_eq!(42.01f64.to_value().to_token(), Token::F64(42.01));
         assert_eq!(true.to_value().to_token(), Token::Bool(true));
         assert_eq!('a'.to_value().to_token(), Token::Char('a'));
-        assert_eq!(
-            format_args!("a {}", "value").to_value().to_token(),
-            Token::Str("a value".into())
-        );
         assert_eq!(
             "a loong string".to_value().to_token(),
             Token::Str("a loong string".into())
