@@ -12,7 +12,9 @@ impl<'v> Value<'v> {
         T: Fill,
     {
         Value {
-            inner: Inner::Fill(value),
+            inner: Inner::Fill {
+                value,
+            },
         }
     }
 }

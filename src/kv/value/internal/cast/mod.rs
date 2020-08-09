@@ -4,12 +4,16 @@
 //! but may end up executing arbitrary caller code if the value is complex.
 //! They will also attempt to downcast erased types into a primitive where possible.
 
-use std::fmt;
+use std::{any::TypeId, fmt};
 
 use super::{Inner, Primitive, Visitor};
 use crate::kv::value::{Error, Value};
 
 mod primitive;
+
+pub(super) fn type_id<T: 'static>() -> TypeId {
+    TypeId::of::<T>()
+}
 
 /// Attempt to capture a primitive from some generic value.
 ///
@@ -17,7 +21,9 @@ mod primitive;
 /// This makes `Value`s produced by `Value::from_*` more useful
 pub(super) fn try_from_primitive<'v, T: 'static>(value: &'v T) -> Option<Value<'v>> {
     primitive::from_any(value).map(|primitive| Value {
-        inner: Inner::Primitive(primitive),
+        inner: Inner::Primitive {
+            value: primitive,
+        },
     })
 }
 
@@ -178,11 +184,21 @@ impl<'v> Value<'v> {
         self.inner.cast().into_primitive().into_borrowed_str()
     }
 
-    #[cfg(feature = "std")]
-    /// Try get an error from this value.
-    pub fn to_error(&self) -> Option<&dyn super::error::Error> {
+    /// Check whether this value can be downcast to `T`.
+    pub fn is<T: 'static>(&self) -> bool {
+        self.downcast_ref::<T>().is_some()
+    }
+
+    /// Try downcast this value to `T`.
+    pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
+        let target = TypeId::of::<T>();
         match self.inner {
-            Inner::Error(value) => Some(value),
+            Inner::Debug { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            Inner::Display { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            #[cfg(feature = "std")]
+            Inner::Error { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
+            #[cfg(feature = "kv_unstable_sval")]
+            Inner::Sval { type_id: Some(type_id), value } if type_id == target => Some(unsafe { &*(value as *const _ as *const T) }),
             _ => None,
         }
     }
@@ -256,7 +272,7 @@ impl<'v> Inner<'v> {
             }
         }
 
-        if let Inner::Primitive(value) = self {
+        if let Inner::Primitive { value } = self {
             Cast::Primitive(value)
         } else {
             // If the erased value isn't a primitive then we visit it

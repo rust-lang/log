@@ -22,18 +22,11 @@ impl<'v> kv::Value<'v> {
         T: sval::Value + 'static,
     {
         cast::try_from_primitive(value).unwrap_or(kv::Value {
-            inner: Inner::Sval(value),
+            inner: Inner::Sval {
+                value,
+                type_id: Some(cast::type_id::<T>()),
+            },
         })
-    }
-
-    /// Get a value from a structured type.
-    pub fn from_sval<T>(value: &'v T) -> Self
-    where
-        T: sval::Value,
-    {
-        kv::Value {
-            inner: Inner::Sval(value),
-        }
     }
 }
 
@@ -118,6 +111,7 @@ impl<'v> From<&'v (dyn sval::Value)> for kv::Value<'v> {
     fn from(value: &'v (dyn sval::Value)) -> kv::Value<'v> {
         kv::Value {
             inner: Inner::Sval(value),
+            type_id: None,
         }
     }
 }
@@ -217,6 +211,22 @@ mod tests {
     }
 
     #[test]
+    fn sval_downcast() {
+        #[derive(PartialEq, Eq)]
+        struct Timestamp(usize);
+
+        impl sval::Value for TestSval {
+            fn stream(&self, stream: &mut sval::value::Stream) -> sval::value::Result {
+                stream.u64(self.0)
+            }
+        }
+
+        let ts = Timestamp(42);
+
+        assert_eq!(&ts, kv::Value::capture_sval(&ts).downcast_ref::<Timestamp>().expect("invalid value"));
+    }
+
+    #[test]
     fn sval_structured() {
         let value = kv::Value::from(42u64);
         let expected = vec![sval::test::Token::Unsigned(42)];
@@ -236,7 +246,7 @@ mod tests {
 
         assert_eq!(
             format!("{:04?}", 42u64),
-            format!("{:04?}", kv::Value::from_sval(&TestSval)),
+            format!("{:04?}", kv::Value::capture_sval(&TestSval)),
         );
     }
 

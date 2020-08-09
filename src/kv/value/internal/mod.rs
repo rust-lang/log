@@ -3,6 +3,8 @@
 //! This implementation isn't intended to be public. It may need to change
 //! for optimizations or to support new external serialization frameworks.
 
+use std::any::TypeId;
+
 use super::{Error, Fill, Slot};
 
 pub(super) mod cast;
@@ -16,38 +18,53 @@ pub(super) mod sval;
 #[derive(Clone, Copy)]
 pub(super) enum Inner<'v> {
     /// A simple primitive value that can be copied without allocating.
-    Primitive(Primitive<'v>),
+    Primitive {
+        value: Primitive<'v>,
+    },
     /// A value that can be filled.
-    Fill(&'v (dyn Fill)),
+    Fill {
+        value: &'v dyn Fill,
+    },
     /// A debuggable value.
-    Debug(&'v (dyn fmt::Debug)),
+    Debug {
+        value: &'v dyn fmt::Debug,
+        type_id: Option<TypeId>,
+    },
     /// A displayable value.
-    Display(&'v (dyn fmt::Display)),
+    Display {
+        value: &'v dyn fmt::Display,
+        type_id: Option<TypeId>,
+    },
 
     #[cfg(feature = "std")]
     /// An error.
-    Error(&'v (dyn error::Error)),
+    Error {
+        value: &'v dyn error::Error,
+        type_id: Option<TypeId>,
+    },
 
     #[cfg(feature = "kv_unstable_sval")]
     /// A structured value from `sval`.
-    Sval(&'v (dyn sval::Value)),
+    Sval {
+        value: &'v dyn sval::Value,
+        type_id: Option<TypeId>,
+    },
 }
 
 impl<'v> Inner<'v> {
     pub(super) fn visit(self, visitor: &mut dyn Visitor<'v>) -> Result<(), Error> {
         match self {
-            Inner::Primitive(value) => value.visit(visitor),
+            Inner::Primitive { value } => value.visit(visitor),
+            Inner::Fill { value } => value.fill(&mut Slot::new(visitor)),
 
-            Inner::Debug(value) => visitor.debug(value),
-            Inner::Display(value) => visitor.display(value),
-
-            Inner::Fill(value) => value.fill(&mut Slot::new(visitor)),
+            Inner::Debug { value, .. } => visitor.debug(value),
+            Inner::Display { value, .. } => visitor.display(value),
 
             #[cfg(feature = "std")]
-            Inner::Error(value) => visitor.error(value),
+            Inner::Error { value, .. } => visitor.error(value),
 
             #[cfg(feature = "kv_unstable_sval")]
-            Inner::Sval(value) => visitor.sval(value),
+            Inner::Sval { value, .. } => visitor.sval(value),
         }
     }
 }

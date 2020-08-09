@@ -19,18 +19,11 @@ impl<'v> kv::Value<'v> {
         T: fmt::Debug + 'static,
     {
         cast::try_from_primitive(value).unwrap_or(kv::Value {
-            inner: Inner::Debug(value),
+            inner: Inner::Debug {
+                value,
+                type_id: Some(cast::type_id::<T>()),
+            },
         })
-    }
-
-    /// Get a value from a debuggable type.
-    pub fn from_debug<T>(value: &'v T) -> Self
-    where
-        T: fmt::Debug,
-    {
-        kv::Value {
-            inner: Inner::Debug(value),
-        }
     }
 
     /// Get a value from a displayable type.
@@ -42,18 +35,11 @@ impl<'v> kv::Value<'v> {
         T: fmt::Display + 'static,
     {
         cast::try_from_primitive(value).unwrap_or(kv::Value {
-            inner: Inner::Display(value),
+            inner: Inner::Display {
+                value,
+                type_id: Some(cast::type_id::<T>()),
+            },
         })
-    }
-
-    /// Get a value from a displayable type.
-    pub fn from_display<T>(value: &'v T) -> Self
-    where
-        T: fmt::Display,
-    {
-        kv::Value {
-            inner: Inner::Display(value),
-        }
     }
 }
 
@@ -256,7 +242,10 @@ impl<'v> ToValue for dyn fmt::Display + 'v {
 impl<'v> From<&'v (dyn fmt::Debug)> for kv::Value<'v> {
     fn from(value: &'v (dyn fmt::Debug)) -> kv::Value<'v> {
         kv::Value {
-            inner: Inner::Debug(value),
+            inner: Inner::Debug {
+                value,
+                type_id: None,
+            },
         }
     }
 }
@@ -264,7 +253,10 @@ impl<'v> From<&'v (dyn fmt::Debug)> for kv::Value<'v> {
 impl<'v> From<&'v (dyn fmt::Display)> for kv::Value<'v> {
     fn from(value: &'v (dyn fmt::Display)) -> kv::Value<'v> {
         kv::Value {
-            inner: Inner::Display(value),
+            inner: Inner::Display {
+                value,
+                type_id: None,
+            },
         }
     }
 }
@@ -302,6 +294,24 @@ mod tests {
                 .to_borrowed_str()
                 .expect("invalid value")
         );
+    }
+
+    #[test]
+    fn fmt_downcast() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct Timestamp(usize);
+
+        impl fmt::Display for Timestamp {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "time is {}", self.0)
+            }
+        }
+
+        let ts = Timestamp(42);
+
+        assert_eq!(&ts, kv::Value::capture_debug(&ts).downcast_ref::<Timestamp>().expect("invalid value"));
+
+        assert_eq!(&ts, kv::Value::capture_display(&ts).downcast_ref::<Timestamp>().expect("invalid value"));
     }
 
     #[test]

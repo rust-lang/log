@@ -169,7 +169,9 @@ impl<'v> Value<'v> {
         T: Into<Primitive<'v>>,
     {
         Value {
-            inner: Inner::Primitive(value.into()),
+            inner: Inner::Primitive {
+                value: value.into(),
+            },
         }
     }
 

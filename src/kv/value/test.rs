@@ -16,6 +16,9 @@ pub(in kv) enum Token {
     Str(String),
     None,
 
+    #[cfg(feature = "std")]
+    Error,
+
     #[cfg(feature = "kv_unstable_sval")]
     Sval,
 }
@@ -63,6 +66,12 @@ impl<'v> Value<'v> {
 
             fn none(&mut self) -> Result<(), Error> {
                 self.0 = Some(Token::None);
+                Ok(())
+            }
+
+            #[cfg(feature = "std")]
+            fn error(&mut self, _: &dyn internal::error::Error) -> Result<(), Error> {
+                self.0 = Some(Token::Error);
                 Ok(())
             }
 
