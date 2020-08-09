@@ -359,7 +359,7 @@ mod std_support {
     use std::borrow::Cow;
 
     impl<'v> Value<'v> {
-        /// Try get a `usize` from this value.
+        /// Try get a `str` from this value.
         ///
         /// This method is cheap for primitive types, but may call arbitrary
         /// serialization implementations for complex ones. If the serialization
