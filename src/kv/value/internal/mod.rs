@@ -14,6 +14,9 @@ pub(super) mod error;
 #[cfg(feature = "kv_unstable_sval")]
 pub(super) mod sval;
 
+// NOTE: Right now this `Inner` type is *huge* (~64 bytes)
+// It's written to be straightforward, but could be optimized to get its size down
+
 /// A container for a structured value for a specific kind of visitor.
 #[derive(Clone, Copy)]
 pub(super) enum Inner<'v> {
