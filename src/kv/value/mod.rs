@@ -40,7 +40,6 @@ impl<'v> ToValue for Value<'v> {
 /// There are a few ways to capture a value:
 ///
 /// - Using the `Value::capture_*` methods.
-/// - Using the `Value::from_*` methods.
 /// - Using the `ToValue` trait.
 /// - Using the standard `From` trait.
 /// - Using the `Fill` API.
@@ -56,19 +55,6 @@ impl<'v> ToValue for Value<'v> {
 /// let value = Value::capture_debug(&42i32);
 ///
 /// assert_eq!(Some(42), value.to_i32());
-/// ```
-///
-/// ## Using the `Value::from_*` methods
-///
-/// `Value` offers a few constructor methods that capture values of different kinds.
-/// These methods don't require `T: 'static`, but can't support downcasting.
-///
-/// ```
-/// use log::kv::Value;
-///
-/// let value = Value::from_debug(&42i32);
-///
-/// assert_eq!(None, value.to_i32());
 /// ```
 ///
 /// ## Using the `ToValue` trait
@@ -150,6 +136,14 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// assert_eq!(None, value.to_i32());
 /// ```
+///
+/// # Inspecting values
+/// 
+/// Once you have a `Value` there are also a few ways to inspect it:
+///
+/// - Using the `Debug`, `Display`, `Serialize`, and `Stream` trait implementations.
+/// - Using the `Value::to_*` methods.
+/// - Using the `Value::downcast_ref` method.
 pub struct Value<'v> {
     inner: Inner<'v>,
 }
