@@ -1,7 +1,7 @@
 //! Integration between `Value` and `sval`.
 //!
-//! This module allows any `Value` to implement the `sval::Value` trait,
-//! and for any `sval::Value` to be captured as a `Value`.
+//! This module allows any `Value` to implement the `sval::value::Value` trait,
+//! and for any `sval::value::Value` to be captured as a `Value`.
 
 extern crate sval;
 
@@ -19,7 +19,7 @@ impl<'v> kv::Value<'v> {
     /// before resorting to using its `Value` implementation.
     pub fn capture_sval<T>(value: &'v T) -> Self
     where
-        T: sval::Value + 'static,
+        T: sval::value::Value + 'static,
     {
         cast::try_from_primitive(value).unwrap_or(kv::Value {
             inner: Inner::Sval {
@@ -40,21 +40,19 @@ impl<'s, 'f> Slot<'s, 'f> {
     /// Calling more than a single `fill` method on this slot will panic.
     pub fn fill_sval<T>(&mut self, value: T) -> Result<(), Error>
     where
-        T: sval::Value,
+        T: sval::value::Value,
     {
         self.fill(|visitor| visitor.sval(&value))
     }
 }
 
-impl<'v> sval::Value for kv::Value<'v> {
+impl<'v> sval::value::Value for kv::Value<'v> {
     fn stream(&self, s: &mut sval::value::Stream) -> sval::value::Result {
         struct SvalVisitor<'a, 'b: 'a>(&'a mut sval::value::Stream<'b>);
 
         impl<'a, 'b: 'a, 'v> Visitor<'v> for SvalVisitor<'a, 'b> {
             fn debug(&mut self, v: &dyn fmt::Debug) -> Result<(), Error> {
-                self.0
-                    .fmt(format_args!("{:?}", v))
-                    .map_err(Error::from_sval)
+                self.0.debug(v).map_err(Error::from_sval)
             }
 
             fn u64(&mut self, v: u64) -> Result<(), Error> {
@@ -90,7 +88,7 @@ impl<'v> sval::Value for kv::Value<'v> {
                 self.0.error(sval::stream::Source::from(v))
             }
 
-            fn sval(&mut self, v: &dyn sval::Value) -> Result<(), Error> {
+            fn sval(&mut self, v: &dyn sval::value::Value) -> Result<(), Error> {
                 self.0.any(v).map_err(Error::from_sval)
             }
         }
@@ -101,32 +99,34 @@ impl<'v> sval::Value for kv::Value<'v> {
     }
 }
 
-impl<'v> ToValue for dyn sval::Value + 'v {
+impl<'v> ToValue for dyn sval::value::Value + 'v {
     fn to_value(&self) -> kv::Value {
         kv::Value::from(self)
     }
 }
 
-impl<'v> From<&'v (dyn sval::Value)> for kv::Value<'v> {
-    fn from(value: &'v (dyn sval::Value)) -> kv::Value<'v> {
+impl<'v> From<&'v (dyn sval::value::Value)> for kv::Value<'v> {
+    fn from(value: &'v (dyn sval::value::Value)) -> kv::Value<'v> {
         kv::Value {
-            inner: Inner::Sval(value),
-            type_id: None,
+            inner: Inner::Sval {
+                value,
+                type_id: None,
+            }
         }
     }
 }
 
-pub(in kv::value) use self::sval::Value;
+pub(in kv::value) use self::sval::value::Value;
 
-pub(super) fn fmt(f: &mut fmt::Formatter, v: &dyn sval::Value) -> Result<(), Error> {
+pub(super) fn fmt(f: &mut fmt::Formatter, v: &dyn sval::value::Value) -> Result<(), Error> {
     sval::fmt::debug(f, v)?;
     Ok(())
 }
 
-pub(super) fn cast<'v>(v: &dyn sval::Value) -> Cast<'v> {
+pub(super) fn cast<'v>(v: &dyn sval::value::Value) -> Cast<'v> {
     struct CastStream<'v>(Cast<'v>);
 
-    impl<'v> sval::Stream for CastStream<'v> {
+    impl<'v> sval::stream::Stream for CastStream<'v> {
         fn u64(&mut self, v: u64) -> sval::stream::Result {
             self.0 = Cast::Primitive(Primitive::Unsigned(v));
             Ok(())
@@ -166,12 +166,12 @@ pub(super) fn cast<'v>(v: &dyn sval::Value) -> Cast<'v> {
 }
 
 impl Error {
-    fn from_sval(_: sval::value::Error) -> Self {
+    fn from_sval(_: sval::Error) -> Self {
         Error::msg("`sval` serialization failed")
     }
 
-    fn into_sval(self) -> sval::value::Error {
-        sval::value::Error::msg("`sval` serialization failed")
+    fn into_sval(self) -> sval::Error {
+        sval::Error::msg("`sval` serialization failed")
     }
 }
 
@@ -212,12 +212,12 @@ mod tests {
 
     #[test]
     fn sval_downcast() {
-        #[derive(PartialEq, Eq)]
+        #[derive(Debug, PartialEq, Eq)]
         struct Timestamp(usize);
 
-        impl sval::Value for TestSval {
+        impl sval::value::Value for Timestamp {
             fn stream(&self, stream: &mut sval::value::Stream) -> sval::value::Result {
-                stream.u64(self.0)
+                stream.u64(self.0 as u64)
             }
         }
 
@@ -243,7 +243,7 @@ mod tests {
     fn sval_debug() {
         struct TestSval;
 
-        impl sval::Value for TestSval {
+        impl sval::value::Value for TestSval {
             fn stream(&self, stream: &mut sval::value::Stream) -> sval::value::Result {
                 stream.u64(42)
             }
