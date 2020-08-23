@@ -479,7 +479,7 @@ impl FromStr for Level {
 
 impl fmt::Display for Level {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.pad(LOG_LEVEL_NAMES[*self as usize])
+        fmt.pad(self.as_str())
     }
 }
 
@@ -505,6 +505,13 @@ impl Level {
     #[inline]
     pub fn to_level_filter(&self) -> LevelFilter {
         LevelFilter::from_usize(*self as usize).unwrap()
+    }
+
+    /// Returns the string representation of the `Level`.
+    ///
+    /// This returns the same string as the `fmt::Display` implementation.
+    pub fn as_str(&self) -> &'static str {
+        LOG_LEVEL_NAMES[*self as usize]
     }
 }
 
@@ -1493,6 +1500,20 @@ mod tests {
         ];
         for &(s, ref expected) in &tests {
             assert_eq!(expected, &s.parse());
+        }
+    }
+
+    #[test]
+    fn test_level_as_str() {
+        let tests = &[
+            (Level::Error, "ERROR"),
+            (Level::Warn, "WARN"),
+            (Level::Info, "INFO"),
+            (Level::Debug, "DEBUG"),
+            (Level::Trace, "TRACE"),
+        ];
+        for (input, expected) in tests {
+            assert_eq!(*expected, input.as_str());
         }
     }
 
