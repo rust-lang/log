@@ -639,7 +639,7 @@ impl FromStr for LevelFilter {
 
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.pad(LOG_LEVEL_NAMES[*self as usize])
+        fmt.pad(self.as_str())
     }
 }
 
@@ -667,6 +667,13 @@ impl LevelFilter {
     #[inline]
     pub fn to_level(&self) -> Option<Level> {
         Level::from_usize(*self as usize)
+    }
+
+    /// Returns the string representation of the `LevelFilter`.
+    ///
+    /// This returns the same string as the `fmt::Display` implementation.
+    pub fn as_str(&self) -> &'static str {
+        LOG_LEVEL_NAMES[*self as usize]
     }
 }
 
@@ -1554,6 +1561,21 @@ mod tests {
     fn test_to_level_filter() {
         assert_eq!(LevelFilter::Error, Level::Error.to_level_filter());
         assert_eq!(LevelFilter::Trace, Level::Trace.to_level_filter());
+    }
+
+    #[test]
+    fn test_level_filter_as_str() {
+        let tests = &[
+            (LevelFilter::Off, "OFF"),
+            (LevelFilter::Error, "ERROR"),
+            (LevelFilter::Warn, "WARN"),
+            (LevelFilter::Info, "INFO"),
+            (LevelFilter::Debug, "DEBUG"),
+            (LevelFilter::Trace, "TRACE"),
+        ];
+        for (input, expected) in tests {
+            assert_eq!(*expected, input.as_str());
+        }
     }
 
     #[test]
