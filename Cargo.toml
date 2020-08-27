@@ -48,6 +48,9 @@ std = []
 kv_unstable = []
 kv_unstable_sval = ["kv_unstable", "sval/fmt"]
 
+# requires 1.46.0
+track_caller = []
+
 [dependencies]
 cfg-if = "0.1.2"
 serde = { version = "1.0", optional = true, default-features = false }
