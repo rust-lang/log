@@ -249,9 +249,12 @@ macro_rules! __log_module_path {
 #[macro_export]
 macro_rules! __log_file {
     () => {
-        if cfg!(feature = "track_caller") {
+        #[cfg(feature = "track_caller")]
+        {
             ::std::panic::Location::caller().file()
-        } else {
+        }
+        #[cfg(not(feature = "track_caller"))]
+        {
             file!()
         }
     };
@@ -261,9 +264,12 @@ macro_rules! __log_file {
 #[macro_export]
 macro_rules! __log_line {
     () => {
-        if cfg!(feature = "track_caller") {
+        #[cfg(feature = "track_caller")]
+        {
             ::std::panic::Location::caller().line()
-        } else {
+        }
+        #[cfg(not(feature = "track_caller"))]
+        {
             line!()
         }
     };
