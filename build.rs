@@ -20,10 +20,16 @@ fn main() {
         None => return,
     };
 
-    // If the target isn't thumbv6 then we can use atomic CAS
-    if !target.starts_with("thumbv6") {
-        println!("cargo:rustc-cfg=atomic_cas");
-    }
+    match &target[..] {
+        "thumbv6m-none-eabi"
+        | "msp430-none-elf"
+        | "riscv32i-unknown-none-elf"
+        | "riscv32imc-unknown-none-elf" => {}
+
+        _ => {
+            println!("cargo:rustc-cfg=atomic_cas");
+        }
+    };
 
     // If the Rust version is at least 1.46.0 then we can use type ids at compile time
     if minor >= 47 {
