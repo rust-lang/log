@@ -31,6 +31,14 @@ fn main() {
         }
     };
 
+    match &target[..] {
+        "msp430-none-elf" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {}
+
+        _ => {
+            println!("cargo:rustc-cfg=has_atomics");
+        }
+    };
+
     // If the Rust version is at least 1.46.0 then we can use type ids at compile time
     if minor >= 47 {
         println!("cargo:rustc-cfg=const_type_id");
