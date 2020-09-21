@@ -1167,6 +1167,23 @@ impl Log for NopLogger {
     fn flush(&self) {}
 }
 
+#[cfg(feature = "std")]
+impl<T> Log for std::boxed::Box<T>
+where
+    T: ?Sized + Log,
+{
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.as_ref().enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        self.as_ref().log(record)
+    }
+    fn flush(&self) {
+        self.as_ref().flush()
+    }
+}
+
 /// Sets the global maximum log level.
 ///
 /// Generally, this should only be called by the active logging implementation.
