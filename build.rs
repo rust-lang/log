@@ -20,9 +20,12 @@ fn main() {
         None => return,
     };
 
-    // If the target isn't thumbv6 then we can use atomic CAS
-    if !target.starts_with("thumbv6") {
+    if target_has_atomic_cas(&target) {
         println!("cargo:rustc-cfg=atomic_cas");
+    }
+
+    if target_has_atomics(&target) {
+        println!("cargo:rustc-cfg=has_atomics");
     }
 
     // If the Rust version is at least 1.46.0 then we can use type ids at compile time
@@ -36,6 +39,23 @@ fn main() {
 
     println!("cargo:rustc-cfg=srcbuild");
     println!("cargo:rerun-if-changed=build.rs");
+}
+
+fn target_has_atomic_cas(target: &str) -> bool {
+    match &target[..] {
+        "thumbv6m-none-eabi"
+        | "msp430-none-elf"
+        | "riscv32i-unknown-none-elf"
+        | "riscv32imc-unknown-none-elf" => false,
+        _ => true,
+    }
+}
+
+fn target_has_atomics(target: &str) -> bool {
+    match &target[..] {
+        "msp430-none-elf" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => false,
+        _ => true,
+    }
 }
 
 fn rustc_target() -> Option<String> {

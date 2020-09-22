@@ -79,5 +79,6 @@ jobs:
         run: |
           rustup update stable --no-self-update
           rustup default stable
-      - run: rustup target add thumbv6m-none-eabi
+      - run: rustup target add thumbv6m-none-eabi riscv32imc-unknown-none-elf
       - run: cargo build --verbose --target=thumbv6m-none-eabi
+      - run: cargo build --verbose --target=riscv32imc-unknown-none-elf

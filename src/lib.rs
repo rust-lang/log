@@ -288,7 +288,6 @@ use std::error;
 use std::fmt;
 use std::mem;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[macro_use]
 mod macros;
@@ -296,6 +295,48 @@ mod serde;
 
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
+
+#[cfg(has_atomics)]
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[cfg(not(has_atomics))]
+use std::cell::Cell;
+#[cfg(not(has_atomics))]
+use std::sync::atomic::Ordering;
+
+#[cfg(not(has_atomics))]
+struct AtomicUsize {
+    v: Cell<usize>,
+}
+
+#[cfg(not(has_atomics))]
+impl AtomicUsize {
+    const fn new(v: usize) -> AtomicUsize {
+        AtomicUsize { v: Cell::new(v) }
+    }
+
+    fn load(&self, _order: Ordering) -> usize {
+        self.v.get()
+    }
+
+    fn store(&self, val: usize, _order: Ordering) {
+        self.v.set(val)
+    }
+
+    #[cfg(atomic_cas)]
+    fn compare_and_swap(&self, current: usize, new: usize, _order: Ordering) -> usize {
+        let prev = self.v.get();
+        if current == prev {
+            self.v.set(new);
+        }
+        prev
+    }
+}
+
+// Any platform without atomics is unlikely to have multiple cores, so
+// writing via Cell will not be a race condition.
+#[cfg(not(has_atomics))]
+unsafe impl Sync for AtomicUsize {}
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
