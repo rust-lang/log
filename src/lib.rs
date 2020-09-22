@@ -333,6 +333,8 @@ impl AtomicUsize {
     }
 }
 
+// Any platform without atomics is unlikely to have multiple cores, so
+// writing via Cell will not be a race condition.
 #[cfg(not(has_atomics))]
 unsafe impl Sync for AtomicUsize {}
 
