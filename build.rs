@@ -4,10 +4,6 @@
 use std::env;
 use std::str;
 
-#[cfg(feature = "kv_unstable")]
-#[path = "src/kv/value/internal/cast/primitive.rs"]
-mod primitive;
-
 fn main() {
     let target = match rustc_target() {
         Some(target) => target,
@@ -22,11 +18,6 @@ fn main() {
         println!("cargo:rustc-cfg=has_atomics");
     }
 
-    // Generate sorted type id lookup
-    #[cfg(feature = "kv_unstable")]
-    primitive::generate();
-
-    println!("cargo:rustc-cfg=srcbuild");
     println!("cargo:rerun-if-changed=build.rs");
 }
 

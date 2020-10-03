@@ -323,7 +323,7 @@ mod std_support {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use kv::value::test::Token;
+        use kv::value::tests::Token;
         use std::collections::{BTreeMap, HashMap};
 
         #[test]
@@ -375,7 +375,7 @@ mod std_support {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kv::value::test::Token;
+    use kv::value::tests::Token;
 
     #[test]
     fn source_is_object_safe() {
