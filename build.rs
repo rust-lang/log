@@ -2,8 +2,7 @@
 //! atomics and sets `cfg` flags accordingly.
 
 use std::env;
-use std::process::Command;
-use std::str::{self, FromStr};
+use std::str;
 
 #[cfg(feature = "kv_unstable")]
 #[path = "src/kv/value/internal/cast/primitive.rs"]
