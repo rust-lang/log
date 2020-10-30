@@ -1228,6 +1228,8 @@ where
 /// Sets the global maximum log level.
 ///
 /// Generally, this should only be called by the active logging implementation.
+///
+/// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
 pub fn set_max_level(level: LevelFilter) {
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
