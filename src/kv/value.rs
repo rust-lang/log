@@ -7,6 +7,9 @@ extern crate value_bag;
 #[cfg(feature = "kv_unstable_sval")]
 extern crate sval;
 
+#[cfg(feature = "kv_unstable_serde")]
+extern crate serde;
+
 use self::value_bag::ValueBag;
 
 pub use kv::Error;
@@ -147,6 +150,17 @@ impl<'v> Value<'v> {
         }
     }
 
+    #[cfg(feature = "kv_unstable_serde")]
+    /// Get a value from a type implementing `serde::Serialize`.
+    pub fn capture_serde<T>(value: &'v T) -> Self
+    where
+        T: self::serde::Serialize + 'static,
+    {
+        Value {
+            inner: ValueBag::capture_serde1(value),
+        }
+    }
+
     /// Get a value from a type implementing `sval::value::Value`.
     #[cfg(feature = "kv_unstable_sval")]
     pub fn capture_sval<T>(value: &'v T) -> Self
@@ -175,6 +189,17 @@ impl<'v> Value<'v> {
     {
         Value {
             inner: ValueBag::from_display(value),
+        }
+    }
+
+    /// Get a value from a type implementing `serde::Serialize`.
+    #[cfg(feature = "kv_unstable_serde")]
+    pub fn from_serde<T>(value: &'v T) -> Self
+    where
+        T: self::serde::Serialize,
+    {
+        Value {
+            inner: ValueBag::from_serde1(value),
         }
     }
 
@@ -258,6 +283,16 @@ impl ToValue for dyn fmt::Display {
 impl ToValue for dyn std::error::Error + 'static {
     fn to_value(&self) -> Value {
         Value::from_dyn_error(self)
+    }
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+impl<'v> self::serde::Serialize for Value<'v> {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: self::serde::Serializer,
+    {
+        self.inner.serialize(s)
     }
 }
 
@@ -483,6 +518,14 @@ pub(crate) mod tests {
 
         assert!(Value::capture_error(&err).to_error().is_some());
         assert!(Value::from_dyn_error(&err).to_error().is_some());
+    }
+
+    #[cfg(feature = "kv_unstable_serde")]
+    #[test]
+    fn test_capture_serde() {
+        assert_eq!(Some(42u64), Value::capture_serde(&42).to_u64());
+
+        assert_eq!(Some(42u64), Value::from_serde(&42).to_u64());
     }
 
     #[cfg(feature = "kv_unstable_sval")]

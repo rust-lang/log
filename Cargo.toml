@@ -16,7 +16,7 @@ exclude = ["rfcs/**/*", "/.travis.yml", "/appveyor.yml"]
 build = "build.rs"
 
 [package.metadata.docs.rs]
-features = ["std", "serde", "kv_unstable_std", "kv_unstable_sval"]
+features = ["std", "serde", "kv_unstable_std", "kv_unstable_sval", "kv_unstable_serde"]
 
 [[test]]
 name = "filters"
@@ -48,6 +48,7 @@ std = []
 kv_unstable = ["value-bag"]
 kv_unstable_sval = ["kv_unstable", "value-bag/sval", "sval"]
 kv_unstable_std = ["std", "kv_unstable", "value-bag/error"]
+kv_unstable_serde = ["kv_unstable_std", "value-bag/serde", "serde"]
 
 [dependencies]
 cfg-if = "1.0"
