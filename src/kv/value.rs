@@ -136,6 +136,17 @@ impl<'v> Value<'v> {
         }
     }
 
+    /// Get a value from an error.
+    #[cfg(feature = "kv_unstable_std")]
+    pub fn capture_error<T>(err: &'v T) -> Self
+    where
+        T: std::error::Error + 'static,
+    {
+        Value {
+            inner: ValueBag::capture_error(err),
+        }
+    }
+
     /// Get a value from a type implementing `sval::value::Value`.
     #[cfg(feature = "kv_unstable_sval")]
     pub fn capture_sval<T>(value: &'v T) -> Self
@@ -157,13 +168,6 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Get a value from a dynamic `std::fmt::Debug`.
-    pub fn from_dyn_debug(value: &'v dyn fmt::Debug) -> Self {
-        Value {
-            inner: ValueBag::from_dyn_debug(value),
-        }
-    }
-
     /// Get a value from a type implementing `std::fmt::Display`.
     pub fn from_display<T>(value: &'v T) -> Self
     where
@@ -171,13 +175,6 @@ impl<'v> Value<'v> {
     {
         Value {
             inner: ValueBag::from_display(value),
-        }
-    }
-
-    /// Get a value from a dynamic `std::fmt::Display`.
-    pub fn from_dyn_display(value: &'v dyn fmt::Display) -> Self {
-        Value {
-            inner: ValueBag::from_dyn_display(value),
         }
     }
 
@@ -189,6 +186,28 @@ impl<'v> Value<'v> {
     {
         Value {
             inner: ValueBag::from_sval1(value),
+        }
+    }
+
+    /// Get a value from a dynamic `std::fmt::Debug`.
+    pub fn from_dyn_debug(value: &'v dyn fmt::Debug) -> Self {
+        Value {
+            inner: ValueBag::from_dyn_debug(value),
+        }
+    }
+
+    /// Get a value from a dynamic `std::fmt::Display`.
+    pub fn from_dyn_display(value: &'v dyn fmt::Display) -> Self {
+        Value {
+            inner: ValueBag::from_dyn_display(value),
+        }
+    }
+
+    /// Get a value from a dynamic error.
+    #[cfg(feature = "kv_unstable_std")]
+    pub fn from_dyn_error(err: &'v (dyn std::error::Error + 'static)) -> Self {
+        Value {
+            inner: ValueBag::from_dyn_error(err),
         }
     }
 
@@ -232,6 +251,13 @@ impl ToValue for dyn fmt::Debug {
 impl ToValue for dyn fmt::Display {
     fn to_value(&self) -> Value {
         Value::from_dyn_display(self)
+    }
+}
+
+#[cfg(feature = "kv_unstable_std")]
+impl ToValue for dyn std::error::Error + 'static {
+    fn to_value(&self) -> Value {
+        Value::from_dyn_error(self)
     }
 }
 
@@ -344,6 +370,12 @@ impl_value_to_primitive![
 ];
 
 impl<'v> Value<'v> {
+    /// Try convert this value into an error.
+    #[cfg(feature = "kv_unstable_std")]
+    pub fn to_error(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.to_error()
+    }
+
     /// Try convert this value into a borrowed string.
     pub fn to_borrowed_str(&self) -> Option<&str> {
         self.inner.to_borrowed_str()
@@ -442,6 +474,15 @@ pub(crate) mod tests {
 
         assert!(Value::from_display(&42).to_u64().is_none());
         assert!(Value::from_debug(&42).to_u64().is_none());
+    }
+
+    #[cfg(feature = "kv_unstable_std")]
+    #[test]
+    fn test_capture_error() {
+        let err = std::io::Error::from(std::io::ErrorKind::Other);
+
+        assert!(Value::capture_error(&err).to_error().is_some());
+        assert!(Value::from_dyn_error(&err).to_error().is_some());
     }
 
     #[cfg(feature = "kv_unstable_sval")]
