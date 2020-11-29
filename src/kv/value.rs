@@ -275,9 +275,9 @@ impl ToValue for dyn self::sval::value::Value {
     }
 }
 
-impl<'v> ToValue for &'v str {
+impl ToValue for str {
     fn to_value(&self) -> Value {
-        Value::from(*self)
+        Value::from(self)
     }
 }
 
