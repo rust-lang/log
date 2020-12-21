@@ -301,9 +301,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(not(has_atomics))]
 use std::cell::Cell;
+use std::convert::TryFrom;
 #[cfg(not(has_atomics))]
 use std::sync::atomic::Ordering;
-use std::convert::TryFrom;
 
 #[cfg(not(has_atomics))]
 struct AtomicUsize {
@@ -685,6 +685,7 @@ impl fmt::Display for LevelFilter {
     }
 }
 
+#[rustversion::since(1.41)]
 impl TryFrom<Level> for LevelFilter {
     type Error = ParseLevelError;
 
