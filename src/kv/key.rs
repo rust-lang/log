@@ -128,6 +128,39 @@ mod std_support {
     }
 }
 
+#[cfg(feature = "kv_unstable_sval")]
+mod sval_support {
+    use super::*;
+
+    extern crate sval;
+
+    use self::sval::value::{self, Value};
+
+    impl<'a> Value for Key<'a> {
+        fn stream(&self, stream: &mut value::Stream) -> value::Result {
+            self.key.stream(stream)
+        }
+    }
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+mod serde_support {
+    use super::*;
+
+    extern crate serde;
+
+    use self::serde::{Serialize, Serializer};
+
+    impl<'a> Serialize for Key<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.key.serialize(serializer)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

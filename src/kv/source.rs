@@ -1,5 +1,11 @@
 //! Sources for key-value pairs.
 
+#[cfg(feature = "kv_unstable_sval")]
+extern crate sval;
+
+#[cfg(feature = "kv_unstable_serde")]
+extern crate serde;
+
 use kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;
 
@@ -372,6 +378,309 @@ mod std_support {
     }
 }
 
+/// The result of calling `Source::as_map`.
+pub struct AsMap<S>(S);
+
+/// Visit this source as a map.
+pub fn as_map<S>(source: S) -> AsMap<S>
+where
+    S: Source,
+{
+    AsMap(source)
+}
+
+impl<S> Source for AsMap<S>
+where
+    S: Source,
+{
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        self.0.visit(visitor)
+    }
+
+    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        self.0.get(key)
+    }
+
+    fn count(&self) -> usize {
+        self.0.count()
+    }
+}
+
+impl<S> fmt::Debug for AsMap<S>
+where
+    S: Source,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut f = f.debug_map();
+        self.0.visit(&mut f).map_err(|_| fmt::Error)?;
+        f.finish()
+    }
+}
+
+/// The result of calling `Source::as_list`
+pub struct AsList<S>(S);
+
+/// Visit this source as a list.
+pub fn as_list<S>(source: S) -> AsList<S>
+where
+    S: Source,
+{
+    AsList(source)
+}
+
+impl<S> Source for AsList<S>
+where
+    S: Source,
+{
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        self.0.visit(visitor)
+    }
+
+    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        self.0.get(key)
+    }
+
+    fn count(&self) -> usize {
+        self.0.count()
+    }
+}
+
+impl<S> fmt::Debug for AsList<S>
+where
+    S: Source,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut f = f.debug_list();
+        self.0.visit(&mut f).map_err(|_| fmt::Error)?;
+        f.finish()
+    }
+}
+
+#[cfg(feature = "kv_unstable_sval")]
+mod sval_support {
+    use super::*;
+
+    use self::sval::value;
+
+    impl<S> value::Value for AsMap<S>
+    where
+        S: Source,
+    {
+        fn stream(&self, stream: &mut value::Stream) -> value::Result {
+            struct StreamVisitor<'a, 'b>(&'a mut value::Stream<'b>);
+
+            impl<'a, 'b, 'kvs> Visitor<'kvs> for StreamVisitor<'a, 'b> {
+                fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+                    self.0
+                        .map_key(key)
+                        .map_err(|_| Error::msg("failed to stream map key"))?;
+                    self.0
+                        .map_value(value)
+                        .map_err(|_| Error::msg("failed to stream map value"))?;
+                    Ok(())
+                }
+            }
+
+            stream
+                .map_begin(Some(self.count()))
+                .map_err(|_| self::sval::Error::msg("failed to begin map"))?;
+
+            self.visit(&mut StreamVisitor(stream))
+                .map_err(|_| self::sval::Error::msg("failed to visit key-values"))?;
+
+            stream
+                .map_end()
+                .map_err(|_| self::sval::Error::msg("failed to end map"))
+        }
+    }
+
+    impl<S> value::Value for AsList<S>
+    where
+        S: Source,
+    {
+        fn stream(&self, stream: &mut value::Stream) -> value::Result {
+            struct StreamVisitor<'a, 'b>(&'a mut value::Stream<'b>);
+
+            impl<'a, 'b, 'kvs> Visitor<'kvs> for StreamVisitor<'a, 'b> {
+                fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+                    self.0
+                        .seq_elem((key, value))
+                        .map_err(|_| Error::msg("failed to stream seq entry"))?;
+                    Ok(())
+                }
+            }
+
+            stream
+                .seq_begin(Some(self.count()))
+                .map_err(|_| self::sval::Error::msg("failed to begin seq"))?;
+
+            self.visit(&mut StreamVisitor(stream))
+                .map_err(|_| self::sval::Error::msg("failed to visit key-values"))?;
+
+            stream
+                .seq_end()
+                .map_err(|_| self::sval::Error::msg("failed to end seq"))
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        use self::sval::Value;
+
+        use crate::kv::source;
+
+        #[test]
+        fn derive_stream() {
+            #[derive(Value)]
+            pub struct MyRecordAsMap<'a> {
+                msg: &'a str,
+                kvs: source::AsMap<&'a dyn Source>,
+            }
+
+            #[derive(Value)]
+            pub struct MyRecordAsList<'a> {
+                msg: &'a str,
+                kvs: source::AsList<&'a dyn Source>,
+            }
+        }
+    }
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+pub mod as_map {
+    //! `serde` adapters for serializing a `Source` as a map.
+
+    use super::*;
+
+    use self::serde::{Serialize, Serializer};
+
+    /// Serialize a `Source` as a map.
+    pub fn serialize<T, S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Source,
+        S: Serializer,
+    {
+        as_map(source).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+pub mod as_list {
+    //! `serde` adapters for serializing a `Source` as a list.
+
+    use super::*;
+
+    use self::serde::{Serialize, Serializer};
+
+    /// Serialize a `Source` as a list.
+    pub fn serialize<T, S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Source,
+        S: Serializer,
+    {
+        as_list(source).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+mod serde_support {
+    use super::*;
+
+    use self::serde::ser::{Error as SerError, Serialize, SerializeMap, SerializeSeq, Serializer};
+
+    impl<T> Serialize for AsMap<T>
+    where
+        T: Source,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            struct SerializerVisitor<'a, S>(&'a mut S);
+
+            impl<'a, 'kvs, S> Visitor<'kvs> for SerializerVisitor<'a, S>
+            where
+                S: SerializeMap,
+            {
+                fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+                    self.0
+                        .serialize_entry(&key, &value)
+                        .map_err(|_| Error::msg("failed to serialize map entry"))?;
+                    Ok(())
+                }
+            }
+
+            let mut map = serializer.serialize_map(Some(self.count()))?;
+
+            self.visit(&mut SerializerVisitor(&mut map))
+                .map_err(|_| S::Error::custom("failed to visit key-values"))?;
+
+            map.end()
+        }
+    }
+
+    impl<T> Serialize for AsList<T>
+    where
+        T: Source,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            struct SerializerVisitor<'a, S>(&'a mut S);
+
+            impl<'a, 'kvs, S> Visitor<'kvs> for SerializerVisitor<'a, S>
+            where
+                S: SerializeSeq,
+            {
+                fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
+                    self.0
+                        .serialize_element(&(key, value))
+                        .map_err(|_| Error::msg("failed to serialize seq entry"))?;
+                    Ok(())
+                }
+            }
+
+            let mut seq = serializer.serialize_seq(Some(self.count()))?;
+
+            self.visit(&mut SerializerVisitor(&mut seq))
+                .map_err(|_| S::Error::custom("failed to visit seq"))?;
+
+            seq.end()
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        use self::serde::Serialize;
+
+        use crate::kv::source;
+
+        #[test]
+        fn derive_serialize() {
+            #[derive(Serialize)]
+            pub struct MyRecordAsMap<'a> {
+                msg: &'a str,
+                #[serde(flatten)]
+                #[serde(with = "source::as_map")]
+                kvs: &'a dyn Source,
+            }
+
+            #[derive(Serialize)]
+            pub struct MyRecordAsList<'a> {
+                msg: &'a str,
+                #[serde(flatten)]
+                #[serde(with = "source::as_list")]
+                kvs: &'a dyn Source,
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -429,5 +738,17 @@ mod tests {
 
         let source = Option::None::<(&str, i32)>;
         assert!(Source::get(&source, Key::from_str("a")).is_none());
+    }
+
+    #[test]
+    fn as_map() {
+        let _ = crate::kv::source::as_map(("a", 1));
+        let _ = crate::kv::source::as_map(&("a", 1) as &dyn Source);
+    }
+
+    #[test]
+    fn as_list() {
+        let _ = crate::kv::source::as_list(("a", 1));
+        let _ = crate::kv::source::as_list(&("a", 1) as &dyn Source);
     }
 }
