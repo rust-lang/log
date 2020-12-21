@@ -1556,8 +1556,8 @@ cfg_if! {
 mod tests {
     extern crate std;
     use super::{Level, LevelFilter, ParseLevelError};
-    use tests::std::string::ToString;
     use std::convert::TryInto;
+    use tests::std::string::ToString;
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1853,5 +1853,4 @@ mod tests {
         // Then
         assert_eq!(LevelFilter::Error, level_filter);
     }
-
 }
