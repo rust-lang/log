@@ -301,6 +301,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(not(has_atomics))]
 use std::cell::Cell;
+#[rustversion::since(1.41)]
+use std::convert::TryFrom;
 #[cfg(not(has_atomics))]
 use std::sync::atomic::Ordering;
 
@@ -405,6 +407,19 @@ impl PartialEq for Level {
     #[inline]
     fn eq(&self, other: &Level) -> bool {
         *self as usize == *other as usize
+    }
+}
+
+#[rustversion::since(1.41)]
+impl TryFrom<LevelFilter> for Level {
+    type Error = ParseLevelError;
+
+    fn try_from(level: LevelFilter) -> Result<Self, ParseLevelError> {
+        if let Some(resp) = Self::from_usize(level as usize) {
+            Ok(resp)
+        } else {
+            Err(ParseLevelError(()))
+        }
     }
 }
 
@@ -681,6 +696,12 @@ impl FromStr for LevelFilter {
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(self.as_str())
+    }
+}
+
+impl From<Level> for LevelFilter {
+    fn from(level: Level) -> Self {
+        level.to_level_filter()
     }
 }
 
@@ -1052,6 +1073,12 @@ impl<'a> RecordBuilder<'a> {
     }
 }
 
+impl<'a> Default for RecordBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Metadata about a log message.
 ///
 /// # Use
@@ -1172,6 +1199,12 @@ impl<'a> MetadataBuilder<'a> {
     #[inline]
     pub fn build(&self) -> Metadata<'a> {
         self.metadata.clone()
+    }
+}
+
+impl<'a> Default for MetadataBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1523,6 +1556,7 @@ cfg_if! {
 mod tests {
     extern crate std;
     use super::{Level, LevelFilter, ParseLevelError};
+    use std::convert::TryInto;
     use tests::std::string::ToString;
 
     #[test]
@@ -1776,5 +1810,47 @@ mod tests {
                 .to_borrowed_str()
                 .expect("invalid value")
         );
+    }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_filter_error_to_level() {
+        // Given
+        let level_filter = LevelFilter::Error;
+
+        // When
+        let level: Result<Level, ParseLevelError> = level_filter.try_into();
+
+        // Then
+        assert!(level.is_ok());
+
+        let level = level.unwrap();
+        assert_eq!(Level::Error, level);
+    }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_filter_off_to_level() {
+        // Given
+        let level_filter = LevelFilter::Off;
+
+        // When
+        let level: Result<Level, ParseLevelError> = level_filter.try_into();
+
+        // Then
+        assert!(level.is_err());
+    }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_error_to_level_filter() {
+        // Given
+        let level = Level::Error;
+
+        // When
+        let level_filter: LevelFilter = level.into();
+
+        // Then
+        assert_eq!(LevelFilter::Error, level_filter);
     }
 }
