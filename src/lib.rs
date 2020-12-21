@@ -688,11 +688,11 @@ impl fmt::Display for LevelFilter {
 impl TryFrom<Level> for LevelFilter {
     type Error = ParseLevelError;
 
-    fn try_from(level: Level) -> Result<Self, Self::Error> {
+    fn try_from(level: Level) -> Result<Self, ParseLevelError> {
         if let Some(resp) = Self::from_usize(level as usize) {
             Ok(resp)
         } else {
-            Err(())
+            Err(ParseLevelError(()))
         }
     }
 }
