@@ -301,6 +301,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(not(has_atomics))]
 use std::cell::Cell;
+#[rustversion::since(1.41)]
 use std::convert::TryFrom;
 #[cfg(not(has_atomics))]
 use std::sync::atomic::Ordering;
