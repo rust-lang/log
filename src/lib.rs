@@ -410,6 +410,19 @@ impl PartialEq for Level {
     }
 }
 
+#[rustversion::since(1.41)]
+impl TryFrom<LevelFilter> for Level {
+    type Error = ParseLevelError;
+
+    fn try_from(level: LevelFilter) -> Result<Self, ParseLevelError> {
+        if let Some(resp) = Self::from_usize(level as usize) {
+            Ok(resp)
+        } else {
+            Err(ParseLevelError(()))
+        }
+    }
+}
+
 impl PartialEq<LevelFilter> for Level {
     #[inline]
     fn eq(&self, other: &LevelFilter) -> bool {
@@ -1551,6 +1564,7 @@ mod tests {
     extern crate std;
     use super::{Level, LevelFilter, ParseLevelError};
     use tests::std::string::ToString;
+    use std::convert::TryInto;
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1804,4 +1818,50 @@ mod tests {
                 .expect("invalid value")
         );
     }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_filter_error_to_level() {
+        // Given
+        let level_filter = LevelFilter::Error;
+
+        // When
+        let level: Result<Level, ParseLevelError> = level_filter.try_into();
+
+        // Then
+        assert!(level.is_ok());
+
+        let level = level.unwrap();
+        assert_eq!(Level::Error, level);
+    }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_filter_off_to_level() {
+        // Given
+        let level_filter = LevelFilter::Off;
+
+        // When
+        let level: Result<Level, ParseLevelError> = level_filter.try_into();
+
+        // Then
+        assert!(level.is_err());
+    }
+
+    #[rustversion::since(1.41)]
+    #[test]
+    fn level_error_to_level_filter() {
+        // Given
+        let level = Level::Error;
+
+        // When
+        let level_filter: Result<LevelFilter, ParseLevelError> = level.try_into();
+
+        // Then
+        assert!(level_filter.is_ok());
+
+        let level = level_filter.unwrap();
+        assert_eq!(LevelFilter::Error, level);
+    }
+
 }
