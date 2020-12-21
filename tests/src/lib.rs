@@ -5,6 +5,7 @@
 
 #![allow(dead_code)]
 
+#[cfg(test)]
 #[macro_use]
 extern crate log;
 
