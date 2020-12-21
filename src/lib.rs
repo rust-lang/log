@@ -303,6 +303,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cell::Cell;
 #[cfg(not(has_atomics))]
 use std::sync::atomic::Ordering;
+use std::convert::TryFrom;
 
 #[cfg(not(has_atomics))]
 struct AtomicUsize {
@@ -684,6 +685,18 @@ impl fmt::Display for LevelFilter {
     }
 }
 
+impl TryFrom<Level> for LevelFilter {
+    type Error = ParseLevelError;
+
+    fn try_from(level: Level) -> Result<Self, Self::Error> {
+        if let Some(resp) = Self::from_usize(level as usize) {
+            Ok(resp)
+        } else {
+            Err(())
+        }
+    }
+}
+
 impl LevelFilter {
     fn from_usize(u: usize) -> Option<LevelFilter> {
         match u {
@@ -1052,6 +1065,12 @@ impl<'a> RecordBuilder<'a> {
     }
 }
 
+impl<'a> Default for RecordBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Metadata about a log message.
 ///
 /// # Use
@@ -1172,6 +1191,12 @@ impl<'a> MetadataBuilder<'a> {
     #[inline]
     pub fn build(&self) -> Metadata<'a> {
         self.metadata.clone()
+    }
+}
+
+impl<'a> Default for MetadataBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
