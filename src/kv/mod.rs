@@ -14,7 +14,7 @@
 
 mod error;
 mod key;
-mod source;
+pub mod source;
 
 pub mod value;
 
