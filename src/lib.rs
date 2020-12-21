@@ -699,16 +699,9 @@ impl fmt::Display for LevelFilter {
     }
 }
 
-#[rustversion::since(1.41)]
-impl TryFrom<Level> for LevelFilter {
-    type Error = ParseLevelError;
-
-    fn try_from(level: Level) -> Result<Self, ParseLevelError> {
-        if let Some(resp) = Self::from_usize(level as usize) {
-            Ok(resp)
-        } else {
-            Err(ParseLevelError(()))
-        }
+impl From<Level> for LevelFilter {
+    fn from(level: Level) -> Self {
+        level.to_level_filter()
     }
 }
 
@@ -1855,13 +1848,10 @@ mod tests {
         let level = Level::Error;
 
         // When
-        let level_filter: Result<LevelFilter, ParseLevelError> = level.try_into();
+        let level_filter: LevelFilter = level.into();
 
         // Then
-        assert!(level_filter.is_ok());
-
-        let level = level_filter.unwrap();
-        assert_eq!(LevelFilter::Error, level);
+        assert_eq!(LevelFilter::Error, level_filter);
     }
 
 }
