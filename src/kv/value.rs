@@ -253,6 +253,16 @@ impl<'v> Value<'v> {
             inner: value.into(),
         }
     }
+
+    /// Check whether this value can be downcast to `T`.
+    pub fn is<T: 'static>(&self) -> bool {
+        self.inner.is::<T>()
+    }
+
+    /// Try downcast this value to `T`.
+    pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
+        self.inner.downcast_ref::<T>()
+    }
 }
 
 impl<'v> fmt::Debug for Value<'v> {
@@ -655,5 +665,16 @@ pub(crate) mod tests {
         {
             assert!(v.to_char().is_none());
         }
+    }
+
+    #[test]
+    fn test_downcast_ref() {
+        #[derive(Debug)]
+        struct Foo(u64);
+
+        let v = Value::capture_debug(&Foo(42));
+
+        assert!(v.is::<Foo>());
+        assert_eq!(42u64, v.downcast_ref::<Foo>().expect("invalid downcast").0);
     }
 }
