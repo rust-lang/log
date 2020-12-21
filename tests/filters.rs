@@ -1,3 +1,4 @@
+#[cfg(not(lib_build))]
 #[macro_use]
 extern crate log;
 
@@ -29,6 +30,7 @@ impl Log for Logger {
     fn flush(&self) {}
 }
 
+#[cfg_attr(lib_build, test)]
 fn main() {
     let me = Arc::new(State {
         last_log: Mutex::new(None),

@@ -1,3 +1,4 @@
+#[cfg(not(lib_build))]
 #[macro_use]
 extern crate log;
 

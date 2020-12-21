@@ -69,6 +69,7 @@ jobs:
       - run: cargo build --verbose
       - run: cargo build --verbose --features serde
       - run: cargo build --verbose --features std
+      - run: cargo test --verbose --manifest-path tests/Cargo.toml
 
   embedded:
     name: Embedded

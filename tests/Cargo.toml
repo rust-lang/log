@@ -1,0 +1,11 @@
+[package]
+name = "integration"
+version = "0.1.0"
+publish = false
+build = "src/build.rs"
+
+[features]
+std = ["log/std"]
+
+[dependencies.log]
+path = ".."
