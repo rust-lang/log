@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.4.12] - 2020-12-24
+
+### New
+
+* Support platforms without atomics by racing instead of failing to compile
+* Implement `Log` for `Box<T: Log>`
+* Update `cfg-if` to `1.0`
+* Internal reworks of the structured logging API. Removed the `Fill` API
+and added `source::as_map` and `source::as_list` to easily serialize a `Source`
+as either a map of `{key: value, ..}` or as a list of `[(key, value), ..]`.
+
+### Fixed
+
+* Fixed deserialization of `LevelFilter` to use their `u64` index variants
+
 ## [0.4.11] - 2020-07-09
 
 ### New
@@ -170,7 +185,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.11...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.12...HEAD
+[0.4.12]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.12
 [0.4.11]: https://github.com/rust-lang-nursery/log/compare/0.4.10...0.4.11
 [0.4.10]: https://github.com/rust-lang-nursery/log/compare/0.4.9...0.4.10
 [0.4.9]: https://github.com/rust-lang-nursery/log/compare/0.4.8...0.4.9
