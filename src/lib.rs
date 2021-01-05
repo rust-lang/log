@@ -297,7 +297,7 @@ mod serde;
 pub mod kv;
 
 pub mod prelude {
-    pub use macros::{log, debug, error, info, trace, warn};
+    pub use crate::{log, debug, error, info, trace, warn};
 }
 
 #[cfg(has_atomics)]
