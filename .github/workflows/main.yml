@@ -42,6 +42,8 @@ jobs:
     - run: cargo test --verbose --features kv_unstable
     - run: cargo test --verbose --features "kv_unstable std"
     - run: cargo test --verbose --features "kv_unstable_sval"
+    - run: cargo test --verbose --features "kv_unstable_sval std"
+    - run: cargo test --verbose --features "kv_unstable kv_unstable_std kv_unstable_sval kv_unstable_serde"
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
 
