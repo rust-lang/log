@@ -326,6 +326,12 @@ impl ToValue for str {
     }
 }
 
+impl ToValue for String {
+    fn to_value(&self) -> Value {
+        Value::from(**self)
+    }
+}
+
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
         Value::from_value_bag(value)
