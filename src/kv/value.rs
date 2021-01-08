@@ -427,7 +427,7 @@ impl<'v> Value<'v> {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "kv_unstable_std")]
 mod std_support {
     use super::*;
 
@@ -615,7 +615,7 @@ pub(crate) mod tests {
         for v in str() {
             assert!(v.to_borrowed_str().is_some());
 
-            #[cfg(feature = "std")]
+            #[cfg(feature = "kv_unstable_std")]
             assert!(v.to_str().is_some());
         }
 
@@ -624,13 +624,13 @@ pub(crate) mod tests {
 
         assert!(v.to_borrowed_str().is_some());
 
-        #[cfg(feature = "std")]
+        #[cfg(feature = "kv_unstable_std")]
         assert!(v.to_str().is_some());
 
         for v in unsigned().chain(signed()).chain(float()).chain(bool()) {
             assert!(v.to_borrowed_str().is_none());
 
-            #[cfg(feature = "std")]
+            #[cfg(feature = "kv_unstable_std")]
             assert!(v.to_str().is_none());
         }
     }
