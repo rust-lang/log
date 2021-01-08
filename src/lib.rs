@@ -324,12 +324,18 @@ impl AtomicUsize {
     }
 
     #[cfg(atomic_cas)]
-    fn compare_and_swap(&self, current: usize, new: usize, _order: Ordering) -> usize {
+    fn compare_exchange(
+        &self,
+        current: usize,
+        new: usize,
+        _success: Ordering,
+        _failure: Ordering,
+    ) -> Result<usize, usize> {
         let prev = self.v.get();
         if current == prev {
             self.v.set(new);
         }
-        prev
+        Ok(prev)
     }
 }
 
@@ -1338,7 +1344,15 @@ fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
 {
-    match STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
+    let old_state = match STATE.compare_exchange(
+        UNINITIALIZED,
+        INITIALIZING,
+        Ordering::SeqCst,
+        Ordering::SeqCst,
+    ) {
+        Ok(s) | Err(s) => s,
+    };
+    match old_state {
         UNINITIALIZED => {
             unsafe {
                 LOGGER = make_logger();
