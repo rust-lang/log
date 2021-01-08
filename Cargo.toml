@@ -20,10 +20,12 @@ features = ["std", "serde", "kv_unstable_std", "kv_unstable_sval", "kv_unstable_
 
 [[test]]
 name = "filters"
+path = "tests/filters.rs"
 harness = false
 
 [[test]]
 name = "macros"
+path = "tests/macros.rs"
 harness = true
 
 [features]
