@@ -40,9 +40,8 @@ jobs:
     - run: cargo test --verbose --features serde
     - run: cargo test --verbose --features std
     - run: cargo test --verbose --features kv_unstable
-    - run: cargo test --verbose --features "kv_unstable std"
-    - run: cargo test --verbose --features "kv_unstable_sval"
-    - run: cargo test --verbose --features "kv_unstable_sval std"
+    - run: cargo test --verbose --features kv_unstable_sval
+    - run: cargo test --verbose --features kv_unstable_serde
     - run: cargo test --verbose --features "kv_unstable kv_unstable_std kv_unstable_sval kv_unstable_serde"
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
@@ -58,6 +57,22 @@ jobs:
         rustup default stable
         rustup component add rustfmt
     - run: cargo fmt -- --check
+
+  features:
+    name: Feature check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Rust
+        run: |
+          rustup update nightly --no-self-update
+          rustup default nightly
+      - run: cargo build --verbose -Z avoid-dev-deps --features kv_unstable
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable std"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_sval"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_serde"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_std"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_sval kv_unstable_serde"
 
   msrv:
     name: MSRV
