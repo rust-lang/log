@@ -2,11 +2,11 @@
 
 ## [Unreleased]
 
-## [0.4.13] - 2020-01-08
-
-### Fixed
-
 * Fixed incorrect combination of `kv_unstable` and `std` features causing compile failures
+
+## [0.4.13] - 2021-01-11
+
+* This is the same as `0.4.11`, except with a `kv_unstable_std` feature added to aid migrating current dependents to `0.4.14` (which was originally going to be `0.4.13` until it was decided to create a patch from `0.4.11` to minimize disruption).
 
 ## [0.4.12] - 2020-12-24
 
@@ -191,8 +191,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.13...HEAD
-[0.4.13]: https://github.com/rust-lang-nursery/log/compare/0.4.12...0.4.13
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.12...HEAD
+[0.4.13]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.13
 [0.4.12]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.12
 [0.4.11]: https://github.com/rust-lang-nursery/log/compare/0.4.10...0.4.11
 [0.4.10]: https://github.com/rust-lang-nursery/log/compare/0.4.9...0.4.10
