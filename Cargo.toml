@@ -28,6 +28,10 @@ name = "macros"
 path = "tests/macros.rs"
 harness = true
 
+[[test]]
+name = "expansion"
+harness = false
+
 [features]
 max_level_off   = []
 max_level_error = []
