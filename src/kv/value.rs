@@ -405,8 +405,8 @@ impl_value_to_primitive![
 impl<'v> Value<'v> {
     /// Try convert this value into an error.
     #[cfg(feature = "kv_unstable_std")]
-    pub fn to_error(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.inner.to_error()
+    pub fn to_borrowed_error(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.to_borrowed_error()
     }
 
     /// Try convert this value into a borrowed string.
@@ -514,8 +514,8 @@ pub(crate) mod tests {
     fn test_capture_error() {
         let err = std::io::Error::from(std::io::ErrorKind::Other);
 
-        assert!(Value::capture_error(&err).to_error().is_some());
-        assert!(Value::from_dyn_error(&err).to_error().is_some());
+        assert!(Value::capture_error(&err).to_borrowed_error().is_some());
+        assert!(Value::from_dyn_error(&err).to_borrowed_error().is_some());
     }
 
     #[cfg(feature = "kv_unstable_serde")]
