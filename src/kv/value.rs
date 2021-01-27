@@ -58,7 +58,7 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// let value = Value::capture_debug(&42i32);
 ///
-/// assert_eq!(Some(42), value.to_i32());
+/// assert_eq!(Some(42), value.to_i64());
 /// ```
 ///
 /// ## Using the `Value::from_*` methods
@@ -71,7 +71,7 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// let value = Value::from_debug(&42i32);
 ///
-/// assert_eq!(None, value.to_i32());
+/// assert_eq!(None, value.to_i64());
 /// ```
 ///
 /// ## Using the `ToValue` trait
@@ -83,7 +83,7 @@ impl<'v> ToValue for Value<'v> {
 /// # use log::kv::ToValue;
 /// let value = 42i32.to_value();
 ///
-/// assert_eq!(Some(42), value.to_i32());
+/// assert_eq!(Some(42), value.to_i64());
 /// ```
 ///
 /// ```
@@ -92,7 +92,7 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// let value = (&42i32 as &dyn Debug).to_value();
 ///
-/// assert_eq!(None, value.to_i32());
+/// assert_eq!(None, value.to_i64());
 /// ```
 ///
 /// ## Using the standard `From` trait
@@ -104,7 +104,7 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// let value = Value::from(42i32);
 ///
-/// assert_eq!(Some(42), value.to_i32());
+/// assert_eq!(Some(42), value.to_i64());
 /// ```
 pub struct Value<'v> {
     inner: ValueBag<'v>,
@@ -381,31 +381,17 @@ macro_rules! impl_value_to_primitive {
     }
 }
 
-impl_to_value_primitive![usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64, char, bool,];
+impl_to_value_primitive![usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,];
 
 impl_value_to_primitive![
-    #[doc = "Try convert this value into a `usize`."]
-    to_usize -> usize,
-    #[doc = "Try convert this value into a `u8`."]
-    to_u8 -> u8,
-    #[doc = "Try convert this value into a `u16`."]
-    to_u16 -> u16,
-    #[doc = "Try convert this value into a `u32`."]
-    to_u32 -> u32,
     #[doc = "Try convert this value into a `u64`."]
     to_u64 -> u64,
-    #[doc = "Try convert this value into a `isize`."]
-    to_isize -> isize,
-    #[doc = "Try convert this value into a `i8`."]
-    to_i8 -> i8,
-    #[doc = "Try convert this value into a `i16`."]
-    to_i16 -> i16,
-    #[doc = "Try convert this value into a `i32`."]
-    to_i32 -> i32,
     #[doc = "Try convert this value into a `i64`."]
     to_i64 -> i64,
-    #[doc = "Try convert this value into a `f32`."]
-    to_f32 -> f32,
+    #[doc = "Try convert this value into a `u128`."]
+    to_u128 -> u128,
+    #[doc = "Try convert this value into a `i128`."]
+    to_i128 -> i128,
     #[doc = "Try convert this value into a `f64`."]
     to_f64 -> f64,
     #[doc = "Try convert this value into a `char`."]
@@ -577,35 +563,22 @@ pub(crate) mod tests {
 
     #[test]
     fn test_to_number() {
-        for v in unsigned().chain(signed()).chain(float()) {
-            assert!(v.to_u8().is_some());
-            assert!(v.to_u16().is_some());
-            assert!(v.to_u32().is_some());
+        for v in unsigned() {
             assert!(v.to_u64().is_some());
-            assert!(v.to_usize().is_some());
-
-            assert!(v.to_i8().is_some());
-            assert!(v.to_i16().is_some());
-            assert!(v.to_i32().is_some());
             assert!(v.to_i64().is_some());
-            assert!(v.to_isize().is_some());
+        }
 
-            assert!(v.to_f32().is_some());
+        for v in signed() {
+            assert!(v.to_i64().is_some());
+        }
+
+        for v in unsigned().chain(signed()).chain(float()) {
             assert!(v.to_f64().is_some());
         }
 
         for v in bool().chain(str()).chain(char()) {
-            assert!(v.to_u8().is_none());
-            assert!(v.to_u16().is_none());
-            assert!(v.to_u32().is_none());
             assert!(v.to_u64().is_none());
-
-            assert!(v.to_i8().is_none());
-            assert!(v.to_i16().is_none());
-            assert!(v.to_i32().is_none());
             assert!(v.to_i64().is_none());
-
-            assert!(v.to_f32().is_none());
             assert!(v.to_f64().is_none());
         }
     }
