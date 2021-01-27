@@ -2,7 +2,10 @@
 
 ## [Unreleased]
 
-* Fixed incorrect combination of `kv_unstable` and `std` features causing compile failures
+## [0.4.14] - 2021-01-27
+
+* Fixed incorrect combination of `kv_unstable` and `std` features causing compile failures.
+* Remove unstable `Value::to_*` conversions that were incorrectly using `as`.
 
 ## [0.4.13] - 2021-01-11
 
@@ -191,7 +194,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.12...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.14...HEAD
+[0.4.14]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.14
 [0.4.13]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.13
 [0.4.12]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.12
 [0.4.11]: https://github.com/rust-lang-nursery/log/compare/0.4.10...0.4.11
