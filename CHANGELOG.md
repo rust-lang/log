@@ -6,6 +6,7 @@
 
 * Fixed incorrect combination of `kv_unstable` and `std` features causing compile failures.
 * Remove unstable `Value::to_*` conversions that were incorrectly using `as`.
+* Rename unstable `Value::to_error` to `Value::to_borrowed_error`.
 
 ## [0.4.13] - 2021-01-11
 
