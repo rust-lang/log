@@ -358,7 +358,9 @@ const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 const UNINITIALIZING: usize = 3;
 
-static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
+const DEFAULT_LOG_LEVEL_FILTER: usize = 0;
+
+static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(DEFAULT_LOG_LEVEL_FILTER);
 
 static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
@@ -1238,6 +1240,14 @@ where
 #[inline]
 pub fn set_max_level(level: LevelFilter) {
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
+}
+
+/// Resets the global maximum log level.
+///
+/// Typically, this will only be used in tests to reset global state.
+#[inline]
+pub fn reset_max_level() {
+    MAX_LOG_LEVEL_FILTER.store(DEFAULT_LOG_LEVEL_FILTER, Ordering::SeqCst)
 }
 
 /// Returns the current maximum log level.
