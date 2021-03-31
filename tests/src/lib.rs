@@ -16,3 +16,7 @@ mod filters;
 #[cfg(test)]
 #[path = "../macros.rs"]
 mod macros;
+
+#[cfg(test)]
+#[path = "../unset.rs"]
+mod unset;

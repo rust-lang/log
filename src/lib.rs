@@ -356,6 +356,7 @@ static STATE: AtomicUsize = AtomicUsize::new(0);
 const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
+const UNINITIALIZING: usize = 3;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -1420,6 +1421,38 @@ impl fmt::Display for SetLoggerError {
 // The Error trait is not available in libcore
 #[cfg(feature = "std")]
 impl error::Error for SetLoggerError {}
+
+/// Unsets the global logger.
+///
+/// When the global logger has been set using [`set_boxed_logger`], no
+/// destructors will be called and memory of the pervious logger will leak.
+///
+/// This function is typically only used in tests to reset global state.
+#[cfg(atomic_cas)]
+pub fn unset_logger() {
+    unset_logger_inner()
+}
+
+#[cfg(atomic_cas)]
+fn unset_logger_inner() {
+    let old_state = match STATE.compare_exchange(
+        INITIALIZED,
+        UNINITIALIZING,
+        Ordering::SeqCst,
+        Ordering::SeqCst,
+    ) {
+        Ok(s) | Err(s) => s,
+    };
+    match old_state {
+        INITIALIZED => {
+            unsafe {
+                LOGGER = &NopLogger;
+            }
+            STATE.store(UNINITIALIZED, Ordering::SeqCst);
+        }
+        _ => {}
+    }
+}
 
 /// The type returned by [`from_str`] when the string doesn't match any of the log levels.
 ///
