@@ -1435,16 +1435,31 @@ impl error::Error for SetLoggerError {}
 /// Unsets the global logger.
 ///
 /// When the global logger has been set using [`set_boxed_logger`], no
-/// destructors will be called and memory of the pervious logger will leak.
+/// destructors will be called and memory of the previous logger will leak. To
+/// prevent leaking memory in that case, use [`unset_boxed_logger`] instead.
 ///
 /// This function is typically only used in tests to reset global state.
 #[cfg(atomic_cas)]
 pub fn unset_logger() {
-    unset_logger_inner()
+    unset_logger_inner(false)
+}
+
+/// Unsets the global logger.
+///
+/// This function is typically only used in tests to reset global state.
+///
+/// # Safety
+///
+/// When the logger has been initialized before calling this function, it is
+/// only safe to call this function if the logger has been initialized via
+/// [`set_boxed_logger`].
+#[cfg(all(feature = "std", atomic_cas))]
+pub unsafe fn unset_boxed_logger() {
+    unset_logger_inner(true)
 }
 
 #[cfg(atomic_cas)]
-fn unset_logger_inner() {
+fn unset_logger_inner(#[cfg(feature = "std")] boxed: bool, #[cfg(not(feature = "std"))] _: bool) {
     let old_state = match STATE.compare_exchange(
         INITIALIZED,
         UNINITIALIZING,
@@ -1455,6 +1470,10 @@ fn unset_logger_inner() {
     };
     match old_state {
         INITIALIZED => {
+            #[cfg(feature = "std")]
+            if boxed {
+                unsafe { Box::from_raw(LOGGER as *const _ as *mut dyn Log) };
+            }
             unsafe {
                 LOGGER = &NopLogger;
             }

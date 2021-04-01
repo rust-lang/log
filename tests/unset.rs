@@ -3,18 +3,17 @@
 extern crate log;
 
 #[cfg(feature = "std")]
-use log::set_boxed_logger;
+use log::{set_boxed_logger, unset_boxed_logger};
 
 #[cfg(not(feature = "std"))]
-fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
-    log::set_logger(Box::leak(logger))
-}
+use log::{set_logger, unset_logger};
 
 use log::{LevelFilter, Log, Metadata, Record};
 use std::sync::{Arc, Mutex};
 
 struct State {
     log_count: Mutex<usize>,
+    dropped: Mutex<bool>,
 }
 
 struct Logger(Arc<State>);
@@ -31,22 +30,73 @@ impl Log for Logger {
     fn flush(&self) {}
 }
 
+impl Drop for Logger {
+    fn drop(&mut self) {
+        *self.0.dropped.lock().unwrap() = true;
+    }
+}
+
 #[test]
+#[cfg(feature = "std")]
 fn unset() {
+    log::set_max_level(LevelFilter::Error);
+
+    let state1 = Arc::new(State {
+        log_count: Mutex::new(0),
+        dropped: Mutex::new(false),
+    });
+
+    let logger1 = Box::new(Logger(state1.clone()));
+
+    set_boxed_logger(logger1).unwrap();
+
+    error!("");
+
+    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+
+    unsafe { unset_boxed_logger() };
+
+    assert_eq!(*state1.clone().dropped.lock().unwrap(), true);
+
+    error!("");
+
+    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+
+    let state2 = Arc::new(State {
+        log_count: Mutex::new(0),
+        dropped: Mutex::new(false),
+    });
+
+    let logger2 = Box::new(Logger(state2.clone()));
+
+    set_boxed_logger(logger2).unwrap();
+
+    error!("");
+
+    assert_eq!(*state2.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+}
+
+#[test]
+#[cfg(not(feature = "std"))]
+fn unset() {
+    log::set_max_level(LevelFilter::Error);
+
     let state = Arc::new(State {
         log_count: Mutex::new(0),
+        dropped: Mutex::new(false),
     });
 
     let logger = Box::new(Logger(state.clone()));
+    let logger = Box::leak(logger);
 
-    set_boxed_logger(logger).unwrap();
-    log::set_max_level(LevelFilter::Error);
+    set_logger(logger).unwrap();
 
     error!("");
 
     assert_eq!(*state.clone().log_count.lock().unwrap(), 1);
 
-    log::unset_logger();
+    unset_logger();
 
     error!("");
 
