@@ -52,15 +52,15 @@ fn unset() {
 
     error!("");
 
-    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state1.log_count.lock().unwrap(), 1);
 
     unsafe { unset_boxed_logger() };
 
-    assert_eq!(*state1.clone().dropped.lock().unwrap(), true);
+    assert_eq!(*state1.dropped.lock().unwrap(), true);
 
     error!("");
 
-    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state1.log_count.lock().unwrap(), 1);
 
     let state2 = Arc::new(State {
         log_count: Mutex::new(0),
@@ -73,8 +73,8 @@ fn unset() {
 
     error!("");
 
-    assert_eq!(*state2.clone().log_count.lock().unwrap(), 1);
-    assert_eq!(*state1.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state2.log_count.lock().unwrap(), 1);
+    assert_eq!(*state1.log_count.lock().unwrap(), 1);
 }
 
 #[test]
@@ -94,11 +94,11 @@ fn unset() {
 
     error!("");
 
-    assert_eq!(*state.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state.log_count.lock().unwrap(), 1);
 
     unset_logger();
 
     error!("");
 
-    assert_eq!(*state.clone().log_count.lock().unwrap(), 1);
+    assert_eq!(*state.log_count.lock().unwrap(), 1);
 }
