@@ -1472,8 +1472,10 @@ fn unset_logger_inner(boxed: bool) {
     match old_state {
         INITIALIZED => {
             #[cfg(feature = "std")]
-            if boxed {
-                unsafe { Box::from_raw(LOGGER as *const _ as *mut dyn Log) };
+            {
+                if boxed {
+                    unsafe { Box::from_raw(LOGGER as *const _ as *mut dyn Log) };
+                }
             }
             unsafe {
                 LOGGER = &NopLogger;
