@@ -40,6 +40,10 @@ fn main() {
     test(&a, LevelFilter::Info);
     test(&a, LevelFilter::Debug);
     test(&a, LevelFilter::Trace);
+
+    log::reset_max_level();
+    error!("");
+    last(&a, None);
 }
 
 fn test(a: &State, filter: LevelFilter) {
