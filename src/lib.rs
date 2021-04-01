@@ -1459,7 +1459,8 @@ pub unsafe fn unset_boxed_logger() {
 }
 
 #[cfg(atomic_cas)]
-fn unset_logger_inner(#[cfg(feature = "std")] boxed: bool, #[cfg(not(feature = "std"))] _: bool) {
+#[allow(unused_variables)]
+fn unset_logger_inner(boxed: bool) {
     let old_state = match STATE.compare_exchange(
         INITIALIZED,
         UNINITIALIZING,
