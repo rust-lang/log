@@ -72,6 +72,7 @@ There are many available implementations to choose from, here are some of the mo
     * [`fern`](https://docs.rs/fern/*/fern/)
 * Adaptors for other facilities:
     * [`syslog`](https://docs.rs/syslog/*/syslog/)
+    * [`systemd-journal-logger`](https://docs.rs/systemd-journal-logger/*/systemd_journal_logger/)
     * [`slog-stdlog`](https://docs.rs/slog-stdlog/*/slog_stdlog/)
     * [`android_log`](https://docs.rs/android_log/*/android_log/)
     * [`win_dbg_logger`](https://docs.rs/win_dbg_logger/*/win_dbg_logger/)
