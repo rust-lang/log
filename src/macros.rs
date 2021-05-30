@@ -235,6 +235,16 @@ macro_rules! __log_module_path {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "track_caller")]
+macro_rules! __log_file {
+    () => {
+        ::std::panic::Location::caller().file()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "track_caller"))]
 macro_rules! __log_file {
     () => {
         file!()
@@ -243,6 +253,16 @@ macro_rules! __log_file {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "track_caller")]
+macro_rules! __log_line {
+    () => {
+        ::std::panic::Location::caller().line()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "track_caller"))]
 macro_rules! __log_line {
     () => {
         line!()
