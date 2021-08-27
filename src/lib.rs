@@ -359,7 +359,12 @@ const INITIALIZED: usize = 2;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
 
-static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+/// Array of supported filter levels for a logger.
+///
+/// Values correspond to the variants of the [`LevelFilter`](enum.LevelFilter.html) enum.
+///
+/// Can be used, for example, in help text shown to a user of an application.
+pub static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 static SET_LOGGER_ERROR: &str = "attempted to set a logger after the logging system \
                                  was already initialized";
