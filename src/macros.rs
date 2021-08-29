@@ -29,6 +29,17 @@
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log {
+    (target: $target:expr, $lvl:expr, $($key:ident = $value:expr),* ; $fmt:expr,  $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log(
+                __log_format_args!($fmt, $($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                Some(&[$((__log_stringify!($key), &$value)),*])
+            );
+        }
+    });
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
@@ -36,6 +47,7 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                None,
             );
         }
     });
@@ -246,5 +258,13 @@ macro_rules! __log_file {
 macro_rules! __log_line {
     () => {
         line!()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __log_stringify {
+    ($($args:tt)*) => {
+        stringify!($($args)*)
     };
 }
