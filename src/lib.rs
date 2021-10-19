@@ -1236,7 +1236,7 @@ where
 /// Generally, this should only be called by the active logging implementation.
 #[inline]
 pub fn set_max_level(level: LevelFilter) {
-    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::SeqCst)
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed)
 }
 
 /// Returns the current maximum log level.
