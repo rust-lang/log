@@ -880,7 +880,7 @@ impl<'a> Record<'a> {
         self.line
     }
 
-    /// The structued key-value pairs associated with the message.
+    /// The structured key-value pairs associated with the message.
     #[cfg(feature = "kv_unstable")]
     #[inline]
     pub fn key_values(&self) -> &dyn kv::Source {
