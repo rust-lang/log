@@ -563,7 +563,7 @@ impl Level {
 
     /// Iterate through all supported logging levels
     pub fn iter() -> impl Iterator<Item = Self> {
-        (0..).flat_map(Self::from_usize)
+        (1..).flat_map(Self::from_usize)
     }
 }
 
