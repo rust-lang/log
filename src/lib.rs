@@ -359,12 +359,7 @@ const INITIALIZED: usize = 2;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
 
-/// Array of supported filter levels for a logger.
-///
-/// Values correspond to the variants of the [`LevelFilter`](enum.LevelFilter.html) enum.
-///
-/// Can be used, for example, in help text shown to a user of an application.
-pub static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 static SET_LOGGER_ERROR: &str = "attempted to set a logger after the logging system \
                                  was already initialized";
@@ -565,6 +560,11 @@ impl Level {
     pub fn as_str(&self) -> &'static str {
         LOG_LEVEL_NAMES[*self as usize]
     }
+
+    /// Iterate through all supported logging levels
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..).flat_map(Self::from_usize)
+    }
 }
 
 /// An enum representing the available verbosity level filters of the logger.
@@ -726,6 +726,11 @@ impl LevelFilter {
     /// This returns the same string as the `fmt::Display` implementation.
     pub fn as_str(&self) -> &'static str {
         LOG_LEVEL_NAMES[*self as usize]
+    }
+
+    /// Iterate through all supported filtering levels
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..).flat_map(Self::from_usize)
     }
 }
 
