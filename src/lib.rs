@@ -562,6 +562,8 @@ impl Level {
     }
 
     /// Iterate through all supported logging levels
+    ///
+    /// The order of iteration is from more severe to less severe log messages
     pub fn iter() -> impl Iterator<Item = Self> {
         (1..).flat_map(Self::from_usize)
     }
@@ -729,6 +731,8 @@ impl LevelFilter {
     }
 
     /// Iterate through all supported filtering levels
+    ///
+    /// The order of iteration is from less to more verbose filtering
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..).flat_map(Self::from_usize)
     }
