@@ -273,9 +273,9 @@ impl<'v> Value<'v> {
             V: Visit<'v>,
         {
             fn visit_any(&mut self, value: ValueBag) -> Result<(), value_bag::Error> {
-                self.0.visit_any(Value {
-                    inner: value
-                }).map_err(Error::into_value)
+                self.0
+                    .visit_any(Value { inner: value })
+                    .map_err(Error::into_value)
             }
 
             fn visit_u64(&mut self, value: u64) -> Result<(), value_bag::Error> {
@@ -315,7 +315,10 @@ impl<'v> Value<'v> {
             }
 
             #[cfg(feature = "kv_unstable_std")]
-            fn visit_error(&mut self, err: &(dyn std::error::Error + 'static)) -> Result<(), value_bag::Error> {
+            fn visit_error(
+                &mut self,
+                err: &(dyn std::error::Error + 'static),
+            ) -> Result<(), value_bag::Error> {
                 self.0.visit_error(err).map_err(Error::into_value)
             }
 
@@ -328,7 +331,9 @@ impl<'v> Value<'v> {
             }
         }
 
-        self.inner.visit(&mut Visitor(visitor)).map_err(Error::from_value)
+        self.inner
+            .visit(&mut Visitor(visitor))
+            .map_err(Error::from_value)
     }
 }
 
