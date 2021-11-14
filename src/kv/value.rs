@@ -263,6 +263,78 @@ impl<'v> Value<'v> {
     pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
         self.inner.downcast_ref::<T>()
     }
+
+    /// Inspect this value using a simple visitor.
+    pub fn visit(&self, visitor: impl Visit<'v>) -> Result<(), Error> {
+        struct Visitor<V>(V);
+
+        impl<'v, V> value_bag::visit::Visit<'v> for Visitor<V>
+        where
+            V: Visit<'v>,
+        {
+            fn visit_any(&mut self, value: ValueBag) -> Result<(), value_bag::Error> {
+                self.0
+                    .visit_any(Value { inner: value })
+                    .map_err(Error::into_value)
+            }
+
+            fn visit_u64(&mut self, value: u64) -> Result<(), value_bag::Error> {
+                self.0.visit_u64(value).map_err(Error::into_value)
+            }
+
+            fn visit_i64(&mut self, value: i64) -> Result<(), value_bag::Error> {
+                self.0.visit_i64(value).map_err(Error::into_value)
+            }
+
+            fn visit_u128(&mut self, value: u128) -> Result<(), value_bag::Error> {
+                self.0.visit_u128(value).map_err(Error::into_value)
+            }
+
+            fn visit_i128(&mut self, value: i128) -> Result<(), value_bag::Error> {
+                self.0.visit_i128(value).map_err(Error::into_value)
+            }
+
+            fn visit_f64(&mut self, value: f64) -> Result<(), value_bag::Error> {
+                self.0.visit_f64(value).map_err(Error::into_value)
+            }
+
+            fn visit_bool(&mut self, value: bool) -> Result<(), value_bag::Error> {
+                self.0.visit_bool(value).map_err(Error::into_value)
+            }
+
+            fn visit_str(&mut self, value: &str) -> Result<(), value_bag::Error> {
+                self.0.visit_str(value).map_err(Error::into_value)
+            }
+
+            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), value_bag::Error> {
+                self.0.visit_borrowed_str(value).map_err(Error::into_value)
+            }
+
+            fn visit_char(&mut self, value: char) -> Result<(), value_bag::Error> {
+                self.0.visit_char(value).map_err(Error::into_value)
+            }
+
+            #[cfg(feature = "kv_unstable_std")]
+            fn visit_error(
+                &mut self,
+                err: &(dyn std::error::Error + 'static),
+            ) -> Result<(), value_bag::Error> {
+                self.0.visit_error(err).map_err(Error::into_value)
+            }
+
+            #[cfg(feature = "kv_unstable_std")]
+            fn visit_borrowed_error(
+                &mut self,
+                err: &'v (dyn std::error::Error + 'static),
+            ) -> Result<(), value_bag::Error> {
+                self.0.visit_borrowed_error(err).map_err(Error::into_value)
+            }
+        }
+
+        self.inner
+            .visit(&mut Visitor(visitor))
+            .map_err(Error::from_value)
+    }
 }
 
 impl<'v> fmt::Debug for Value<'v> {
@@ -447,6 +519,142 @@ mod std_support {
         pub fn to_str(&self) -> Option<Cow<str>> {
             self.inner.to_str()
         }
+    }
+
+    impl<'v> From<&'v String> for Value<'v> {
+        fn from(v: &'v String) -> Self {
+            Value::from(&**v)
+        }
+    }
+}
+
+/// A visitor for a `Value`.
+pub trait Visit<'v> {
+    /// Visit a `Value`.
+    ///
+    /// This is the only required method on `Visit` and acts as a fallback for any
+    /// more specific methods that aren't overridden.
+    /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
+    /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
+    fn visit_any(&mut self, value: Value) -> Result<(), Error>;
+
+    /// Visit an unsigned integer.
+    fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a signed integer.
+    fn visit_i64(&mut self, value: i64) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a big unsigned integer.
+    fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a big signed integer.
+    fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a floating point.
+    fn visit_f64(&mut self, value: f64) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a boolean.
+    fn visit_bool(&mut self, value: bool) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a string.
+    fn visit_str(&mut self, value: &str) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a string.
+    fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
+        self.visit_str(value)
+    }
+
+    /// Visit a Unicode character.
+    fn visit_char(&mut self, value: char) -> Result<(), Error> {
+        let mut b = [0; 4];
+        self.visit_str(&*value.encode_utf8(&mut b))
+    }
+
+    /// Visit an error.
+    #[cfg(feature = "kv_unstable_std")]
+    fn visit_error(&mut self, err: &(dyn std::error::Error + 'static)) -> Result<(), Error> {
+        self.visit_any(Value::from_dyn_error(err))
+    }
+
+    /// Visit an error.
+    #[cfg(feature = "kv_unstable_std")]
+    fn visit_borrowed_error(
+        &mut self,
+        err: &'v (dyn std::error::Error + 'static),
+    ) -> Result<(), Error> {
+        self.visit_any(Value::from_dyn_error(err))
+    }
+}
+
+impl<'a, 'v, T: ?Sized> Visit<'v> for &'a mut T
+where
+    T: Visit<'v>,
+{
+    fn visit_any(&mut self, value: Value) -> Result<(), Error> {
+        (**self).visit_any(value)
+    }
+
+    fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
+        (**self).visit_u64(value)
+    }
+
+    fn visit_i64(&mut self, value: i64) -> Result<(), Error> {
+        (**self).visit_i64(value)
+    }
+
+    fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
+        (**self).visit_u128(value)
+    }
+
+    fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
+        (**self).visit_i128(value)
+    }
+
+    fn visit_f64(&mut self, value: f64) -> Result<(), Error> {
+        (**self).visit_f64(value)
+    }
+
+    fn visit_bool(&mut self, value: bool) -> Result<(), Error> {
+        (**self).visit_bool(value)
+    }
+
+    fn visit_str(&mut self, value: &str) -> Result<(), Error> {
+        (**self).visit_str(value)
+    }
+
+    fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
+        (**self).visit_borrowed_str(value)
+    }
+
+    fn visit_char(&mut self, value: char) -> Result<(), Error> {
+        (**self).visit_char(value)
+    }
+
+    #[cfg(feature = "kv_unstable_std")]
+    fn visit_error(&mut self, err: &(dyn std::error::Error + 'static)) -> Result<(), Error> {
+        (**self).visit_error(err)
+    }
+
+    #[cfg(feature = "kv_unstable_std")]
+    fn visit_borrowed_error(
+        &mut self,
+        err: &'v (dyn std::error::Error + 'static),
+    ) -> Result<(), Error> {
+        (**self).visit_borrowed_error(err)
     }
 }
 
@@ -651,5 +859,51 @@ pub(crate) mod tests {
 
         assert!(v.is::<Foo>());
         assert_eq!(42u64, v.downcast_ref::<Foo>().expect("invalid downcast").0);
+    }
+
+    #[test]
+    fn test_visit_integer() {
+        struct Extract(Option<u64>);
+
+        impl<'v> Visit<'v> for Extract {
+            fn visit_any(&mut self, value: Value) -> Result<(), Error> {
+                unimplemented!("unexpected value: {:?}", value)
+            }
+
+            fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
+                self.0 = Some(value);
+
+                Ok(())
+            }
+        }
+
+        let mut extract = Extract(None);
+        Value::from(42u64).visit(&mut extract).unwrap();
+
+        assert_eq!(Some(42), extract.0);
+    }
+
+    #[test]
+    fn test_visit_borrowed_str() {
+        struct Extract<'v>(Option<&'v str>);
+
+        impl<'v> Visit<'v> for Extract<'v> {
+            fn visit_any(&mut self, value: Value) -> Result<(), Error> {
+                unimplemented!("unexpected value: {:?}", value)
+            }
+
+            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
+                self.0 = Some(value);
+
+                Ok(())
+            }
+        }
+
+        let mut extract = Extract(None);
+
+        let short_lived = String::from("A short-lived string");
+        Value::from(&*short_lived).visit(&mut extract).unwrap();
+
+        assert_eq!(Some("A short-lived string"), extract.0);
     }
 }
