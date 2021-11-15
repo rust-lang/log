@@ -576,7 +576,7 @@ impl Level {
     /// assert_eq!(Some(Level::Trace), levels.last());
     /// ```
     pub fn iter() -> impl Iterator<Item = Self> {
-        (1..6).flat_map(Self::from_usize)
+        (1..6).map(|i| Self::from_usize(i).unwrap())
     }
 }
 
@@ -757,7 +757,7 @@ impl LevelFilter {
     /// assert_eq!(Some(LevelFilter::Trace), levels.last());
     /// ```
     pub fn iter() -> impl Iterator<Item = Self> {
-        (0..6).flat_map(Self::from_usize)
+        (0..6).map(|i| Self::from_usize(i).unwrap())
     }
 }
 
