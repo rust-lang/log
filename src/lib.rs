@@ -560,6 +560,13 @@ impl Level {
     pub fn as_str(&self) -> &'static str {
         LOG_LEVEL_NAMES[*self as usize]
     }
+
+    /// Iterate through all supported logging levels
+    ///
+    /// The order of iteration is from more severe to less severe log messages
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (1..).flat_map(Self::from_usize)
+    }
 }
 
 /// An enum representing the available verbosity level filters of the logger.
@@ -721,6 +728,13 @@ impl LevelFilter {
     /// This returns the same string as the `fmt::Display` implementation.
     pub fn as_str(&self) -> &'static str {
         LOG_LEVEL_NAMES[*self as usize]
+    }
+
+    /// Iterate through all supported filtering levels
+    ///
+    /// The order of iteration is from less to more verbose filtering
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..).flat_map(Self::from_usize)
     }
 }
 
