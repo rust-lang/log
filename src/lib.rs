@@ -561,11 +561,22 @@ impl Level {
         LOG_LEVEL_NAMES[*self as usize]
     }
 
-    /// Iterate through all supported logging levels
+    /// Iterate through all supported logging levels.
     ///
-    /// The order of iteration is from more severe to less severe log messages
+    /// The order of iteration is from more severe to less severe log messages.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::Level;
+    ///
+    /// let mut levels = Level::iter();
+    ///
+    /// assert_eq!(Some(Level::Error), levels.next());
+    /// assert_eq!(Some(Level::Trace), levels.last());
+    /// ```
     pub fn iter() -> impl Iterator<Item = Self> {
-        (1..).flat_map(Self::from_usize)
+        (1..6).flat_map(Self::from_usize)
     }
 }
 
@@ -709,6 +720,7 @@ impl LevelFilter {
             _ => None,
         }
     }
+
     /// Returns the most verbose logging level filter.
     #[inline]
     pub fn max() -> LevelFilter {
@@ -730,11 +742,22 @@ impl LevelFilter {
         LOG_LEVEL_NAMES[*self as usize]
     }
 
-    /// Iterate through all supported filtering levels
+    /// Iterate through all supported filtering levels.
     ///
-    /// The order of iteration is from less to more verbose filtering
+    /// The order of iteration is from less to more verbose filtering.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::LevelFilter;
+    ///
+    /// let mut levels = LevelFilter::iter();
+    ///
+    /// assert_eq!(Some(LevelFilter::Off), levels.next());
+    /// assert_eq!(Some(LevelFilter::Trace), levels.last());
+    /// ```
     pub fn iter() -> impl Iterator<Item = Self> {
-        (0..).flat_map(Self::from_usize)
+        (0..6).flat_map(Self::from_usize)
     }
 }
 
@@ -928,7 +951,6 @@ impl<'a> Record<'a> {
 /// the created object when `build` is called.
 ///
 /// # Examples
-///
 ///
 /// ```edition2018
 /// use log::{Level, Record};
