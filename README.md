@@ -78,6 +78,8 @@ There are many available implementations to choose from, here are some of the mo
     * [`win_dbg_logger`](https://docs.rs/win_dbg_logger/*/win_dbg_logger/)
 * For WebAssembly binaries:
     * [`console_log`](https://docs.rs/console_log/*/console_log/)
+* For dynamic libraries:
+    * You may need to construct [an FFI-safe wrapper over `log`](https://github.com/rust-lang/log/issues/421) to initialize in your libraries. 
 
 Executables should choose a logger implementation and initialize it early in the
 runtime of the program. Logger implementations will typically include a
