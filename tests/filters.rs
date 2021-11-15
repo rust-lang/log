@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 #[cfg(not(lib_build))]
 #[macro_use]
 extern crate log;
@@ -32,18 +34,36 @@ impl Log for Logger {
 
 #[cfg_attr(lib_build, test)]
 fn main() {
-    let me = Arc::new(State {
-        last_log: Mutex::new(None),
-    });
-    let a = me.clone();
-    set_boxed_logger(Box::new(Logger(me))).unwrap();
+    // These tests don't really make sense when static
+    // max level filtering is applied
+    #[cfg(not(any(
+        feature = "max_level_off",
+        feature = "max_level_error",
+        feature = "max_level_warn",
+        feature = "max_level_info",
+        feature = "max_level_debug",
+        feature = "max_level_trace",
+        feature = "max_level_off",
+        feature = "max_level_error",
+        feature = "max_level_warn",
+        feature = "max_level_info",
+        feature = "max_level_debug",
+        feature = "max_level_trace",
+    )))]
+    {
+        let me = Arc::new(State {
+            last_log: Mutex::new(None),
+        });
+        let a = me.clone();
+        set_boxed_logger(Box::new(Logger(me))).unwrap();
 
-    test(&a, LevelFilter::Off);
-    test(&a, LevelFilter::Error);
-    test(&a, LevelFilter::Warn);
-    test(&a, LevelFilter::Info);
-    test(&a, LevelFilter::Debug);
-    test(&a, LevelFilter::Trace);
+        test(&a, LevelFilter::Off);
+        test(&a, LevelFilter::Error);
+        test(&a, LevelFilter::Warn);
+        test(&a, LevelFilter::Info);
+        test(&a, LevelFilter::Debug);
+        test(&a, LevelFilter::Trace);
+    }
 }
 
 fn test(a: &State, filter: LevelFilter) {
