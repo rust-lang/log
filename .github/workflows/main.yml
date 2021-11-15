@@ -37,6 +37,8 @@ jobs:
         rustup update ${{ matrix.rust }} --no-self-update
         rustup default ${{ matrix.rust }}
     - run: cargo test --verbose
+    - run: cargo test --verbose --no-default-features
+    - run: cargo test --verbose --all-features
     - run: cargo test --verbose --features serde
     - run: cargo test --verbose --features std
     - run: cargo test --verbose --features kv_unstable
