@@ -1284,24 +1284,6 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<P, T> Log for std::pin::Pin<P>
-where
-    P: std::ops::Deref<Target = T> + std::marker::Send + std::marker::Sync,
-    T: Log + ?Sized,
-{
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        (**self).enabled(metadata)
-    }
-
-    fn log(&self, record: &Record) {
-        (**self).log(record)
-    }
-    fn flush(&self) {
-        (**self).flush()
-    }
-}
-
-#[cfg(feature = "std")]
 impl<T> Log for std::sync::Arc<T>
 where
     T: ?Sized + Log,
@@ -1900,7 +1882,7 @@ mod tests {
     fn test_foreign_impl() {
         use super::Log;
         #[cfg(feature = "std")]
-        use std::{pin::Pin, sync::Arc};
+        use std::sync::Arc;
 
         fn assert_is_log<T: Log + ?Sized>() {}
 
@@ -1910,9 +1892,6 @@ mod tests {
         assert_is_log::<Box<dyn Log>>();
 
         #[cfg(feature = "std")]
-        assert_is_log::<Pin<Box<dyn Log>>>();
-
-        #[cfg(feature = "std")]
         assert_is_log::<Arc<dyn Log>>();
 
         // Assert these statements for all T: Log + ?Sized
@@ -1920,9 +1899,6 @@ mod tests {
         fn forall<T: Log + ?Sized>() {
             #[cfg(feature = "std")]
             assert_is_log::<Box<T>>();
-
-            #[cfg(feature = "std")]
-            assert_is_log::<Pin<Box<T>>>();
 
             assert_is_log::<&T>();
 
