@@ -269,7 +269,7 @@
     html_root_url = "https://docs.rs/log/0.4.14"
 )]
 #![warn(missing_docs)]
-#![deny(missing_debug_implementations)]
+#![deny(missing_debug_implementations, unconditional_recursion)]
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 // When compiled for the rustc compiler itself we want to make sure that this is
 // an unstable crate
@@ -1250,8 +1250,41 @@ impl Log for NopLogger {
     fn flush(&self) {}
 }
 
+impl<T> Log for &'_ T
+where
+    T: ?Sized + Log,
+{
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        (**self).enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        (**self).log(record)
+    }
+    fn flush(&self) {
+        (**self).flush()
+    }
+}
+
 #[cfg(feature = "std")]
 impl<T> Log for std::boxed::Box<T>
+where
+    T: ?Sized + Log,
+{
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.as_ref().enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        self.as_ref().log(record)
+    }
+    fn flush(&self) {
+        self.as_ref().flush()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Log for std::sync::Arc<T>
 where
     T: ?Sized + Log,
 {
@@ -1841,5 +1874,36 @@ mod tests {
                 .to_borrowed_str()
                 .expect("invalid value")
         );
+    }
+
+    // Test that the `impl Log for Foo` blocks work
+    // This test mostly operates on a type level, so failures will be compile errors
+    #[test]
+    fn test_foreign_impl() {
+        use super::Log;
+        #[cfg(feature = "std")]
+        use std::sync::Arc;
+
+        fn assert_is_log<T: Log + ?Sized>() {}
+
+        assert_is_log::<&dyn Log>();
+
+        #[cfg(feature = "std")]
+        assert_is_log::<Box<dyn Log>>();
+
+        #[cfg(feature = "std")]
+        assert_is_log::<Arc<dyn Log>>();
+
+        // Assert these statements for all T: Log + ?Sized
+        #[allow(unused)]
+        fn forall<T: Log + ?Sized>() {
+            #[cfg(feature = "std")]
+            assert_is_log::<Box<T>>();
+
+            assert_is_log::<&T>();
+
+            #[cfg(feature = "std")]
+            assert_is_log::<Arc<T>>();
+        }
     }
 }
