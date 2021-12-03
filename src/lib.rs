@@ -106,6 +106,13 @@
 //! * Adaptors for other facilities:
 //!     * [syslog]
 //!     * [slog-stdlog]
+//!     * [systemd-journal-logger]
+//!     * [android_log]
+//!     * [win_dbg_logger]
+//! * For WebAssembly binaries:
+//!     * [console_log]
+//! * For dynamic libraries:
+//!     * You may need to construct an FFI-safe wrapper over `log` to initialize in your libraries
 //!
 //! # Implementing a Logger
 //!
