@@ -269,6 +269,10 @@
 //! [slog-stdlog]: https://docs.rs/slog-stdlog/*/slog_stdlog/
 //! [log4rs]: https://docs.rs/log4rs/*/log4rs/
 //! [fern]: https://docs.rs/fern/*/fern/
+//! [systemd-journal-logger]: (https://docs.rs/systemd-journal-logger/*/systemd_journal_logger/)
+//! [android_log]: (https://docs.rs/android_log/*/android_log/)
+//! [win_dbg_logger]: (https://docs.rs/win_dbg_logger/*/win_dbg_logger/)
+//! [console_log]: (https://docs.rs/console_log/*/console_log/)
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",

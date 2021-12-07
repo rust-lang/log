@@ -43,12 +43,12 @@ fn main() {
         feature = "max_level_info",
         feature = "max_level_debug",
         feature = "max_level_trace",
-        feature = "max_level_off",
-        feature = "max_level_error",
-        feature = "max_level_warn",
-        feature = "max_level_info",
-        feature = "max_level_debug",
-        feature = "max_level_trace",
+        feature = "release_max_level_off",
+        feature = "release_max_level_error",
+        feature = "release_max_level_warn",
+        feature = "release_max_level_info",
+        feature = "release_max_level_debug",
+        feature = "release_max_level_trace",
     )))]
     {
         let me = Arc::new(State {
