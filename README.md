@@ -93,5 +93,22 @@ The executable itself may use the `log` crate to log as well.
 If you enable the `kv_unstable` feature, you can associate structured data with your log records:
 
 ```rust
+use log::{info, trace, warn, as_serde, as_error};
 
+pub fn shave_the_yak(yak: &mut Yak) {
+    trace!(target = "yak_events"; yak = as_serde!(yak); "Commencing yak shaving");
+
+    loop {
+        match find_a_razor() {
+            Ok(razor) => {
+                info!(razor = razor; "Razor located");
+                yak.shave(razor);
+                break;
+            }
+            Err(err) => {
+                warn!(err = as_error!(err); "Unable to locate a razor, retrying");
+            }
+        }
+    }
+}
 ```
