@@ -190,27 +190,27 @@ mod implicit_args {
     #[test]
     fn implicit_named_args() {
         let world = "world";
-    
+
         for lvl in log::Level::iter() {
             log!(lvl, "hello {world}");
             log!(lvl, "hello {world}",);
-    
+
             log!(target: "my_target", lvl, "hello {world}");
             log!(target: "my_target", lvl, "hello {world}",);
-    
+
             log!(lvl; "hello {world}");
             log!(lvl; "hello {world}",);
-    
+
             log!(target = "my_target", lvl; "hello {world}");
             log!(target = "my_target", lvl; "hello {world}",);
         }
-    
+
         all_log_macros!("hello {world}");
         all_log_macros!("hello {world}",);
-    
+
         all_log_macros!(target = "my_target"; "hello {world}");
         all_log_macros!(target = "my_target"; "hello {world}",);
-    
+
         all_log_macros!(target: "my_target", "hello {world}");
         all_log_macros!(target: "my_target", "hello {world}",);
     }

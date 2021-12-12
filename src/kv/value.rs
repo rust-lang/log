@@ -40,34 +40,44 @@ impl<'v> ToValue for Value<'v> {
 /// Get a value from a type implementing `std::fmt::Debug`.
 #[macro_export]
 macro_rules! as_debug {
-    ($capture:expr) => ($crate::kv::Value::from_debug(&$capture));
+    ($capture:expr) => {
+        $crate::kv::Value::from_debug(&$capture)
+    };
 }
 
 /// Get a value from a type implementing `std::fmt::Display`.
 #[macro_export]
 macro_rules! as_display {
-    ($capture:expr) => ($crate::kv::Value::from_display(&$capture));
+    ($capture:expr) => {
+        $crate::kv::Value::from_display(&$capture)
+    };
 }
 
 /// Get a value from an error.
 #[cfg(feature = "kv_unstable_std")]
 #[macro_export]
 macro_rules! as_error {
-    ($capture:expr) => ($crate::kv::Value::from_dyn_error(&$capture));
+    ($capture:expr) => {
+        $crate::kv::Value::from_dyn_error(&$capture)
+    };
 }
 
 #[cfg(feature = "kv_unstable_serde")]
 /// Get a value from a type implementing `serde::Serialize`.
 #[macro_export]
 macro_rules! as_serde {
-    ($capture:expr) => ($crate::kv::Value::from_serde(&$capture));
+    ($capture:expr) => {
+        $crate::kv::Value::from_serde(&$capture)
+    };
 }
 
 /// Get a value from a type implementing `sval::value::Value`.
 #[cfg(feature = "kv_unstable_sval")]
 #[macro_export]
 macro_rules! as_sval {
-    ($capture:expr) => ($crate::kv::Value::from_sval(&$capture));
+    ($capture:expr) => {
+        $crate::kv::Value::from_sval(&$capture)
+    };
 }
 
 /// A value in a structured key-value pair.
