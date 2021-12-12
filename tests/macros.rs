@@ -183,12 +183,10 @@ fn kv_shadow_target() {
     all_log_macros!(target = "kv_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
 }
 
-#[rustversion::since(1.58)]
-mod implicit_args {
-    use super::*;
-
-    #[test]
-    fn implicit_named_args() {
+#[test]
+fn implicit_named_args() {
+    #[rustversion::since(1.58)]
+    fn _check() {
         let world = "world";
 
         for lvl in log::Level::iter() {
@@ -214,10 +212,13 @@ mod implicit_args {
         all_log_macros!(target: "my_target", "hello {world}");
         all_log_macros!(target: "my_target", "hello {world}",);
     }
+}
 
-    #[test]
-    #[cfg(feature = "kv_unstable")]
-    fn kv_implicit_named_args() {
+#[test]
+#[cfg(feature = "kv_unstable")]
+fn kv_implicit_named_args() {
+    #[rustversion::since(1.58)]
+    fn _check() {
         let world = "world";
 
         for lvl in log::Level::iter() {
