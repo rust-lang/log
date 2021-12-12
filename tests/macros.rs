@@ -129,6 +129,19 @@ fn kv_no_args() {
 
 #[test]
 #[cfg(feature = "kv_unstable")]
+fn kv_expr_args() {
+    for lvl in log::Level::iter() {
+        log!(target = "my_target", lvl; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+
+        log!(lvl; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+    }
+
+    all_log_macros!(target = "my_target"; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+    all_log_macros!(cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+}
+
+#[test]
+#[cfg(feature = "kv_unstable")]
 fn kv_anonymous_args() {
     for lvl in log::Level::iter() {
         log!(target = "my_target", lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
