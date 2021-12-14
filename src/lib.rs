@@ -1051,7 +1051,14 @@ impl<'a> RecordBuilder<'a> {
     /// Set [`Metadata::target`](struct.Metadata.html#method.target)
     #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut RecordBuilder<'a> {
-        self.record.metadata.target = target;
+        self.record.metadata.target = MaybeStaticStr::Borrowed(target);
+        self
+    }
+
+    /// Set [`Metadata::target`](struct.Metadata.html#method.target) to a `'static` string
+    #[inline]
+    pub fn target_static(&mut self, target: &'static str) -> &mut RecordBuilder<'a> {
+        self.record.metadata.target = MaybeStaticStr::Static(target);
         self
     }
 
@@ -1146,7 +1153,7 @@ impl<'a> RecordBuilder<'a> {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Metadata<'a> {
     level: Level,
-    target: &'a str,
+    target: MaybeStaticStr<'a>,
 }
 
 impl<'a> Metadata<'a> {
@@ -1165,7 +1172,16 @@ impl<'a> Metadata<'a> {
     /// The name of the target of the directive.
     #[inline]
     pub fn target(&self) -> &'a str {
-        self.target
+        self.target.get()
+    }
+
+    /// The name of the target of the directive.
+    #[inline]
+    pub fn target_static(&self) -> Option<&'static str> {
+        match self.target {
+            MaybeStaticStr::Static(s) => Some(s),
+            _ => None,
+        }
     }
 }
 
@@ -1202,7 +1218,7 @@ impl<'a> MetadataBuilder<'a> {
         MetadataBuilder {
             metadata: Metadata {
                 level: Level::Info,
-                target: "",
+                target: MaybeStaticStr::Static(""),
             },
         }
     }
@@ -1217,7 +1233,14 @@ impl<'a> MetadataBuilder<'a> {
     /// Setter for [`target`](struct.Metadata.html#method.target).
     #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut MetadataBuilder<'a> {
-        self.metadata.target = target;
+        self.metadata.target = MaybeStaticStr::Borrowed(target);
+        self
+    }
+
+    /// Setter for [`target`](struct.Metadata.html#method.target_static) to a `'static` string.
+    #[inline]
+    pub fn target_static(&mut self, target: &'static str) -> &mut MetadataBuilder<'a> {
+        self.metadata.target = MaybeStaticStr::Static(target);
         self
     }
 
