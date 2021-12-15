@@ -73,6 +73,17 @@ macro_rules! log {
             );
         }
     });
+    ($lvl:expr, $($key:ident = $value:expr),* ; $fmt:expr,  $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log_target_static(
+                __log_format_args!($($arg)+),
+                lvl,
+                &(__log_module_path!(), __log_module_path!(), __log_file!(), __log_line!()),
+                Some(&[$((__log_stringify!($key), &$value)),*])
+            );
+        }
+    });
     ($lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
