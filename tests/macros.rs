@@ -21,6 +21,16 @@ fn with_args() {
 }
 
 #[test]
+fn with_target() {
+    info!(target : "static_target", "hello");
+    info!(target : "static_target", "hello {}", "cats");
+    info!(target : "static_target", "hello {}", "cats",);
+    info!(target : format!("{}", "dynamic_target").as_str(), "hello");
+    info!(target : format!("{}", "dynamic_target").as_str(), "hello {}", "cats");
+    info!(target : format!("{}", "dynamic_target").as_str(), "hello {}", "cats");
+}
+
+#[test]
 fn with_args_expr_context() {
     match "cats" {
         cats => info!("hello {}", cats),

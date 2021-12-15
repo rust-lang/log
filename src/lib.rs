@@ -892,6 +892,12 @@ impl<'a> Record<'a> {
         self.metadata.target()
     }
 
+    /// The name of the target of the directive.
+    #[inline]
+    pub fn target_static(&self) -> Option<&'static str> {
+        self.metadata.target_static()
+    }
+
     /// The module path of the message.
     #[inline]
     pub fn module_path(&self) -> Option<&'a str> {
@@ -1051,7 +1057,14 @@ impl<'a> RecordBuilder<'a> {
     /// Set [`Metadata::target`](struct.Metadata.html#method.target)
     #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut RecordBuilder<'a> {
-        self.record.metadata.target = target;
+        self.record.metadata.target = MaybeStaticStr::Borrowed(target);
+        self
+    }
+
+    /// Set [`Metadata::target`](struct.Metadata.html#method.target) to a `'static` string
+    #[inline]
+    pub fn target_static(&mut self, target: &'static str) -> &mut RecordBuilder<'a> {
+        self.record.metadata.target = MaybeStaticStr::Static(target);
         self
     }
 
@@ -1146,7 +1159,7 @@ impl<'a> RecordBuilder<'a> {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Metadata<'a> {
     level: Level,
-    target: &'a str,
+    target: MaybeStaticStr<'a>,
 }
 
 impl<'a> Metadata<'a> {
@@ -1165,7 +1178,16 @@ impl<'a> Metadata<'a> {
     /// The name of the target of the directive.
     #[inline]
     pub fn target(&self) -> &'a str {
-        self.target
+        self.target.get()
+    }
+
+    /// The name of the target of the directive.
+    #[inline]
+    pub fn target_static(&self) -> Option<&'static str> {
+        match self.target {
+            MaybeStaticStr::Static(s) => Some(s),
+            _ => None,
+        }
     }
 }
 
@@ -1202,7 +1224,7 @@ impl<'a> MetadataBuilder<'a> {
         MetadataBuilder {
             metadata: Metadata {
                 level: Level::Info,
-                target: "",
+                target: MaybeStaticStr::Static(""),
             },
         }
     }
@@ -1217,7 +1239,14 @@ impl<'a> MetadataBuilder<'a> {
     /// Setter for [`target`](struct.Metadata.html#method.target).
     #[inline]
     pub fn target(&mut self, target: &'a str) -> &mut MetadataBuilder<'a> {
-        self.metadata.target = target;
+        self.metadata.target = MaybeStaticStr::Borrowed(target);
+        self
+    }
+
+    /// Setter for [`target`](struct.Metadata.html#method.target_static) to a `'static` string.
+    #[inline]
+    pub fn target_static(&mut self, target: &'static str) -> &mut MetadataBuilder<'a> {
+        self.metadata.target = MaybeStaticStr::Static(target);
         self
     }
 
@@ -1563,6 +1592,33 @@ pub fn __private_api_log(
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
+#[cfg(not(feature = "kv_unstable"))]
+pub fn __private_api_log_target_static(
+    args: fmt::Arguments,
+    level: Level,
+    &(target, module_path, file, line): &(&'static str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &str)]>,
+) {
+    if kvs.is_some() {
+        panic!(
+            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
+        )
+    }
+
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target_static(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
 #[cfg(feature = "kv_unstable")]
 pub fn __private_api_log(
     args: fmt::Arguments,
@@ -1575,6 +1631,28 @@ pub fn __private_api_log(
             .args(args)
             .level(level)
             .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .key_values(&kvs)
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+#[cfg(feature = "kv_unstable")]
+pub fn __private_api_log_target_static(
+    args: fmt::Arguments,
+    level: Level,
+    &(target, module_path, file, line): &(&'static str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &dyn kv::ToValue)]>,
+) {
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target_static(target)
             .module_path_static(Some(module_path))
             .file_static(Some(file))
             .line(Some(line))
