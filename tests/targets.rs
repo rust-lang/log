@@ -34,20 +34,23 @@ impl Log for Logger {
 
 #[cfg_attr(lib_build, test)]
 fn main() {
-    let me = Arc::new(State {
-        is_target_static: Mutex::new(None),
-    });
-    let a = me.clone();
-    set_boxed_logger(Box::new(Logger(me))).unwrap();
-    log::set_max_level(log::LevelFilter::Error);
+    #[cfg(not(any(feature = "max_level_off", feature = "release_max_level_off",)))]
+    {
+        let me = Arc::new(State {
+            is_target_static: Mutex::new(None),
+        });
+        let a = me.clone();
+        set_boxed_logger(Box::new(Logger(me))).unwrap();
+        log::set_max_level(log::LevelFilter::Error);
 
-    let dynamic_target = "dynamic";
-    error!("");
-    last(&a, Some(true));
-    error!(target: "","");
-    last(&a, Some(true));
-    error!(target: dynamic_target, "");
-    last(&a, Some(false));
+        let dynamic_target = "dynamic";
+        error!("");
+        last(&a, Some(true));
+        error!(target: "","");
+        last(&a, Some(true));
+        error!(target: dynamic_target, "");
+        last(&a, Some(false));
+    }
 }
 
 fn last(state: &State, expected: Option<bool>) {
