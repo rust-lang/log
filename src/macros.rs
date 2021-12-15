@@ -29,6 +29,17 @@
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log {
+    (target: $target:literal, $lvl:expr, $($key:ident = $value:expr),* ; $fmt:expr,  $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log_target_static(
+                __log_format_args!($fmt, $($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                Some(&[$((__log_stringify!($key), &$value)),*])
+            );
+        }
+    });
     (target: $target:expr, $lvl:expr, $($key:ident = $value:expr),* ; $fmt:expr,  $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
@@ -37,6 +48,17 @@ macro_rules! log {
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
                 Some(&[$((__log_stringify!($key), &$value)),*])
+            );
+        }
+    });
+    (target: $target:literal, $lvl:expr, $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log_target_static(
+                __log_format_args!($($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+                None,
             );
         }
     });
@@ -51,7 +73,17 @@ macro_rules! log {
             );
         }
     });
-    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log_target_static(
+                __log_format_args!($($arg)+),
+                lvl,
+                &(__log_module_path!(), __log_module_path!(), __log_file!(), __log_line!()),
+                None,
+            );
+        }
+    });
 }
 
 /// Logs a message at the error level.

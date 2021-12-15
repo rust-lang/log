@@ -892,6 +892,12 @@ impl<'a> Record<'a> {
         self.metadata.target()
     }
 
+    /// The name of the target of the directive.
+    #[inline]
+    pub fn target_static(&self) -> Option<&'static str> {
+        self.metadata.target_static()
+    }
+
     /// The module path of the message.
     #[inline]
     pub fn module_path(&self) -> Option<&'a str> {
@@ -1586,6 +1592,33 @@ pub fn __private_api_log(
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
+#[cfg(not(feature = "kv_unstable"))]
+pub fn __private_api_log_target_static(
+    args: fmt::Arguments,
+    level: Level,
+    &(target, module_path, file, line): &(&'static str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &str)]>,
+) {
+    if kvs.is_some() {
+        panic!(
+            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
+        )
+    }
+
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target_static(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
 #[cfg(feature = "kv_unstable")]
 pub fn __private_api_log(
     args: fmt::Arguments,
@@ -1598,6 +1631,28 @@ pub fn __private_api_log(
             .args(args)
             .level(level)
             .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(file))
+            .line(Some(line))
+            .key_values(&kvs)
+            .build(),
+    );
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+#[cfg(feature = "kv_unstable")]
+pub fn __private_api_log_target_static(
+    args: fmt::Arguments,
+    level: Level,
+    &(target, module_path, file, line): &(&'static str, &'static str, &'static str, u32),
+    kvs: Option<&[(&str, &dyn kv::ToValue)]>,
+) {
+    logger().log(
+        &Record::builder()
+            .args(args)
+            .level(level)
+            .target_static(target)
             .module_path_static(Some(module_path))
             .file_static(Some(file))
             .line(Some(line))
