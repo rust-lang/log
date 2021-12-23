@@ -21,18 +21,12 @@ fn no_args() {
         log!(target: "my_target", lvl, "hello");
         log!(target: "my_target", lvl, "hello",);
 
-        log!(lvl; "hello");
-        log!(lvl; "hello",);
-
-        log!(target = "my_target", lvl; "hello");
-        log!(target = "my_target", lvl; "hello",);
+        log!(lvl, "hello");
+        log!(lvl, "hello",);
     }
 
     all_log_macros!("hello");
     all_log_macros!("hello",);
-
-    all_log_macros!(target = "my_target"; "hello");
-    all_log_macros!(target = "my_target"; "hello",);
 
     all_log_macros!(target: "my_target", "hello");
     all_log_macros!(target: "my_target", "hello",);
@@ -47,18 +41,12 @@ fn anonymous_args() {
         log!(target: "my_target", lvl, "hello {}", "world");
         log!(target: "my_target", lvl, "hello {}", "world",);
 
-        log!(lvl; "hello {}", "world");
-        log!(lvl; "hello {}", "world",);
-
-        log!(target = "my_target", lvl; "hello {}", "world");
-        log!(target = "my_target", lvl; "hello {}", "world",);
+        log!(lvl, "hello {}", "world");
+        log!(lvl, "hello {}", "world",);
     }
 
     all_log_macros!("hello {}", "world");
     all_log_macros!("hello {}", "world",);
-
-    all_log_macros!(target = "my_target"; "hello {}", "world");
-    all_log_macros!(target = "my_target"; "hello {}", "world",);
 
     all_log_macros!(target: "my_target", "hello {}", "world");
     all_log_macros!(target: "my_target", "hello {}", "world",);
@@ -73,18 +61,12 @@ fn named_args() {
         log!(target: "my_target", lvl, "hello {world}", world = "world");
         log!(target: "my_target", lvl, "hello {world}", world = "world",);
 
-        log!(lvl; "hello {world}", world = "world");
-        log!(lvl; "hello {world}", world = "world",);
-
-        log!(target = "my_target", lvl; "hello {world}", world = "world");
-        log!(target = "my_target", lvl; "hello {world}", world = "world",);
+        log!(lvl, "hello {world}", world = "world");
+        log!(lvl, "hello {world}", world = "world",);
     }
 
     all_log_macros!("hello {world}", world = "world");
     all_log_macros!("hello {world}", world = "world",);
-
-    all_log_macros!(target = "my_target"; "hello {world}", world = "world");
-    all_log_macros!(target = "my_target"; "hello {world}", world = "world",);
 
     all_log_macros!(target: "my_target", "hello {world}", world = "world");
     all_log_macros!(target: "my_target", "hello {world}", world = "world",);
@@ -98,19 +80,13 @@ fn enabled() {
         } else {
             false
         };
-
-        let _enabled = if log_enabled!(target = "my_target", lvl) {
-            true
-        } else {
-            false
-        };
     }
 }
 
 #[test]
 fn expr() {
     for lvl in log::Level::iter() {
-        let _ = log!(lvl; "hello");
+        let _ = log!(lvl, "hello");
     }
 }
 
@@ -118,12 +94,13 @@ fn expr() {
 #[cfg(feature = "kv_unstable")]
 fn kv_no_args() {
     for lvl in log::Level::iter() {
-        log!(target = "my_target", lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
+        log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
 
-        log!(lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
+        log!(lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     }
 
-    all_log_macros!(target = "my_target"; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
+    all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
+    all_log_macros!(target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
 }
 
@@ -131,12 +108,14 @@ fn kv_no_args() {
 #[cfg(feature = "kv_unstable")]
 fn kv_expr_args() {
     for lvl in log::Level::iter() {
-        log!(target = "my_target", lvl; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+        log!(target: "my_target", lvl, cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
 
-        log!(lvl; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+        log!(lvl, target = "my_target", cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+        log!(lvl, cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
     }
 
-    all_log_macros!(target = "my_target"; cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+    all_log_macros!(target: "my_target", cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
+    all_log_macros!(target = "my_target", cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
     all_log_macros!(cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
 }
 
@@ -144,12 +123,14 @@ fn kv_expr_args() {
 #[cfg(feature = "kv_unstable")]
 fn kv_anonymous_args() {
     for lvl in log::Level::iter() {
-        log!(target = "my_target", lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
+        log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
+        log!(lvl, target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
 
-        log!(lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
+        log!(lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
     }
 
-    all_log_macros!(target = "my_target"; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
+    all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
+    all_log_macros!(target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
     all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
 }
 
@@ -157,12 +138,13 @@ fn kv_anonymous_args() {
 #[cfg(feature = "kv_unstable")]
 fn kv_named_args() {
     for lvl in log::Level::iter() {
-        log!(target = "my_target", lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
+        log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
+        log!(lvl, target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
 
-        log!(lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
+        log!(lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
     }
 
-    all_log_macros!(target = "my_target"; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
+    all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
     all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
 }
 
@@ -171,16 +153,9 @@ fn kv_named_args() {
 fn kv_expr_context() {
     match "chashu" {
         cat_1 => {
-            info!(target = "target"; cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats")
+            info!(target: "target", cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats")
         }
     };
-}
-
-#[test]
-#[cfg(feature = "kv_unstable")]
-fn kv_shadow_target() {
-    all_log_macros!(target = "kv_target"; "hello {}", "world");
-    all_log_macros!(target = "kv_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
 }
 
 #[test]
@@ -196,21 +171,18 @@ fn implicit_named_args() {
             log!(target: "my_target", lvl, "hello {world}");
             log!(target: "my_target", lvl, "hello {world}",);
 
-            log!(lvl; "hello {world}");
-            log!(lvl; "hello {world}",);
-
-            log!(target = "my_target", lvl; "hello {world}");
-            log!(target = "my_target", lvl; "hello {world}",);
+            log!(lvl, "hello {world}");
+            log!(lvl, "hello {world}",);
         }
 
         all_log_macros!("hello {world}");
         all_log_macros!("hello {world}",);
 
-        all_log_macros!(target = "my_target"; "hello {world}");
-        all_log_macros!(target = "my_target"; "hello {world}",);
-
         all_log_macros!(target: "my_target", "hello {world}");
         all_log_macros!(target: "my_target", "hello {world}",);
+
+        all_log_macros!(target = "my_target"; "hello {world}");
+        all_log_macros!(target = "my_target"; "hello {world}",);
     }
 }
 
@@ -222,12 +194,13 @@ fn kv_implicit_named_args() {
         let world = "world";
 
         for lvl in log::Level::iter() {
-            log!(target = "my_target", lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
+            log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
 
-            log!(lvl; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
+            log!(lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
         }
 
-        all_log_macros!(target = "my_target"; cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
+        all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
+        all_log_macros!(target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
         all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
     }
 }

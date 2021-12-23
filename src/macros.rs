@@ -29,8 +29,8 @@
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log {
-    // log!(target = "my_target", Level::Info; key1 = 42, key2 = true; "a {} event", "log");
-    (target = $target:expr, $lvl:expr; $($key:ident = $value:expr),+; $($arg:tt)+) => ({
+    // log!(target: "my_target", Level::Info; key1 = 42, key2 = true; "a {} event", "log");
+    (target: $target:expr, $lvl:expr, $($key:ident = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
@@ -42,8 +42,8 @@ macro_rules! log {
         }
     });
 
-    // log!(target = "my_target", Level::Info; "a {} event", "log");
-    (target = $target:expr, $lvl:expr; $($arg:tt)+) => ({
+    // log!(target: "my_target", Level::Info; "a {} event", "log");
+    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
@@ -55,17 +55,8 @@ macro_rules! log {
         }
     });
 
-    // log!(target: "my_target", Level::Info, "a log event")
-    (target: $target:expr, $lvl:expr, $($arg:tt)+) => (log!(target = $target, $lvl; $($arg)+));
-
-    // log!(target = "my_target", Level::Info; "a log event")
-    (target = $target:expr, $lvl:expr; $($arg:tt)+) => (log!(target = $target, $lvl; $($arg)+));
-
     // log!(Level::Info, "a log event")
-    ($lvl:expr, $($arg:tt)+) => (log!(target = __log_module_path!(), $lvl; $($arg)+));
-
-    // log!(Level::Info; "a log event")
-    ($lvl:expr; $($arg:tt)+) => (log!(target = __log_module_path!(), $lvl; $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+));
 }
 
 /// Logs a message at the error level.
@@ -84,15 +75,12 @@ macro_rules! log {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! error {
-    // error!(target = "my_target"; key1 = 42, key2 = true; "a {} event", "log")
-    // error!(target = "my_target"; "a {} event", "log")
-    (target = $target:expr; $($arg:tt)+) => (log!(target = $target, $crate::Level::Error; $($arg)+));
-
+    // error!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // error!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target = $target, $crate::Level::Error; $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Error, $($arg)+));
 
     // error!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Error; $($arg)+))
+    ($($arg:tt)+) => (log!($crate::Level::Error, $($arg)+))
 }
 
 /// Logs a message at the warn level.
@@ -111,15 +99,12 @@ macro_rules! error {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! warn {
-    // warn!(target = "my_target"; key1 = 42, key2 = true; "a {} event", "log")
-    // warn!(target = "my_target"; "a {} event", "log")
-    (target = $target:expr; $($arg:tt)+) => (log!(target = $target, $crate::Level::Warn; $($arg)+));
-
+    // warn!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // warn!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target = $target, $crate::Level::Warn; $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Warn, $($arg)+));
 
     // warn!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Warn; $($arg)+))
+    ($($arg:tt)+) => (log!($crate::Level::Warn, $($arg)+))
 }
 
 /// Logs a message at the info level.
@@ -140,15 +125,12 @@ macro_rules! warn {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! info {
-    // info!(target = "my_target"; key1 = 42, key2 = true; "a {} event", "log")
-    // info!(target = "my_target"; "a {} event", "log")
-    (target = $target:expr; $($arg:tt)+) => (log!(target = $target, $crate::Level::Info; $($arg)+));
-
+    // info!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // info!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target = $target, $crate::Level::Info; $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Info, $($arg)+));
 
     // info!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Info; $($arg)+))
+    ($($arg:tt)+) => (log!($crate::Level::Info, $($arg)+))
 }
 
 /// Logs a message at the debug level.
@@ -168,15 +150,12 @@ macro_rules! info {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! debug {
-    // debug!(target = "my_target"; key1 = 42, key2 = true; "a {} event", "log")
-    // debug!(target = "my_target"; "a {} event", "log")
-    (target = $target:expr; $($arg:tt)+) => (log!(target = $target, $crate::Level::Debug; $($arg)+));
-
+    // debug!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // debug!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target = $target, $crate::Level::Debug; $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Debug, $($arg)+));
 
     // debug!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Debug; $($arg)+))
+    ($($arg:tt)+) => (log!($crate::Level::Debug, $($arg)+))
 }
 
 /// Logs a message at the trace level.
@@ -198,15 +177,12 @@ macro_rules! debug {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! trace {
-    // trace!(target = "my_target"; key1 = 42, key2 = true; "a {} event", "log")
-    // trace!(target = "my_target"; "a {} event", "log")
-    (target = $target:expr; $($arg:tt)+) => (log!(target = $target, $crate::Level::Trace; $($arg)+));
-
+    // trace!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // trace!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target = $target, $crate::Level::Trace; $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Trace, $($arg)+));
 
     // trace!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Trace; $($arg)+))
+    ($($arg:tt)+) => (log!($crate::Level::Trace, $($arg)+))
 }
 
 /// Determines if a message logged at the specified level in that module will
@@ -237,17 +213,14 @@ macro_rules! trace {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log_enabled {
-    (target = $target:expr, $lvl:expr) => {{
+    (target: $target:expr, $lvl:expr) => {{
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL
             && lvl <= $crate::max_level()
             && $crate::__private_api_enabled(lvl, $target)
     }};
-    (target: $target:expr, $lvl:expr) => {
-        log_enabled!(target = $target, $lvl)
-    };
     ($lvl:expr) => {
-        log_enabled!(target = __log_module_path!(), $lvl)
+        log_enabled!(target: __log_module_path!(), $lvl)
     };
 }
 
