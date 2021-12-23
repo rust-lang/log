@@ -145,6 +145,7 @@ fn kv_named_args() {
     }
 
     all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
+    all_log_macros!(target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
     all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
 }
 
