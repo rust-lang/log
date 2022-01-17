@@ -12,7 +12,7 @@ A lightweight logging facade for Rust
 """
 categories = ["development-tools::debugging"]
 keywords = ["logging"]
-exclude = ["rfcs/**/*", "/.travis.yml", "/appveyor.yml"]
+exclude = ["rfcs/**/*"]
 build = "build.rs"
 
 [package.metadata.docs.rs]
