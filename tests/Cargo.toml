@@ -9,3 +9,6 @@ std = ["log/std"]
 
 [dependencies.log]
 path = ".."
+
+[dev-dependencies.rustversion]
+version = "1.0"

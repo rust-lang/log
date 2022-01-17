@@ -24,7 +24,7 @@
 //! though that default may be overridden. Logger implementations typically use
 //! the target to filter requests based on some user configuration.
 //!
-//! # Use
+//! # Usage
 //!
 //! The basic use of the log crate is through the five logging macros: [`error!`],
 //! [`warn!`], [`info!`], [`debug!`] and [`trace!`]
@@ -85,6 +85,42 @@
 //! ### Warning
 //!
 //! The logging system may only be initialized once.
+//!
+//! ## Structured logging
+//!
+//! If you enable the `kv_unstable` feature you can associate structured values
+//! with your log records. If we take the example from before, we can include
+//! some additional context besides what's in the formatted message:
+//!
+//! ```edition2018
+//! # #[macro_use] extern crate serde;
+//! # #[derive(Debug, Serialize)] pub struct Yak(String);
+//! # impl Yak { fn shave(&mut self, _: u32) {} }
+//! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
+//! # #[cfg(feature = "kv_unstable_serde")]
+//! # fn main() {
+//! use log::{info, warn, as_serde, as_error};
+//!
+//! pub fn shave_the_yak(yak: &mut Yak) {
+//!     info!(target: "yak_events", yak = as_serde!(yak); "Commencing yak shaving");
+//!
+//!     loop {
+//!         match find_a_razor() {
+//!             Ok(razor) => {
+//!                 info!(razor = razor; "Razor located");
+//!                 yak.shave(razor);
+//!                 break;
+//!             }
+//!             Err(err) => {
+//!                 warn!(err = as_error!(err); "Unable to locate a razor, retrying");
+//!             }
+//!         }
+//!     }
+//! }
+//! # }
+//! # #[cfg(not(feature = "kv_unstable_serde"))]
+//! # fn main() {}
+//! ```
 //!
 //! # Available logging implementations
 //!

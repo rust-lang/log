@@ -24,7 +24,7 @@ This version is explicitly tested in CI and may be bumped in any release as need
 
 ## Usage
 
-## In libraries
+### In libraries
 
 Libraries should link only to the `log` crate, and use the provided macros to
 log whatever information will be useful to downstream consumers:
@@ -55,7 +55,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
 }
 ```
 
-## In executables
+### In executables
 
 In order to produce log output, executables have to use a logger implementation compatible with the facade.
 There are many available implementations to choose from, here are some of the most popular ones:
@@ -87,3 +87,28 @@ function to do this. Any log messages generated before the logger is
 initialized will be ignored.
 
 The executable itself may use the `log` crate to log as well.
+
+## Structured logging
+
+If you enable the `kv_unstable` feature, you can associate structured data with your log records:
+
+```rust
+use log::{info, trace, warn, as_serde, as_error};
+
+pub fn shave_the_yak(yak: &mut Yak) {
+    trace!(target = "yak_events", yak = as_serde!(yak); "Commencing yak shaving");
+
+    loop {
+        match find_a_razor() {
+            Ok(razor) => {
+                info!(razor = razor; "Razor located");
+                yak.shave(razor);
+                break;
+            }
+            Err(err) => {
+                warn!(err = as_error!(err); "Unable to locate a razor, retrying");
+            }
+        }
+    }
+}
+```
