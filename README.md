@@ -62,8 +62,8 @@ There are many available implementations to choose from, here are some of the mo
 
 * Simple minimal loggers:
     * [`env_logger`](https://docs.rs/env_logger/*/env_logger/)
-    * [`simple_logger`](https://github.com/borntyping/rust-simple_logger)
-    * [`simplelog`](https://github.com/drakulix/simplelog.rs)
+    * [`simple_logger`](https://docs.rs/simple_logger/*/simple_logger/)
+    * [`simplelog`](https://docs.rs/simplelog/*/simplelog/)
     * [`pretty_env_logger`](https://docs.rs/pretty_env_logger/*/pretty_env_logger/)
     * [`stderrlog`](https://docs.rs/stderrlog/*/stderrlog/)
     * [`flexi_logger`](https://docs.rs/flexi_logger/*/flexi_logger/)
