@@ -76,6 +76,22 @@ jobs:
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_std"
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_sval kv_unstable_serde"
 
+  features:
+    name: Minimal versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Rust
+        run: |
+          rustup update nightly --no-self-update
+          rustup default nightly
+      - run: cargo build --verbose -Z minimal-versions --features kv_unstable
+      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable std"
+      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_sval"
+      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_serde"
+      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_std"
+      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_sval kv_unstable_serde"
+
   msrv:
     name: MSRV
     runs-on: ubuntu-latest
