@@ -80,6 +80,8 @@ There are many available implementations to choose from, here are some of the mo
     * [`console_log`](https://docs.rs/console_log/*/console_log/)
 * For dynamic libraries:
     * You may need to construct [an FFI-safe wrapper over `log`](https://github.com/rust-lang/log/issues/421) to initialize in your libraries. 
+* Utilities:
+    * [`log_err`](https://docs.rs/log_err/*/log_err/)
 
 Executables should choose a logger implementation and initialize it early in the
 runtime of the program. Logger implementations will typically include a
