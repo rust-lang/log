@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.4.15] - 2022-02-23
+
+* Silence a warning about the deprecated `spin_loop_hint`.
+* Relax ordering in the atomic `set_max_level` call.
+* Allow levels to be iterated over.
+* Implement `Log` on some common wrapper types.
+* Improvements to test coverage.
+* Improvements to documentation.
+* Add key-value support to the `log!` macros.
+* Tighten `kv_unstable` internal dependencies so they don't bump past their current alpha.
+* Add a simple visit API to `kv_unstable`.
+
 ## [0.4.14] - 2021-01-27
 
 * Remove the `__private_api_log_lit` special case.
@@ -196,7 +208,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.14...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.15...HEAD
+[0.4.15]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.15
 [0.4.14]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.14
 [0.4.13]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.13
 [0.4.12]: https://github.com/rust-lang-nursery/log/compare/0.4.11...0.4.12
