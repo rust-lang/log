@@ -30,14 +30,14 @@
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     // log!(target: "my_target", Level::Info; key1 = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:ident = $value:expr),+; $($arg:tt)+) => ({
+    (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                Some(&[$((__log_stringify!($key), &$value)),+])
+                Some(&[$((__log_key!($key), &$value)),+])
             );
         }
     });
@@ -268,8 +268,13 @@ macro_rules! __log_line {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __log_stringify {
-    ($($args:tt)*) => {
+macro_rules! __log_key {
+    // key1 = 42
+    ($($args:ident)*) => {
         stringify!($($args)*)
+    };
+    // "key1" = 42
+    ($($args:expr)*) => {
+        $($args)*
     };
 }

@@ -205,3 +205,13 @@ fn kv_implicit_named_args() {
         all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}");
     }
 }
+
+#[test]
+#[cfg(feature = "kv_unstable")]
+fn kv_string_keys() {
+    for lvl in log::Level::iter() {
+        log!(target: "my_target", lvl, "also dogs" = "Fílos", "key/that-can't/be/an/ident" = "hi"; "hello {world}", world = "world");
+    }
+
+    all_log_macros!(target: "my_target", "also dogs" = "Fílos", "key/that-can't/be/an/ident" = "hi"; "hello {world}", world = "world");
+}
