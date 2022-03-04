@@ -335,6 +335,7 @@ use std::error;
 use std::fmt;
 use std::mem;
 use std::str::FromStr;
+use std::sync::atomic::Ordering;
 
 #[macro_use]
 mod macros;
@@ -343,53 +344,76 @@ mod serde;
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
 
-#[cfg(has_atomics)]
-use std::sync::atomic::{AtomicUsize, Ordering};
+// In case it has atomics. See https://github.com/rust-lang/log/issues/489.
+#[cfg(not(any(
+    target = "thumbv4t-none-eabi",
+    target = "msp430-none-elf",
+    target = "riscv32i-unknown-none-elf",
+    target = "riscv32imc-unknown-none-elf",
+)))]
+use std::sync::atomic::AtomicUsize;
 
-#[cfg(not(has_atomics))]
-use std::cell::Cell;
-#[cfg(not(has_atomics))]
-use std::sync::atomic::Ordering;
+// In case it doesn't have atomics. See https://github.com/rust-lang/log/issues/489.
+#[cfg(any(
+    target = "thumbv4t-none-eabi",
+    target = "msp430-none-elf",
+    target = "riscv32i-unknown-none-elf",
+    target = "riscv32imc-unknown-none-elf",
+))]
+mod not_atomics {
+    use super::Ordering;
+    use std::cell::Cell;
 
-#[cfg(not(has_atomics))]
-struct AtomicUsize {
-    v: Cell<usize>,
-}
-
-#[cfg(not(has_atomics))]
-impl AtomicUsize {
-    const fn new(v: usize) -> AtomicUsize {
-        AtomicUsize { v: Cell::new(v) }
+    pub struct AtomicUsize {
+        v: Cell<usize>,
     }
 
-    fn load(&self, _order: Ordering) -> usize {
-        self.v.get()
-    }
-
-    fn store(&self, val: usize, _order: Ordering) {
-        self.v.set(val)
-    }
-
-    #[cfg(atomic_cas)]
-    fn compare_exchange(
-        &self,
-        current: usize,
-        new: usize,
-        _success: Ordering,
-        _failure: Ordering,
-    ) -> Result<usize, usize> {
-        let prev = self.v.get();
-        if current == prev {
-            self.v.set(new);
+    impl AtomicUsize {
+        pub const fn new(v: usize) -> AtomicUsize {
+            AtomicUsize { v: Cell::new(v) }
         }
-        Ok(prev)
-    }
-}
 
-// Any platform without atomics is unlikely to have multiple cores, so
-// writing via Cell will not be a race condition.
-#[cfg(not(has_atomics))]
-unsafe impl Sync for AtomicUsize {}
+        pub fn load(&self, _order: Ordering) -> usize {
+            self.v.get()
+        }
+
+        pub fn store(&self, val: usize, _order: Ordering) {
+            self.v.set(val)
+        }
+
+        // In case it has atomic_cas. See https://github.com/rust-lang/log/issues/489.
+        #[cfg(not(any(
+            target = "thumbv6m-none-eabi",
+            target = "msp430-none-elf",
+            target = "riscv32i-unknown-none-elf",
+            target = "riscv32imc-unknown-none-elf",
+        )))]
+        pub fn compare_exchange(
+            &self,
+            current: usize,
+            new: usize,
+            _success: Ordering,
+            _failure: Ordering,
+        ) -> Result<usize, usize> {
+            let prev = self.v.get();
+            if current == prev {
+                self.v.set(new);
+            }
+            Ok(prev)
+        }
+    }
+
+    // Any platform without atomics is unlikely to have multiple cores, so
+    // writing via Cell will not be a race condition.
+    unsafe impl Sync for AtomicUsize {}
+}
+#[cfg(any(
+    target = "thumbv4t-none-eabi",
+    target = "msp430-none-elf",
+    target = "riscv32i-unknown-none-elf",
+    target = "riscv32imc-unknown-none-elf",
+))]
+use not_atomics::AtomicUsize;
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
@@ -1381,114 +1405,130 @@ pub fn max_level() -> LevelFilter {
     unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
 }
 
-/// Sets the global logger to a `Box<Log>`.
-///
-/// This is a simple convenience wrapper over `set_logger`, which takes a
-/// `Box<Log>` rather than a `&'static Log`. See the documentation for
-/// [`set_logger`] for more details.
-///
-/// Requires the `std` feature.
-///
-/// # Errors
-///
-/// An error is returned if a logger has already been set.
-///
-/// [`set_logger`]: fn.set_logger.html
-#[cfg(all(feature = "std", atomic_cas))]
-pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| Box::leak(logger))
-}
+// In case it has atomic_cas. See https://github.com/rust-lang/log/issues/489.
+#[cfg(not(any(
+    target = "thumbv6m-none-eabi",
+    target = "msp430-none-elf",
+    target = "riscv32i-unknown-none-elf",
+    target = "riscv32imc-unknown-none-elf",
+)))]
+mod has_atomic_cas {
+    use super::*;
 
-/// Sets the global logger to a `&'static Log`.
-///
-/// This function may only be called once in the lifetime of a program. Any log
-/// events that occur before the call to `set_logger` completes will be ignored.
-///
-/// This function does not typically need to be called manually. Logger
-/// implementations should provide an initialization method that installs the
-/// logger internally.
-///
-/// # Availability
-///
-/// This method is available even when the `std` feature is disabled. However,
-/// it is currently unavailable on `thumbv6` targets, which lack support for
-/// some atomic operations which are used by this function. Even on those
-/// targets, [`set_logger_racy`] will be available.
-///
-/// # Errors
-///
-/// An error is returned if a logger has already been set.
-///
-/// # Examples
-///
-/// ```edition2018
-/// use log::{error, info, warn, Record, Level, Metadata, LevelFilter};
-///
-/// static MY_LOGGER: MyLogger = MyLogger;
-///
-/// struct MyLogger;
-///
-/// impl log::Log for MyLogger {
-///     fn enabled(&self, metadata: &Metadata) -> bool {
-///         metadata.level() <= Level::Info
-///     }
-///
-///     fn log(&self, record: &Record) {
-///         if self.enabled(record.metadata()) {
-///             println!("{} - {}", record.level(), record.args());
-///         }
-///     }
-///     fn flush(&self) {}
-/// }
-///
-/// # fn main(){
-/// log::set_logger(&MY_LOGGER).unwrap();
-/// log::set_max_level(LevelFilter::Info);
-///
-/// info!("hello log");
-/// warn!("warning");
-/// error!("oops");
-/// # }
-/// ```
-///
-/// [`set_logger_racy`]: fn.set_logger_racy.html
-#[cfg(atomic_cas)]
-pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| logger)
-}
+    /// Sets the global logger to a `Box<Log>`.
+    ///
+    /// This is a simple convenience wrapper over `set_logger`, which takes a
+    /// `Box<Log>` rather than a `&'static Log`. See the documentation for
+    /// [`set_logger`] for more details.
+    ///
+    /// Requires the `std` feature.
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if a logger has already been set.
+    ///
+    /// [`set_logger`]: fn.set_logger.html
+    #[cfg(feature = "std")]
+    pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
+        set_logger_inner(|| Box::leak(logger))
+    }
 
-#[cfg(atomic_cas)]
-fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
-where
-    F: FnOnce() -> &'static dyn Log,
-{
-    let old_state = match STATE.compare_exchange(
-        UNINITIALIZED,
-        INITIALIZING,
-        Ordering::SeqCst,
-        Ordering::SeqCst,
-    ) {
-        Ok(s) | Err(s) => s,
-    };
-    match old_state {
-        UNINITIALIZED => {
-            unsafe {
-                LOGGER = make_logger();
+    /// Sets the global logger to a `&'static Log`.
+    ///
+    /// This function may only be called once in the lifetime of a program. Any log
+    /// events that occur before the call to `set_logger` completes will be ignored.
+    ///
+    /// This function does not typically need to be called manually. Logger
+    /// implementations should provide an initialization method that installs the
+    /// logger internally.
+    ///
+    /// # Availability
+    ///
+    /// This method is available even when the `std` feature is disabled. However,
+    /// it is currently unavailable on `thumbv6` targets, which lack support for
+    /// some atomic operations which are used by this function. Even on those
+    /// targets, [`set_logger_racy`] will be available.
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if a logger has already been set.
+    ///
+    /// # Examples
+    ///
+    /// ```edition2018
+    /// use log::{error, info, warn, Record, Level, Metadata, LevelFilter};
+    ///
+    /// static MY_LOGGER: MyLogger = MyLogger;
+    ///
+    /// struct MyLogger;
+    ///
+    /// impl log::Log for MyLogger {
+    ///     fn enabled(&self, metadata: &Metadata) -> bool {
+    ///         metadata.level() <= Level::Info
+    ///     }
+    ///
+    ///     fn log(&self, record: &Record) {
+    ///         if self.enabled(record.metadata()) {
+    ///             println!("{} - {}", record.level(), record.args());
+    ///         }
+    ///     }
+    ///     fn flush(&self) {}
+    /// }
+    ///
+    /// # fn main(){
+    /// log::set_logger(&MY_LOGGER).unwrap();
+    /// log::set_max_level(LevelFilter::Info);
+    ///
+    /// info!("hello log");
+    /// warn!("warning");
+    /// error!("oops");
+    /// # }
+    /// ```
+    ///
+    /// [`set_logger_racy`]: fn.set_logger_racy.html
+    pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+        set_logger_inner(|| logger)
+    }
+
+    fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
+    where
+        F: FnOnce() -> &'static dyn Log,
+    {
+        let old_state = match STATE.compare_exchange(
+            UNINITIALIZED,
+            INITIALIZING,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        ) {
+            Ok(s) | Err(s) => s,
+        };
+        match old_state {
+            UNINITIALIZED => {
+                unsafe {
+                    LOGGER = make_logger();
+                }
+                STATE.store(INITIALIZED, Ordering::SeqCst);
+                Ok(())
             }
-            STATE.store(INITIALIZED, Ordering::SeqCst);
-            Ok(())
-        }
-        INITIALIZING => {
-            while STATE.load(Ordering::SeqCst) == INITIALIZING {
-                // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
-                #[allow(deprecated)]
-                std::sync::atomic::spin_loop_hint();
+            INITIALIZING => {
+                while STATE.load(Ordering::SeqCst) == INITIALIZING {
+                    // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
+                    #[allow(deprecated)]
+                    std::sync::atomic::spin_loop_hint();
+                }
+                Err(SetLoggerError(()))
             }
-            Err(SetLoggerError(()))
+            _ => Err(SetLoggerError(())),
         }
-        _ => Err(SetLoggerError(())),
     }
 }
+#[cfg(not(any(
+    target = "thumbv6m-none-eabi",
+    target = "msp430-none-elf",
+    target = "riscv32i-unknown-none-elf",
+    target = "riscv32imc-unknown-none-elf",
+)))]
+pub use has_atomic_cas::*;
 
 /// A thread-unsafe version of [`set_logger`].
 ///
