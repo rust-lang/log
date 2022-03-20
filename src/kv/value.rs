@@ -483,6 +483,24 @@ macro_rules! impl_to_value_primitive {
     };
 }
 
+macro_rules! impl_to_value_nonzero_primitive {
+    ($($into_ty:ident,)*) => {
+        $(
+            impl ToValue for std::num::$into_ty {
+                fn to_value(&self) -> Value {
+                    Value::from(self.get())
+                }
+            }
+
+            impl<'v> From<std::num::$into_ty> for Value<'v> {
+                fn from(value: std::num::$into_ty) -> Self {
+                    Value::from(value.get())
+                }
+            }
+        )*
+    };
+}
+
 macro_rules! impl_value_to_primitive {
     ($(#[doc = $doc:tt] $into_name:ident -> $into_ty:ty,)*) => {
         impl<'v> Value<'v> {
@@ -498,6 +516,12 @@ macro_rules! impl_value_to_primitive {
 
 impl_to_value_primitive![
     usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,
+];
+
+#[rustfmt::skip]
+impl_to_value_nonzero_primitive![
+    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
 ];
 
 impl_value_to_primitive![
@@ -720,6 +744,11 @@ pub(crate) mod tests {
             Value::from(32u32),
             Value::from(64u64),
             Value::from(1usize),
+            Value::from(std::num::NonZeroU8::new(8).unwrap()),
+            Value::from(std::num::NonZeroU16::new(16).unwrap()),
+            Value::from(std::num::NonZeroU32::new(32).unwrap()),
+            Value::from(std::num::NonZeroU64::new(64).unwrap()),
+            Value::from(std::num::NonZeroUsize::new(1).unwrap()),
         ]
         .into_iter()
     }
@@ -731,6 +760,11 @@ pub(crate) mod tests {
             Value::from(-32i32),
             Value::from(-64i64),
             Value::from(-1isize),
+            Value::from(std::num::NonZeroI8::new(-8).unwrap()),
+            Value::from(std::num::NonZeroI16::new(-16).unwrap()),
+            Value::from(std::num::NonZeroI32::new(-32).unwrap()),
+            Value::from(std::num::NonZeroI64::new(-64).unwrap()),
+            Value::from(std::num::NonZeroIsize::new(-1).unwrap()),
         ]
         .into_iter()
     }
