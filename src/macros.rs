@@ -37,7 +37,7 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                Some(&[$((__log_key!($key), &$value)),+])
+                std::option::Option::Some(&[$((__log_key!($key), &$value)),+])
             );
         }
     });
@@ -50,7 +50,7 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                None,
+                std::option::Option::None,
             );
         }
     });
