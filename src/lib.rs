@@ -313,7 +313,7 @@
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
     html_favicon_url = "https://www.rust-lang.org/favicon.ico",
-    html_root_url = "https://docs.rs/log/0.4.15"
+    html_root_url = "https://docs.rs/log/0.4.16"
 )]
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations, unconditional_recursion)]
@@ -1623,6 +1623,12 @@ pub fn __private_api_log(
 #[doc(hidden)]
 pub fn __private_api_enabled(level: Level, target: &str) -> bool {
     logger().enabled(&Metadata::builder().level(level).target(target).build())
+}
+
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+pub mod __private_api {
+    pub use std::option::Option;
 }
 
 /// The statically resolved maximum log level.
