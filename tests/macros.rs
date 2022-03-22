@@ -215,3 +215,16 @@ fn kv_string_keys() {
 
     all_log_macros!(target: "my_target", "also dogs" = "Fílos", "key/that-can't/be/an/ident" = "hi"; "hello {world}", world = "world");
 }
+
+/// Some and None (from Option) are used in the macros.
+#[derive(Debug)]
+enum Type {
+    Some,
+    None,
+}
+
+#[test]
+fn regression_issue_494() {
+    use Type::*;
+    all_log_macros!("some message: {:?}, {:?}", None, Some);
+}
