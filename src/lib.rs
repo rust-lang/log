@@ -1625,6 +1625,12 @@ pub fn __private_api_enabled(level: Level, target: &str) -> bool {
     logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
 
+// WARNING: this is not part of the crate's public API and is subject to change at any time
+#[doc(hidden)]
+pub mod __private_api {
+    pub use std::option::Option;
+}
+
 /// The statically resolved maximum log level.
 ///
 /// See the crate level documentation for information on how to configure this.

@@ -37,7 +37,7 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                std::option::Option::Some(&[$((__log_key!($key), &$value)),+])
+                $crate::__private_api::Option::Some(&[$((__log_key!($key), &$value)),+])
             );
         }
     });
@@ -50,7 +50,7 @@ macro_rules! log {
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                std::option::Option::None,
+                $crate::__private_api::Option::None,
             );
         }
     });
