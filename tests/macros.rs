@@ -225,6 +225,6 @@ enum Type {
 
 #[test]
 fn regression_issue_494() {
-    use Type::*;
+    use self::Type::*;
     all_log_macros!("some message: {:?}, {:?}", None, Some);
 }
