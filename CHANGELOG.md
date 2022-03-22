@@ -6,6 +6,7 @@
 
 * Silence a warning about the deprecated `spin_loop_hint`.
 * Relax ordering in the atomic `set_max_level` call.
+* Add thumbv4t-none-eabi to targets that don't support atomics
 * Allow levels to be iterated over.
 * Implement `Log` on some common wrapper types.
 * Improvements to test coverage.
@@ -13,6 +14,8 @@
 * Add key-value support to the `log!` macros.
 * Tighten `kv_unstable` internal dependencies so they don't bump past their current alpha.
 * Add a simple visit API to `kv_unstable`.
+* Support `NonZero*` integers as values in structured logging
+* Support static strings as keys in structured logging
 
 ## [0.4.14] - 2021-01-27
 
