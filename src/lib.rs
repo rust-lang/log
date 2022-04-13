@@ -145,6 +145,7 @@
 //!     * [systemd-journal-logger]
 //!     * [android_log]
 //!     * [win_dbg_logger]
+//!     * [db_logger]
 //! * For WebAssembly binaries:
 //!     * [console_log]
 //! * For dynamic libraries:
