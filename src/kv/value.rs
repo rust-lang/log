@@ -441,9 +441,59 @@ impl ToValue for str {
     }
 }
 
+impl ToValue for u128 {
+    fn to_value(&self) -> Value {
+        Value::from(self)
+    }
+}
+
+impl ToValue for i128 {
+    fn to_value(&self) -> Value {
+        Value::from(self)
+    }
+}
+
+impl ToValue for std::num::NonZeroU128 {
+    fn to_value(&self) -> Value {
+        Value::from(self)
+    }
+}
+
+impl ToValue for std::num::NonZeroI128 {
+    fn to_value(&self) -> Value {
+        Value::from(self)
+    }
+}
+
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
         Value::from_value_bag(value)
+    }
+}
+
+impl<'v> From<&'v u128> for Value<'v> {
+    fn from(value: &'v u128) -> Self {
+        Value::from_value_bag(value)
+    }
+}
+
+impl<'v> From<&'v i128> for Value<'v> {
+    fn from(value: &'v i128) -> Self {
+        Value::from_value_bag(value)
+    }
+}
+
+impl<'v> From<&'v std::num::NonZeroU128> for Value<'v> {
+    fn from(v: &'v std::num::NonZeroU128) -> Value<'v> {
+        // SAFETY: `NonZeroU128` and `u128` have the same ABI
+        Value::from_value_bag(unsafe { std::mem::transmute::<&std::num::NonZeroU128, &u128>(v) })
+    }
+}
+
+impl<'v> From<&'v std::num::NonZeroI128> for Value<'v> {
+    fn from(v: &'v std::num::NonZeroI128) -> Value<'v> {
+        // SAFETY: `NonZeroI128` and `i128` have the same ABI
+        Value::from_value_bag(unsafe { std::mem::transmute::<&std::num::NonZeroI128, &i128>(v) })
     }
 }
 
@@ -514,14 +564,12 @@ macro_rules! impl_value_to_primitive {
     }
 }
 
-impl_to_value_primitive![
-    usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,
-];
+impl_to_value_primitive![usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64, char, bool,];
 
 #[rustfmt::skip]
 impl_to_value_nonzero_primitive![
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
+    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64,
+    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
 ];
 
 impl_value_to_primitive![
@@ -617,12 +665,12 @@ pub trait Visit<'v> {
 
     /// Visit a big unsigned integer.
     fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
-        self.visit_any(value.into())
+        self.visit_any((&value).into())
     }
 
     /// Visit a big signed integer.
     fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
-        self.visit_any(value.into())
+        self.visit_any((&value).into())
     }
 
     /// Visit a floating point.
