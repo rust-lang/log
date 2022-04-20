@@ -564,9 +564,7 @@ macro_rules! impl_value_to_primitive {
     }
 }
 
-impl_to_value_primitive![
-    usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64, char, bool,
-];
+impl_to_value_primitive![usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64, char, bool,];
 
 #[rustfmt::skip]
 impl_to_value_nonzero_primitive![
