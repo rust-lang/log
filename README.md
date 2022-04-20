@@ -76,6 +76,7 @@ There are many available implementations to choose from, here are some of the mo
     * [`slog-stdlog`](https://docs.rs/slog-stdlog/*/slog_stdlog/)
     * [`android_log`](https://docs.rs/android_log/*/android_log/)
     * [`win_dbg_logger`](https://docs.rs/win_dbg_logger/*/win_dbg_logger/)
+    * [`db_logger`](https://docs.rs/db_logger/*/db_logger/)
 * For WebAssembly binaries:
     * [`console_log`](https://docs.rs/console_log/*/console_log/)
 * For dynamic libraries:
