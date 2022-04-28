@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.4.17] - 2022-04-29
+
+* Update `kv_unstable` internal dependencies.
+
 ## [0.4.16] - 2022-03-22
 
 * Fix a conflict with unqualified `Option` use in macros.
@@ -215,7 +219,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.16...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.17...HEAD
+[0.4.17]: https://github.com/rust-lang-nursery/log/compare/0.4.16...0.4.17
 [0.4.16]: https://github.com/rust-lang-nursery/log/compare/0.4.15...0.4.16
 [0.4.15]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.15
 [0.4.14]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.14
