@@ -1283,6 +1283,8 @@ pub trait Log: Sync + Send {
 
     /// Logs the `Record`.
     ///
+    /// # For implementors
+    ///
     /// Note that `enabled` is *not* necessarily called before this method.
     /// Implementations of `log` should perform all necessary filtering
     /// internally.
