@@ -22,23 +22,23 @@ fn main() {
 }
 
 fn target_has_atomic_cas(target: &str) -> bool {
-    match &target[..] {
+    !matches!(
+        target,
         "thumbv6m-none-eabi"
-        | "msp430-none-elf"
-        | "riscv32i-unknown-none-elf"
-        | "riscv32imc-unknown-none-elf" => false,
-        _ => true,
-    }
+            | "msp430-none-elf"
+            | "riscv32i-unknown-none-elf"
+            | "riscv32imc-unknown-none-elf"
+    )
 }
 
 fn target_has_atomics(target: &str) -> bool {
-    match &target[..] {
+    !matches!(
+        target,
         "thumbv4t-none-eabi"
-        | "msp430-none-elf"
-        | "riscv32i-unknown-none-elf"
-        | "riscv32imc-unknown-none-elf" => false,
-        _ => true,
-    }
+            | "msp430-none-elf"
+            | "riscv32i-unknown-none-elf"
+            | "riscv32imc-unknown-none-elf"
+    )
 }
 
 fn rustc_target() -> Option<String> {

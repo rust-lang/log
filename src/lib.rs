@@ -450,14 +450,14 @@ pub enum Level {
 
 impl Clone for Level {
     #[inline]
-    fn clone(&self) -> Level {
+    fn clone(&self) -> Self {
         *self
     }
 }
 
 impl PartialEq for Level {
     #[inline]
-    fn eq(&self, other: &Level) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         *self as usize == *other as usize
     }
 }
@@ -471,27 +471,27 @@ impl PartialEq<LevelFilter> for Level {
 
 impl PartialOrd for Level {
     #[inline]
-    fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 
     #[inline]
-    fn lt(&self, other: &Level) -> bool {
+    fn lt(&self, other: &Self) -> bool {
         (*self as usize) < *other as usize
     }
 
     #[inline]
-    fn le(&self, other: &Level) -> bool {
+    fn le(&self, other: &Self) -> bool {
         *self as usize <= *other as usize
     }
 
     #[inline]
-    fn gt(&self, other: &Level) -> bool {
+    fn gt(&self, other: &Self) -> bool {
         *self as usize > *other as usize
     }
 
     #[inline]
-    fn ge(&self, other: &Level) -> bool {
+    fn ge(&self, other: &Self) -> bool {
         *self as usize >= *other as usize
     }
 }
@@ -525,7 +525,7 @@ impl PartialOrd<LevelFilter> for Level {
 
 impl Ord for Level {
     #[inline]
-    fn cmp(&self, other: &Level) -> cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
@@ -540,7 +540,7 @@ fn ok_or<T, E>(t: Option<T>, e: E) -> Result<T, E> {
 // Reimplemented here because std::ascii is not available in libcore
 fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
     fn to_ascii_uppercase(c: u8) -> u8 {
-        if c >= b'a' && c <= b'z' {
+        if (b'a'..=b'z').contains(&c) {
             c - b'a' + b'A'
         } else {
             c
@@ -558,14 +558,14 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 
 impl FromStr for Level {
     type Err = ParseLevelError;
-    fn from_str(level: &str) -> Result<Level, Self::Err> {
+    fn from_str(level: &str) -> Result<Self, Self::Err> {
         ok_or(
             LOG_LEVEL_NAMES
                 .iter()
                 .position(|&name| eq_ignore_ascii_case(name, level))
                 .into_iter()
                 .filter(|&idx| idx != 0)
-                .map(|idx| Level::from_usize(idx).unwrap())
+                .map(|idx| Self::from_usize(idx).unwrap())
                 .next(),
             ParseLevelError(()),
         )
@@ -579,21 +579,21 @@ impl fmt::Display for Level {
 }
 
 impl Level {
-    fn from_usize(u: usize) -> Option<Level> {
+    const fn from_usize(u: usize) -> Option<Self> {
         match u {
-            1 => Some(Level::Error),
-            2 => Some(Level::Warn),
-            3 => Some(Level::Info),
-            4 => Some(Level::Debug),
-            5 => Some(Level::Trace),
+            1 => Some(Self::Error),
+            2 => Some(Self::Warn),
+            3 => Some(Self::Info),
+            4 => Some(Self::Debug),
+            5 => Some(Self::Trace),
             _ => None,
         }
     }
 
     /// Returns the most verbose logging level.
     #[inline]
-    pub fn max() -> Level {
-        Level::Trace
+    pub const fn max() -> Self {
+        Self::Trace
     }
 
     /// Converts the `Level` to the equivalent `LevelFilter`.
@@ -657,14 +657,14 @@ pub enum LevelFilter {
 
 impl Clone for LevelFilter {
     #[inline]
-    fn clone(&self) -> LevelFilter {
+    fn clone(&self) -> Self {
         *self
     }
 }
 
 impl PartialEq for LevelFilter {
     #[inline]
-    fn eq(&self, other: &LevelFilter) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         *self as usize == *other as usize
     }
 }
@@ -678,27 +678,27 @@ impl PartialEq<Level> for LevelFilter {
 
 impl PartialOrd for LevelFilter {
     #[inline]
-    fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 
     #[inline]
-    fn lt(&self, other: &LevelFilter) -> bool {
+    fn lt(&self, other: &Self) -> bool {
         (*self as usize) < *other as usize
     }
 
     #[inline]
-    fn le(&self, other: &LevelFilter) -> bool {
+    fn le(&self, other: &Self) -> bool {
         *self as usize <= *other as usize
     }
 
     #[inline]
-    fn gt(&self, other: &LevelFilter) -> bool {
+    fn gt(&self, other: &Self) -> bool {
         *self as usize > *other as usize
     }
 
     #[inline]
-    fn ge(&self, other: &LevelFilter) -> bool {
+    fn ge(&self, other: &Self) -> bool {
         *self as usize >= *other as usize
     }
 }
@@ -732,19 +732,19 @@ impl PartialOrd<Level> for LevelFilter {
 
 impl Ord for LevelFilter {
     #[inline]
-    fn cmp(&self, other: &LevelFilter) -> cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
 
 impl FromStr for LevelFilter {
     type Err = ParseLevelError;
-    fn from_str(level: &str) -> Result<LevelFilter, Self::Err> {
+    fn from_str(level: &str) -> Result<Self, Self::Err> {
         ok_or(
             LOG_LEVEL_NAMES
                 .iter()
                 .position(|&name| eq_ignore_ascii_case(name, level))
-                .map(|p| LevelFilter::from_usize(p).unwrap()),
+                .map(|p| Self::from_usize(p).unwrap()),
             ParseLevelError(()),
         )
     }
@@ -757,29 +757,29 @@ impl fmt::Display for LevelFilter {
 }
 
 impl LevelFilter {
-    fn from_usize(u: usize) -> Option<LevelFilter> {
+    const fn from_usize(u: usize) -> Option<Self> {
         match u {
-            0 => Some(LevelFilter::Off),
-            1 => Some(LevelFilter::Error),
-            2 => Some(LevelFilter::Warn),
-            3 => Some(LevelFilter::Info),
-            4 => Some(LevelFilter::Debug),
-            5 => Some(LevelFilter::Trace),
+            0 => Some(Self::Off),
+            1 => Some(Self::Error),
+            2 => Some(Self::Warn),
+            3 => Some(Self::Info),
+            4 => Some(Self::Debug),
+            5 => Some(Self::Trace),
             _ => None,
         }
     }
 
     /// Returns the most verbose logging level filter.
     #[inline]
-    pub fn max() -> LevelFilter {
-        LevelFilter::Trace
+    pub const fn max() -> Self {
+        Self::Trace
     }
 
     /// Converts `self` to the equivalent `Level`.
     ///
     /// Returns `None` if `self` is `LevelFilter::Off`.
     #[inline]
-    pub fn to_level(&self) -> Option<Level> {
+    pub const fn to_level(&self) -> Option<Level> {
         Level::from_usize(*self as usize)
     }
 
@@ -817,7 +817,7 @@ enum MaybeStaticStr<'a> {
 
 impl<'a> MaybeStaticStr<'a> {
     #[inline]
-    fn get(&self) -> &'a str {
+    const fn get(&self) -> &'a str {
         match *self {
             MaybeStaticStr::Static(s) => s,
             MaybeStaticStr::Borrowed(s) => s,
@@ -907,25 +907,25 @@ impl<'a> Record<'a> {
 
     /// The message body.
     #[inline]
-    pub fn args(&self) -> &fmt::Arguments<'a> {
+    pub const fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
     }
 
     /// Metadata about the log directive.
     #[inline]
-    pub fn metadata(&self) -> &Metadata<'a> {
+    pub const fn metadata(&self) -> &Metadata<'a> {
         &self.metadata
     }
 
     /// The verbosity level of the message.
     #[inline]
-    pub fn level(&self) -> Level {
+    pub const fn level(&self) -> Level {
         self.metadata.level()
     }
 
     /// The name of the target of the directive.
     #[inline]
-    pub fn target(&self) -> &'a str {
+    pub const fn target(&self) -> &'a str {
         self.metadata.target()
     }
 
@@ -937,7 +937,7 @@ impl<'a> Record<'a> {
 
     /// The module path of the message, if it is a `'static` string.
     #[inline]
-    pub fn module_path_static(&self) -> Option<&'static str> {
+    pub const fn module_path_static(&self) -> Option<&'static str> {
         match self.module_path {
             Some(MaybeStaticStr::Static(s)) => Some(s),
             _ => None,
@@ -952,7 +952,7 @@ impl<'a> Record<'a> {
 
     /// The module path of the message, if it is a `'static` string.
     #[inline]
-    pub fn file_static(&self) -> Option<&'static str> {
+    pub const fn file_static(&self) -> Option<&'static str> {
         match self.file {
             Some(MaybeStaticStr::Static(s)) => Some(s),
             _ => None,
@@ -961,7 +961,7 @@ impl<'a> Record<'a> {
 
     /// The line containing the message.
     #[inline]
-    pub fn line(&self) -> Option<u32> {
+    pub const fn line(&self) -> Option<u32> {
         self.line
     }
 
@@ -1142,6 +1142,13 @@ impl<'a> RecordBuilder<'a> {
     }
 }
 
+impl<'a> Default for RecordBuilder<'a> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Metadata about a log message.
 ///
 /// # Use
@@ -1189,19 +1196,19 @@ pub struct Metadata<'a> {
 impl<'a> Metadata<'a> {
     /// Returns a new builder.
     #[inline]
-    pub fn builder() -> MetadataBuilder<'a> {
+    pub const fn builder() -> MetadataBuilder<'a> {
         MetadataBuilder::new()
     }
 
     /// The verbosity level of the message.
     #[inline]
-    pub fn level(&self) -> Level {
+    pub const fn level(&self) -> Level {
         self.level
     }
 
     /// The name of the target of the directive.
     #[inline]
-    pub fn target(&self) -> &'a str {
+    pub const fn target(&self) -> &'a str {
         self.target
     }
 }
@@ -1235,7 +1242,7 @@ impl<'a> MetadataBuilder<'a> {
     /// - `level`: `Level::Info`
     /// - `target`: `""`
     #[inline]
-    pub fn new() -> MetadataBuilder<'a> {
+    pub const fn new() -> MetadataBuilder<'a> {
         MetadataBuilder {
             metadata: Metadata {
                 level: Level::Info,
@@ -1262,6 +1269,13 @@ impl<'a> MetadataBuilder<'a> {
     #[inline]
     pub fn build(&self) -> Metadata<'a> {
         self.metadata.clone()
+    }
+}
+
+impl<'a> Default for MetadataBuilder<'a> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1315,10 +1329,10 @@ where
     }
 
     fn log(&self, record: &Record) {
-        (**self).log(record)
+        (**self).log(record);
     }
     fn flush(&self) {
-        (**self).flush()
+        (**self).flush();
     }
 }
 
@@ -1363,7 +1377,7 @@ where
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
 pub fn set_max_level(level: LevelFilter) {
-    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed)
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
 
 /// Returns the current maximum log level.
