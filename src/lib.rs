@@ -1588,22 +1588,24 @@ pub fn __private_api_log(
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
     kvs: Option<&[(&str, &str)]>,
 ) {
-    if kvs.is_some() {
-        panic!(
-            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
-        )
-    }
+    if level <= max_level() {
+        if kvs.is_some() {
+            panic!(
+                "key-value support is experimental and must be enabled using the `kv_unstable` feature"
+            )
+        }
 
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .build(),
-    );
+        logger().log(
+            &Record::builder()
+                .args(args)
+                .level(level)
+                .target(target)
+                .module_path_static(Some(module_path))
+                .file_static(Some(file))
+                .line(Some(line))
+                .build(),
+        );
+    }
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
@@ -1615,23 +1617,26 @@ pub fn __private_api_log(
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
     kvs: Option<&[(&str, &dyn kv::ToValue)]>,
 ) {
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .key_values(&kvs)
-            .build(),
-    );
+    if level <= max_level() {
+        logger().log(
+            &Record::builder()
+                .args(args)
+                .level(level)
+                .target(target)
+                .module_path_static(Some(module_path))
+                .file_static(Some(file))
+                .line(Some(line))
+                .key_values(&kvs)
+                .build(),
+        );
+    }
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
 pub fn __private_api_enabled(level: Level, target: &str) -> bool {
-    logger().enabled(&Metadata::builder().level(level).target(target).build())
+    level <= max_level()
+        && logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
