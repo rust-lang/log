@@ -75,18 +75,14 @@ fn named_args() {
 #[test]
 fn enabled() {
     for lvl in log::Level::iter() {
-        let _enabled = if log_enabled!(target: "my_target", lvl) {
-            true
-        } else {
-            false
-        };
+        let _enabled = log_enabled!(target: "my_target", lvl);
     }
 }
 
 #[test]
 fn expr() {
     for lvl in log::Level::iter() {
-        let _ = log!(lvl, "hello");
+        log!(lvl, "hello");
     }
 }
 
