@@ -47,6 +47,8 @@ jobs:
     - run: cargo test --verbose --features "kv_unstable kv_unstable_std kv_unstable_sval kv_unstable_serde"
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
+    - run: cargo run --verbose --manifest-path test_local_max_level_features/Cargo.toml
+    - run: cargo run --verbose --manifest-path test_local_max_level_features/Cargo.toml --release
 
   rustfmt:
     name: Rustfmt

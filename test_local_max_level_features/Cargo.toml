@@ -1,0 +1,28 @@
+[package]
+name = "optimized"
+version = "0.1.0"
+publish = false
+
+[[bin]]
+name = "test_local_max_level_features"
+path = "../test_max_level_features/main.rs"
+
+[dependencies.log]
+path = ".."
+
+[features]
+default = ["log_max_level_debug", "log_release_max_level_info"]
+
+log_max_level_off   = []
+log_max_level_error = []
+log_max_level_warn  = []
+log_max_level_info  = []
+log_max_level_debug = []
+log_max_level_trace = []
+
+log_release_max_level_off   = []
+log_release_max_level_error = []
+log_release_max_level_warn  = []
+log_release_max_level_info  = []
+log_release_max_level_debug = []
+log_release_max_level_trace = []

@@ -32,7 +32,7 @@ macro_rules! log {
     // log!(target: "my_target", Level::Info; key1 = 42, key2 = true; "a {} event", "log");
     (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+        if lvl <= __log_max_level!() && lvl <= $crate::max_level() {
             $crate::__private_api_log(
                 __log_format_args!($($arg)+),
                 lvl,
@@ -45,7 +45,7 @@ macro_rules! log {
     // log!(target: "my_target", Level::Info; "a {} event", "log");
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+        if lvl <= __log_max_level!() && lvl <= $crate::max_level() {
             $crate::__private_api_log(
                 __log_format_args!($($arg)+),
                 lvl,
@@ -215,7 +215,7 @@ macro_rules! trace {
 macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => {{
         let lvl = $lvl;
-        lvl <= $crate::STATIC_MAX_LEVEL
+        lvl <= __log_max_level!()
             && lvl <= $crate::max_level()
             && $crate::__private_api_enabled(lvl, $target)
     }};
@@ -276,5 +276,55 @@ macro_rules! __log_key {
     // "key1" = 42
     ($($args:expr)*) => {
         $($args)*
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __log_max_level {
+    () => {
+        if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_off"
+        )) {
+            $crate::LevelFilter::Off
+        } else if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_error"
+        )) {
+            $crate::LevelFilter::Error
+        } else if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_warn"
+        )) {
+            $crate::LevelFilter::Warn
+        } else if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_info"
+        )) {
+            $crate::LevelFilter::Info
+        } else if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_debug"
+        )) {
+            $crate::LevelFilter::Debug
+        } else if cfg!(all(
+            not(debug_assertions),
+            feature = "log_release_max_level_trace"
+        )) {
+            $crate::LevelFilter::Trace
+        } else if cfg!(feature = "log_max_level_off") {
+            $crate::LevelFilter::Off
+        } else if cfg!(feature = "log_max_level_error") {
+            $crate::LevelFilter::Error
+        } else if cfg!(feature = "log_max_level_warn") {
+            $crate::LevelFilter::Warn
+        } else if cfg!(feature = "log_max_level_info") {
+            $crate::LevelFilter::Info
+        } else if cfg!(feature = "log_max_level_debug") {
+            $crate::LevelFilter::Debug
+        } else {
+            $crate::STATIC_MAX_LEVEL
+        }
     };
 }
