@@ -422,7 +422,7 @@ static LEVEL_PARSE_ERROR: &str =
 /// [`log!`](macro.log.html), and comparing a `Level` directly to a
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
-#[derive(Copy, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Level {
     /// The "error" level.
     ///
@@ -449,20 +449,6 @@ pub enum Level {
     Trace,
 }
 
-impl Clone for Level {
-    #[inline]
-    fn clone(&self) -> Level {
-        *self
-    }
-}
-
-impl PartialEq for Level {
-    #[inline]
-    fn eq(&self, other: &Level) -> bool {
-        *self as usize == *other as usize
-    }
-}
-
 impl PartialEq<LevelFilter> for Level {
     #[inline]
     fn eq(&self, other: &LevelFilter) -> bool {
@@ -470,64 +456,10 @@ impl PartialEq<LevelFilter> for Level {
     }
 }
 
-impl PartialOrd for Level {
-    #[inline]
-    fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-
-    #[inline]
-    fn lt(&self, other: &Level) -> bool {
-        (*self as usize) < *other as usize
-    }
-
-    #[inline]
-    fn le(&self, other: &Level) -> bool {
-        *self as usize <= *other as usize
-    }
-
-    #[inline]
-    fn gt(&self, other: &Level) -> bool {
-        *self as usize > *other as usize
-    }
-
-    #[inline]
-    fn ge(&self, other: &Level) -> bool {
-        *self as usize >= *other as usize
-    }
-}
-
 impl PartialOrd<LevelFilter> for Level {
     #[inline]
     fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
-    }
-
-    #[inline]
-    fn lt(&self, other: &LevelFilter) -> bool {
-        (*self as usize) < *other as usize
-    }
-
-    #[inline]
-    fn le(&self, other: &LevelFilter) -> bool {
-        *self as usize <= *other as usize
-    }
-
-    #[inline]
-    fn gt(&self, other: &LevelFilter) -> bool {
-        *self as usize > *other as usize
-    }
-
-    #[inline]
-    fn ge(&self, other: &LevelFilter) -> bool {
-        *self as usize >= *other as usize
-    }
-}
-
-impl Ord for Level {
-    #[inline]
-    fn cmp(&self, other: &Level) -> cmp::Ordering {
-        (*self as usize).cmp(&(*other as usize))
     }
 }
 
@@ -638,7 +570,7 @@ impl Level {
 /// [`max_level()`]: fn.max_level.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
-#[derive(Copy, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
@@ -654,22 +586,6 @@ pub enum LevelFilter {
     Trace,
 }
 
-// Deriving generates terrible impls of these traits
-
-impl Clone for LevelFilter {
-    #[inline]
-    fn clone(&self) -> LevelFilter {
-        *self
-    }
-}
-
-impl PartialEq for LevelFilter {
-    #[inline]
-    fn eq(&self, other: &LevelFilter) -> bool {
-        *self as usize == *other as usize
-    }
-}
-
 impl PartialEq<Level> for LevelFilter {
     #[inline]
     fn eq(&self, other: &Level) -> bool {
@@ -677,64 +593,10 @@ impl PartialEq<Level> for LevelFilter {
     }
 }
 
-impl PartialOrd for LevelFilter {
-    #[inline]
-    fn partial_cmp(&self, other: &LevelFilter) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-
-    #[inline]
-    fn lt(&self, other: &LevelFilter) -> bool {
-        (*self as usize) < *other as usize
-    }
-
-    #[inline]
-    fn le(&self, other: &LevelFilter) -> bool {
-        *self as usize <= *other as usize
-    }
-
-    #[inline]
-    fn gt(&self, other: &LevelFilter) -> bool {
-        *self as usize > *other as usize
-    }
-
-    #[inline]
-    fn ge(&self, other: &LevelFilter) -> bool {
-        *self as usize >= *other as usize
-    }
-}
-
 impl PartialOrd<Level> for LevelFilter {
     #[inline]
     fn partial_cmp(&self, other: &Level) -> Option<cmp::Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
-    }
-
-    #[inline]
-    fn lt(&self, other: &Level) -> bool {
-        (*self as usize) < *other as usize
-    }
-
-    #[inline]
-    fn le(&self, other: &Level) -> bool {
-        *self as usize <= *other as usize
-    }
-
-    #[inline]
-    fn gt(&self, other: &Level) -> bool {
-        *self as usize > *other as usize
-    }
-
-    #[inline]
-    fn ge(&self, other: &Level) -> bool {
-        *self as usize >= *other as usize
-    }
-}
-
-impl Ord for LevelFilter {
-    #[inline]
-    fn cmp(&self, other: &LevelFilter) -> cmp::Ordering {
-        (*self as usize).cmp(&(*other as usize))
     }
 }
 
@@ -1143,6 +1005,12 @@ impl<'a> RecordBuilder<'a> {
     }
 }
 
+impl<'a> Default for RecordBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Metadata about a log message.
 ///
 /// # Use
@@ -1266,6 +1134,12 @@ impl<'a> MetadataBuilder<'a> {
     }
 }
 
+impl<'a> Default for MetadataBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// A trait encapsulating the operations required of a logger.
 pub trait Log: Sync + Send {
     /// Determines if a log message with the specified metadata would be
@@ -1316,10 +1190,10 @@ where
     }
 
     fn log(&self, record: &Record) {
-        (**self).log(record)
+        (**self).log(record);
     }
     fn flush(&self) {
-        (**self).flush()
+        (**self).flush();
     }
 }
 
@@ -1364,7 +1238,7 @@ where
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
 pub fn set_max_level(level: LevelFilter) {
-    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed)
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
 
 /// Returns the current maximum log level.
@@ -1555,7 +1429,7 @@ impl error::Error for SetLoggerError {}
 ///
 /// [`from_str`]: https://doc.rust-lang.org/std/str/trait.FromStr.html#tymethod.from_str
 #[allow(missing_copy_implementations)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ParseLevelError(());
 
 impl fmt::Display for ParseLevelError {

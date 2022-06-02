@@ -22,7 +22,7 @@ fn main() {
 }
 
 fn target_has_atomic_cas(target: &str) -> bool {
-    match &target[..] {
+    match target {
         "thumbv6m-none-eabi"
         | "msp430-none-elf"
         | "riscv32i-unknown-none-elf"
@@ -32,7 +32,7 @@ fn target_has_atomic_cas(target: &str) -> bool {
 }
 
 fn target_has_atomics(target: &str) -> bool {
-    match &target[..] {
+    match target {
         "thumbv4t-none-eabi"
         | "msp430-none-elf"
         | "riscv32i-unknown-none-elf"

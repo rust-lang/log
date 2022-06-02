@@ -69,15 +69,15 @@ fn main() {
 fn test(a: &State, filter: LevelFilter) {
     log::set_max_level(filter);
     error!("");
-    last(&a, t(Level::Error, filter));
+    last(a, t(Level::Error, filter));
     warn!("");
-    last(&a, t(Level::Warn, filter));
+    last(a, t(Level::Warn, filter));
     info!("");
-    last(&a, t(Level::Info, filter));
+    last(a, t(Level::Info, filter));
     debug!("");
-    last(&a, t(Level::Debug, filter));
+    last(a, t(Level::Debug, filter));
     trace!("");
-    last(&a, t(Level::Trace, filter));
+    last(a, t(Level::Trace, filter));
 
     fn t(lvl: Level, filter: LevelFilter) -> Option<Level> {
         if lvl <= filter {
