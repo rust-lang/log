@@ -32,7 +32,7 @@ jobs:
             rust: stable-x86_64-gnu
     steps:
     - uses: actions/checkout@master
-    - name: Install Rust (rustup)
+    - name: Install Rust
       run: |
         rustup update ${{ matrix.rust }} --no-self-update
         rustup default ${{ matrix.rust }}
@@ -71,6 +71,19 @@ jobs:
         rustup default stable
         rustup component add clippy
     - run: cargo clippy --verbose
+
+  doc:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Install Rust
+      run: |
+        rustup update stable --no-self-update
+        rustup default stable
+        rustup component add rust-docs
+    - name: Run rustdoc
+      run: RUSTDOCFLAGS="-D warnings" cargo doc --verbose --all-features
 
   features:
     name: Feature check

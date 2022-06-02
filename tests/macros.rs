@@ -212,6 +212,28 @@ fn kv_string_keys() {
     all_log_macros!(target: "my_target", "also dogs" = "Fílos", "key/that-can't/be/an/ident" = "hi"; "hello {world}", world = "world");
 }
 
+#[test]
+#[cfg(feature = "kv_unstable")]
+fn kv_common_value_types() {
+    all_log_macros!(
+        u8 = 42u8,
+        u16 = 42u16,
+        u32 = 42u32,
+        u64 = 42u64,
+        u128 = 42u128,
+        i8 = -42i8,
+        i16 = -42i16,
+        i32 = -42i32,
+        i64 = -42i64,
+        i128 = -42i128,
+        f32 = 4.2f32,
+        f64 = -4.2f64,
+        bool = true,
+        str = "string";
+        "hello world"
+    );
+}
+
 /// Some and None (from Option) are used in the macros.
 #[derive(Debug)]
 enum Type {
