@@ -1349,7 +1349,7 @@ where
     match STATE.compare_exchange(
         UNINITIALIZED,
         INITIALIZING,
-        Ordering::Relaxed,
+        Ordering::Acquire,
         Ordering::Relaxed,
     ) {
         Ok(UNINITIALIZED) => {
@@ -1391,7 +1391,7 @@ where
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    match STATE.load(Ordering::Relaxed) {
+    match STATE.load(Ordering::Acquire) {
         UNINITIALIZED => {
             LOGGER = logger;
             STATE.store(INITIALIZED, Ordering::Release);
