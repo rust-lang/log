@@ -1350,7 +1350,7 @@ where
         UNINITIALIZED,
         INITIALIZING,
         Ordering::Relaxed,
-        Ordering::Relaxed
+        Ordering::Relaxed,
     ) {
         Ok(UNINITIALIZED) => {
             unsafe {
@@ -1367,7 +1367,7 @@ where
             }
             Err(SetLoggerError(()))
         }
-        _ => Err(SetLoggerError(()))
+        _ => Err(SetLoggerError(())),
     }
 }
 
