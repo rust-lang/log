@@ -470,32 +470,13 @@ fn ok_or<T, E>(t: Option<T>, e: E) -> Result<T, E> {
     }
 }
 
-// Reimplemented here because std::ascii is not available in libcore
-fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
-    fn to_ascii_uppercase(c: u8) -> u8 {
-        if c >= b'a' && c <= b'z' {
-            c - b'a' + b'A'
-        } else {
-            c
-        }
-    }
-
-    if a.len() == b.len() {
-        a.bytes()
-            .zip(b.bytes())
-            .all(|(a, b)| to_ascii_uppercase(a) == to_ascii_uppercase(b))
-    } else {
-        false
-    }
-}
-
 impl FromStr for Level {
     type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<Level, Self::Err> {
         ok_or(
             LOG_LEVEL_NAMES
                 .iter()
-                .position(|&name| eq_ignore_ascii_case(name, level))
+                .position(|&name| name.eq_ignore_ascii_case(level))
                 .into_iter()
                 .filter(|&idx| idx != 0)
                 .map(|idx| Level::from_usize(idx).unwrap())
@@ -606,7 +587,7 @@ impl FromStr for LevelFilter {
         ok_or(
             LOG_LEVEL_NAMES
                 .iter()
-                .position(|&name| eq_ignore_ascii_case(name, level))
+                .position(|&name| name.eq_ignore_ascii_case(level))
                 .map(|p| LevelFilter::from_usize(p).unwrap()),
             ParseLevelError(()),
         )
