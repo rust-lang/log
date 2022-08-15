@@ -423,6 +423,7 @@ static LEVEL_PARSE_ERROR: &str =
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[cfg_attr(all(feature = "clap", feature = "std"), derive(clap::ValueEnum))]
 pub enum Level {
     /// The "error" level.
     ///
@@ -552,6 +553,7 @@ impl Level {
 /// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[cfg_attr(all(feature = "clap", feature = "std"), derive(clap::ValueEnum))]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
