@@ -99,7 +99,7 @@ If you enable the `kv_unstable` feature, you can associate structured data with 
 use log::{info, trace, warn, as_serde, as_error};
 
 pub fn shave_the_yak(yak: &mut Yak) {
-    trace!(target = "yak_events", yak = as_serde!(yak); "Commencing yak shaving");
+    trace!(target = "yak_events", yak = as_serde!(yak), "Commencing yak shaving");
 
     loop {
         match find_a_razor() {
