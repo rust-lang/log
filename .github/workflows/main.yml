@@ -23,13 +23,13 @@ jobs:
             rust: stable
           - build: win32
             os: windows-latest
-            rust: stable-i686
+            rust: stable-i686-pc-windows-msvc
           - build: win64
             os: windows-latest
-            rust: stable-x86_64
+            rust: stable-x86_64-pc-windows-msvc
           - build: mingw
             os: windows-latest
-            rust: stable-x86_64-gnu
+            rust: stable-x86_64-pc-windows-gnu
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
