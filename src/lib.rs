@@ -328,6 +328,12 @@
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
+
+#[cfg(feature = "arbitrary")]
+mod arbitrary_impl;
+#[cfg(feature = "arbitrary")]
+extern crate arbitrary;
+
 #[macro_use]
 extern crate cfg_if;
 
@@ -423,6 +429,7 @@ static LEVEL_PARSE_ERROR: &str =
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum Level {
     /// The "error" level.
     ///
@@ -551,6 +558,7 @@ impl Level {
 /// [`max_level()`]: fn.max_level.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LevelFilter {
     /// A level lower than all log levels.
@@ -724,6 +732,8 @@ pub struct Record<'a> {
     #[cfg(feature = "kv_unstable")]
     key_values: KeyValues<'a>,
 }
+
+
 
 // This wrapper type is only needed so we can
 // `#[derive(Debug)]` on `Record`. It also
