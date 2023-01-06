@@ -127,8 +127,8 @@ jobs:
       - uses: actions/checkout@master
       - name: Install Rust
         run: |
-          rustup update 1.31.0 --no-self-update
-          rustup default 1.31.0
+          rustup update 1.60.0 --no-self-update
+          rustup default 1.60.0
       - run: cargo build --verbose
       - run: cargo build --verbose --features serde
       - run: cargo build --verbose --features std
