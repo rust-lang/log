@@ -71,7 +71,7 @@ macro_rules! as_serde {
     };
 }
 
-/// Get a value from a type implementing `sval::value::Value`.
+/// Get a value from a type implementing `self::sval::value::Value`.
 #[cfg(feature = "kv_unstable_sval")]
 #[macro_export]
 macro_rules! as_sval {
@@ -197,21 +197,21 @@ impl<'v> Value<'v> {
     /// Get a value from a type implementing `serde::Serialize`.
     pub fn capture_serde<T>(value: &'v T) -> Self
     where
-        T: self::serde::Serialize + 'static,
+        T: serde::Serialize + 'static,
     {
         Value {
             inner: ValueBag::capture_serde1(value),
         }
     }
 
-    /// Get a value from a type implementing `sval::value::Value`.
+    /// Get a value from a type implementing `self::sval::value::Value`.
     #[cfg(feature = "kv_unstable_sval")]
     pub fn capture_sval<T>(value: &'v T) -> Self
     where
-        T: self::sval::value::Value + 'static,
+        T: self::sval::Value + 'static,
     {
         Value {
-            inner: ValueBag::capture_sval1(value),
+            inner: ValueBag::capture_sval2(value),
         }
     }
 
@@ -239,7 +239,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_serde")]
     pub fn from_serde<T>(value: &'v T) -> Self
     where
-        T: self::serde::Serialize,
+        T: serde::Serialize,
     {
         Value {
             inner: ValueBag::from_serde1(value),
@@ -250,10 +250,10 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_sval")]
     pub fn from_sval<T>(value: &'v T) -> Self
     where
-        T: self::sval::value::Value,
+        T: self::sval::Value,
     {
         Value {
-            inner: ValueBag::from_sval1(value),
+            inner: ValueBag::from_sval2(value),
         }
     }
 
@@ -276,14 +276,6 @@ impl<'v> Value<'v> {
     pub fn from_dyn_error(err: &'v (dyn std::error::Error + 'static)) -> Self {
         Value {
             inner: ValueBag::from_dyn_error(err),
-        }
-    }
-
-    /// Get a value from a type implementing `sval::value::Value`.
-    #[cfg(feature = "kv_unstable_sval")]
-    pub fn from_dyn_sval(value: &'v dyn self::sval::value::Value) -> Self {
-        Value {
-            inner: ValueBag::from_dyn_sval1(value),
         }
     }
 
@@ -412,26 +404,19 @@ impl ToValue for dyn std::error::Error + 'static {
 }
 
 #[cfg(feature = "kv_unstable_serde")]
-impl<'v> self::serde::Serialize for Value<'v> {
+impl<'v> serde::Serialize for Value<'v> {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
-        S: self::serde::Serializer,
+        S: serde::Serializer,
     {
         self.inner.serialize(s)
     }
 }
 
 #[cfg(feature = "kv_unstable_sval")]
-impl<'v> self::sval::value::Value for Value<'v> {
-    fn stream(&self, stream: &mut self::sval::value::Stream) -> self::sval::value::Result {
-        self::sval::value::Value::stream(&self.inner, stream)
-    }
-}
-
-#[cfg(feature = "kv_unstable_sval")]
-impl ToValue for dyn self::sval::value::Value {
-    fn to_value(&self) -> Value {
-        Value::from_dyn_sval(self)
+impl<'v> self::sval::Value for Value<'v> {
+    fn stream<'sval, S: self::sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut S) -> self::sval::Result {
+        self::sval::Value::stream(&self.inner, stream)
     }
 }
 
@@ -462,6 +447,12 @@ impl ToValue for std::num::NonZeroU128 {
 impl ToValue for std::num::NonZeroI128 {
     fn to_value(&self) -> Value {
         Value::from(self)
+    }
+}
+
+impl<'v> From<ValueBag<'v>> for Value<'v> {
+    fn from(value: ValueBag<'v>) -> Self {
+        Value::from_value_bag(value)
     }
 }
 
@@ -650,7 +641,7 @@ pub trait Visit<'v> {
     /// This is the only required method on `Visit` and acts as a fallback for any
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
-    /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
+    /// or serialized using its `self::sval::Value` or `serde::Serialize` implementation.
     fn visit_any(&mut self, value: Value) -> Result<(), Error>;
 
     /// Visit an unsigned integer.
@@ -777,11 +768,11 @@ where
 pub(crate) mod tests {
     use super::*;
 
-    pub(crate) use super::value_bag::test::Token;
+    pub(crate) use super::value_bag::test::TestToken as Token;
 
     impl<'v> Value<'v> {
         pub(crate) fn to_token(&self) -> Token {
-            self.inner.to_token()
+            self.inner.to_test_token()
         }
     }
 

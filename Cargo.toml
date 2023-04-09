@@ -54,12 +54,13 @@ kv_unstable_serde = ["kv_unstable_std", "value-bag/serde", "serde"]
 
 [dependencies]
 serde = { version = "1.0", optional = true, default-features = false }
-sval = { version = "=1.0.0-alpha.5", optional = true, default-features = false }
-value-bag = { version = "=1.0.0-alpha.9", optional = true, default-features = false }
+sval = { version = "2.0", optional = true, default-features = false }
+value-bag = { version = "1.0", optional = true, default-features = false }
 
 [dev-dependencies]
 rustversion = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_test = "1.0"
-sval = { version = "=1.0.0-alpha.5", features = ["derive"] }
-value-bag = { version = "=1.0.0-alpha.9", features = ["test"] }
+sval = { version = "2.0" }
+sval_derive = { version = "2.0" }
+value-bag = { version = "1.0", features = ["test"] }
