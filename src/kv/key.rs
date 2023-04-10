@@ -104,11 +104,19 @@ mod sval_support {
     use super::*;
 
     extern crate sval;
+    extern crate sval_ref;
 
     use self::sval::Value;
+    use self::sval_ref::ValueRef;
 
     impl<'a> Value for Key<'a> {
         fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut S) -> sval::Result {
+            self.key.stream(stream)
+        }
+    }
+
+    impl<'a> ValueRef<'a> for Key<'a> {
+        fn stream_ref<S: self::sval::Stream<'a> + ?Sized>(&self, stream: &mut S) -> self::sval::Result {
             self.key.stream(stream)
         }
     }

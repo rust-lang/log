@@ -6,6 +6,8 @@ extern crate value_bag;
 
 #[cfg(feature = "kv_unstable_sval")]
 extern crate sval;
+#[cfg(feature = "kv_unstable_sval")]
+extern crate sval_ref;
 
 #[cfg(feature = "kv_unstable_serde")]
 extern crate serde;
@@ -420,6 +422,13 @@ impl<'v> self::sval::Value for Value<'v> {
     }
 }
 
+#[cfg(feature = "kv_unstable_sval")]
+impl<'v> self::sval_ref::ValueRef<'v> for Value<'v> {
+    fn stream_ref<S: self::sval::Stream<'v> + ?Sized>(&self, stream: &mut S) -> self::sval::Result {
+        self::sval_ref::ValueRef::stream_ref(&self.inner, stream)
+    }
+}
+
 impl ToValue for str {
     fn to_value(&self) -> Value {
         Value::from(self)
@@ -447,12 +456,6 @@ impl ToValue for std::num::NonZeroU128 {
 impl ToValue for std::num::NonZeroI128 {
     fn to_value(&self) -> Value {
         Value::from(self)
-    }
-}
-
-impl<'v> From<ValueBag<'v>> for Value<'v> {
-    fn from(value: ValueBag<'v>) -> Self {
-        Value::from_value_bag(value)
     }
 }
 

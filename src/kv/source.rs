@@ -2,6 +2,8 @@
 
 #[cfg(feature = "kv_unstable_sval")]
 extern crate sval;
+#[cfg(feature = "kv_unstable_sval")]
+extern crate sval_ref;
 
 #[cfg(feature = "kv_unstable_serde")]
 extern crate serde;
@@ -470,16 +472,11 @@ mod sval_support {
             impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
                     self.0.map_key_begin().map_err(|_| Error::msg("failed to stream map key"))?;
-                    if let Some(key) = key.to_borrowed_str() {
-                        self.0.value(key).map_err(|_| Error::msg("failed to stream map key"))?;
-                    } else {
-                        self.0.value_computed(key.as_str()).map_err(|_| Error::msg("failed to stream map key"))?;
-                    }
+                    sval_ref::stream_ref(self.0, key).map_err(|_| Error::msg("failed to stream map key"))?;
                     self.0.map_key_end().map_err(|_| Error::msg("failed to stream map key"))?;
 
-                    // TODO: Need to borrow this here
                     self.0.map_value_begin().map_err(|_| Error::msg("failed to stream map value"))?;
-                    self.0.value_computed(&value).map_err(|_| Error::msg("failed to stream map value"))?;
+                    sval_ref::stream_ref(self.0, value).map_err(|_| Error::msg("failed to stream map value"))?;
                     self.0.map_value_end().map_err(|_| Error::msg("failed to stream map value"))?;
 
                     Ok(())
@@ -508,9 +505,8 @@ mod sval_support {
 
             impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
-                    // TODO: Need to borrow this here
                     self.0.seq_value_begin().map_err(|_| Error::msg("failed to stream seq value"))?;
-                    self.0.value_computed(&(key, value)).map_err(|_| Error::msg("failed to stream seq value"))?;
+                    self::sval_ref::stream_ref(self.0, (key, value)).map_err(|_| Error::msg("failed to stream seq value"))?;
                     self.0.seq_value_end().map_err(|_| Error::msg("failed to stream seq value"))?;
 
                     Ok(())
