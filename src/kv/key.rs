@@ -48,6 +48,12 @@ impl<'k> Key<'k> {
     pub fn as_str(&self) -> &str {
         self.key
     }
+
+    /// Try get a string borrowed for the `'k` lifetime from this key.
+    pub fn to_borrowed_str(&self) -> Option<&'k str> {
+        // NOTE: This API leaves room for keys to be owned
+        Some(self.key)
+    }
 }
 
 impl<'k> fmt::Display for Key<'k> {
@@ -98,11 +104,25 @@ mod sval_support {
     use super::*;
 
     extern crate sval;
+    extern crate sval_ref;
 
-    use self::sval::value::{self, Value};
+    use self::sval::Value;
+    use self::sval_ref::ValueRef;
 
     impl<'a> Value for Key<'a> {
-        fn stream(&self, stream: &mut value::Stream) -> value::Result {
+        fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(
+            &'sval self,
+            stream: &mut S,
+        ) -> sval::Result {
+            self.key.stream(stream)
+        }
+    }
+
+    impl<'a> ValueRef<'a> for Key<'a> {
+        fn stream_ref<S: self::sval::Stream<'a> + ?Sized>(
+            &self,
+            stream: &mut S,
+        ) -> self::sval::Result {
             self.key.stream(stream)
         }
     }
