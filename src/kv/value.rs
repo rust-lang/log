@@ -73,7 +73,7 @@ macro_rules! as_serde {
     };
 }
 
-/// Get a value from a type implementing `self::sval::value::Value`.
+/// Get a value from a type implementing `sval::Value`.
 #[cfg(feature = "kv_unstable_sval")]
 #[macro_export]
 macro_rules! as_sval {
@@ -206,7 +206,7 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Get a value from a type implementing `self::sval::value::Value`.
+    /// Get a value from a type implementing `sval::Value`.
     #[cfg(feature = "kv_unstable_sval")]
     pub fn capture_sval<T>(value: &'v T) -> Self
     where
@@ -248,7 +248,7 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Get a value from a type implementing `sval::value::Value`.
+    /// Get a value from a type implementing `sval::Value`.
     #[cfg(feature = "kv_unstable_sval")]
     pub fn from_sval<T>(value: &'v T) -> Self
     where
@@ -644,7 +644,7 @@ pub trait Visit<'v> {
     /// This is the only required method on `Visit` and acts as a fallback for any
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
-    /// or serialized using its `self::sval::Value` or `serde::Serialize` implementation.
+    /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
     fn visit_any(&mut self, value: Value) -> Result<(), Error>;
 
     /// Visit an unsigned integer.
