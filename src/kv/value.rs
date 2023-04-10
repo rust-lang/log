@@ -199,7 +199,7 @@ impl<'v> Value<'v> {
     /// Get a value from a type implementing `serde::Serialize`.
     pub fn capture_serde<T>(value: &'v T) -> Self
     where
-        T: serde::Serialize + 'static,
+        T: self::serde::Serialize + 'static,
     {
         Value {
             inner: ValueBag::capture_serde1(value),
@@ -241,7 +241,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_serde")]
     pub fn from_serde<T>(value: &'v T) -> Self
     where
-        T: serde::Serialize,
+        T: self::serde::Serialize,
     {
         Value {
             inner: ValueBag::from_serde1(value),
@@ -406,10 +406,10 @@ impl ToValue for dyn std::error::Error + 'static {
 }
 
 #[cfg(feature = "kv_unstable_serde")]
-impl<'v> serde::Serialize for Value<'v> {
+impl<'v> self::serde::Serialize for Value<'v> {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: self::serde::Serializer,
     {
         self.inner.serialize(s)
     }
