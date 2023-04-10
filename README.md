@@ -18,7 +18,7 @@ implementation that is most suitable for its use case.
 
 ## Minimum supported `rustc`
 
-`1.31.0+`
+`1.60.0+`
 
 This version is explicitly tested in CI and may be bumped in any release as needed. Maintaining compatibility with older compilers is a priority though, so the bar for bumping the minimum supported version is set very high. Any changes to the supported minimum version will be called out in the release notes.
 
@@ -67,6 +67,7 @@ There are many available implementations to choose from, here are some of the mo
     * [`pretty_env_logger`](https://docs.rs/pretty_env_logger/*/pretty_env_logger/)
     * [`stderrlog`](https://docs.rs/stderrlog/*/stderrlog/)
     * [`flexi_logger`](https://docs.rs/flexi_logger/*/flexi_logger/)
+    * [`call_logger`](https://docs.rs/call_logger/*/call_logger/)
 * Complex configurable frameworks:
     * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
     * [`fern`](https://docs.rs/fern/*/fern/)

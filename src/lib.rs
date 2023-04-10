@@ -136,6 +136,7 @@
 //!     * [pretty_env_logger]
 //!     * [stderrlog]
 //!     * [flexi_logger]
+//!     * [call_logger]
 //! * Complex configurable frameworks:
 //!     * [log4rs]
 //!     * [fern]
@@ -302,6 +303,7 @@
 //! [pretty_env_logger]: https://docs.rs/pretty_env_logger/*/pretty_env_logger/
 //! [stderrlog]: https://docs.rs/stderrlog/*/stderrlog/
 //! [flexi_logger]: https://docs.rs/flexi_logger/*/flexi_logger/
+//! [call_logger]: https://docs.rs/call_logger/*/call_logger/
 //! [syslog]: https://docs.rs/syslog/*/syslog/
 //! [slog-stdlog]: https://docs.rs/slog-stdlog/*/slog_stdlog/
 //! [log4rs]: https://docs.rs/log4rs/*/log4rs/
@@ -342,20 +344,20 @@ mod serde;
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
 
-#[cfg(has_atomics)]
+#[cfg(target_has_atomic = "ptr")]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 use std::cell::Cell;
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 use std::sync::atomic::Ordering;
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 struct AtomicUsize {
     v: Cell<usize>,
 }
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 impl AtomicUsize {
     const fn new(v: usize) -> AtomicUsize {
         AtomicUsize { v: Cell::new(v) }
@@ -369,7 +371,7 @@ impl AtomicUsize {
         self.v.set(val)
     }
 
-    #[cfg(atomic_cas)]
+    #[cfg(target_has_atomic = "ptr")]
     fn compare_exchange(
         &self,
         current: usize,
@@ -387,7 +389,7 @@ impl AtomicUsize {
 
 // Any platform without atomics is unlikely to have multiple cores, so
 // writing via Cell will not be a race condition.
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 unsafe impl Sync for AtomicUsize {}
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
@@ -1256,7 +1258,7 @@ pub fn max_level() -> LevelFilter {
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(all(feature = "std", atomic_cas))]
+#[cfg(all(feature = "std", target_has_atomic = "ptr"))]
 pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
     set_logger_inner(|| Box::leak(logger))
 }
@@ -1314,12 +1316,12 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 /// ```
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
-#[cfg(atomic_cas)]
+#[cfg(target_has_atomic = "ptr")]
 pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
-#[cfg(atomic_cas)]
+#[cfg(target_has_atomic = "ptr")]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
