@@ -417,7 +417,10 @@ impl<'v> self::serde::Serialize for Value<'v> {
 
 #[cfg(feature = "kv_unstable_sval")]
 impl<'v> self::sval::Value for Value<'v> {
-    fn stream<'sval, S: self::sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut S) -> self::sval::Result {
+    fn stream<'sval, S: self::sval::Stream<'sval> + ?Sized>(
+        &'sval self,
+        stream: &mut S,
+    ) -> self::sval::Result {
         self::sval::Value::stream(&self.inner, stream)
     }
 }

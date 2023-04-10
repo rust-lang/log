@@ -466,18 +466,31 @@ mod sval_support {
     where
         S: Source,
     {
-        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut SV) -> self::sval::Result {
+        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(
+            &'sval self,
+            stream: &mut SV,
+        ) -> self::sval::Result {
             struct StreamVisitor<'a, V: ?Sized>(&'a mut V);
 
             impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
-                    self.0.map_key_begin().map_err(|_| Error::msg("failed to stream map key"))?;
-                    sval_ref::stream_ref(self.0, key).map_err(|_| Error::msg("failed to stream map key"))?;
-                    self.0.map_key_end().map_err(|_| Error::msg("failed to stream map key"))?;
+                    self.0
+                        .map_key_begin()
+                        .map_err(|_| Error::msg("failed to stream map key"))?;
+                    sval_ref::stream_ref(self.0, key)
+                        .map_err(|_| Error::msg("failed to stream map key"))?;
+                    self.0
+                        .map_key_end()
+                        .map_err(|_| Error::msg("failed to stream map key"))?;
 
-                    self.0.map_value_begin().map_err(|_| Error::msg("failed to stream map value"))?;
-                    sval_ref::stream_ref(self.0, value).map_err(|_| Error::msg("failed to stream map value"))?;
-                    self.0.map_value_end().map_err(|_| Error::msg("failed to stream map value"))?;
+                    self.0
+                        .map_value_begin()
+                        .map_err(|_| Error::msg("failed to stream map value"))?;
+                    sval_ref::stream_ref(self.0, value)
+                        .map_err(|_| Error::msg("failed to stream map value"))?;
+                    self.0
+                        .map_value_end()
+                        .map_err(|_| Error::msg("failed to stream map value"))?;
 
                     Ok(())
                 }
@@ -490,9 +503,7 @@ mod sval_support {
             self.visit(&mut StreamVisitor(stream))
                 .map_err(|_| self::sval::Error::new())?;
 
-            stream
-                .map_end()
-                .map_err(|_| self::sval::Error::new())
+            stream.map_end().map_err(|_| self::sval::Error::new())
         }
     }
 
@@ -500,14 +511,22 @@ mod sval_support {
     where
         S: Source,
     {
-        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut SV) -> self::sval::Result {
+        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(
+            &'sval self,
+            stream: &mut SV,
+        ) -> self::sval::Result {
             struct StreamVisitor<'a, V: ?Sized>(&'a mut V);
 
             impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
-                    self.0.seq_value_begin().map_err(|_| Error::msg("failed to stream seq value"))?;
-                    self::sval_ref::stream_ref(self.0, (key, value)).map_err(|_| Error::msg("failed to stream seq value"))?;
-                    self.0.seq_value_end().map_err(|_| Error::msg("failed to stream seq value"))?;
+                    self.0
+                        .seq_value_begin()
+                        .map_err(|_| Error::msg("failed to stream seq value"))?;
+                    self::sval_ref::stream_ref(self.0, (key, value))
+                        .map_err(|_| Error::msg("failed to stream seq value"))?;
+                    self.0
+                        .seq_value_end()
+                        .map_err(|_| Error::msg("failed to stream seq value"))?;
 
                     Ok(())
                 }
@@ -520,9 +539,7 @@ mod sval_support {
             self.visit(&mut StreamVisitor(stream))
                 .map_err(|_| self::sval::Error::new())?;
 
-            stream
-                .seq_end()
-                .map_err(|_| self::sval::Error::new())
+            stream.seq_end().map_err(|_| self::sval::Error::new())
         }
     }
 
