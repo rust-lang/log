@@ -58,7 +58,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
 ### In executables
 
 In order to produce log output, executables have to use a logger implementation compatible with the facade.
-There are many available implementations to choose from, here are some of the most popular ones:
+There are many available implementations to choose from, here are some options:
 
 * Simple minimal loggers:
     * [`env_logger`](https://docs.rs/env_logger/*/env_logger/)
@@ -81,7 +81,7 @@ There are many available implementations to choose from, here are some of the mo
 * For WebAssembly binaries:
     * [`console_log`](https://docs.rs/console_log/*/console_log/)
 * For dynamic libraries:
-    * You may need to construct [an FFI-safe wrapper over `log`](https://github.com/rust-lang/log/issues/421) to initialize in your libraries. 
+    * You may need to construct [an FFI-safe wrapper over `log`](https://github.com/rust-lang/log/issues/421) to initialize in your libraries.
 * Utilities:
     * [`log_err`](https://docs.rs/log_err/*/log_err/)
 
