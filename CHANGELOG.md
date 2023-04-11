@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.4.19] - 2023-06-10
+
+* Use target_has_atomic instead of the old atomic_cas cfg by @KodrAus in https://github.com/rust-lang/log/pull/555
+* Put MSRV into Cargo.toml by @est31 in https://github.com/rust-lang/log/pull/557
+
 ## [0.4.18] - 2023-05-28
 
 * fix markdown links (again) by @hellow554 in https://github.com/rust-lang/log/pull/513
@@ -239,7 +244,9 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.17...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.18...HEAD
+[0.4.19]: https://github.com/rust-lang-nursery/log/compare/0.4.18...0.4.19
+[0.4.18]: https://github.com/rust-lang-nursery/log/compare/0.4.17...0.4.18
 [0.4.17]: https://github.com/rust-lang-nursery/log/compare/0.4.16...0.4.17
 [0.4.16]: https://github.com/rust-lang-nursery/log/compare/0.4.15...0.4.16
 [0.4.15]: https://github.com/rust-lang-nursery/log/compare/0.4.13...0.4.15

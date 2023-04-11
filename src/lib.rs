@@ -371,7 +371,7 @@ impl AtomicUsize {
         self.v.set(val)
     }
 
-    #[cfg(atomic_cas)]
+    #[cfg(target_has_atomic = "ptr")]
     fn compare_exchange(
         &self,
         current: usize,
@@ -1217,6 +1217,7 @@ where
 ///
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
+#[cfg(target_has_atomic = "ptr")]
 pub fn set_max_level(level: LevelFilter) {
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
@@ -1285,7 +1286,7 @@ pub fn max_level() -> LevelFilter {
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(all(feature = "std", atomic_cas))]
+#[cfg(all(feature = "std", target_has_atomic = "ptr"))]
 pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
     set_logger_inner(|| Box::leak(logger))
 }
@@ -1343,12 +1344,12 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 /// ```
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
-#[cfg(atomic_cas)]
+#[cfg(target_has_atomic = "ptr")]
 pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
-#[cfg(atomic_cas)]
+#[cfg(target_has_atomic = "ptr")]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
