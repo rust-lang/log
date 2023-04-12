@@ -68,6 +68,7 @@ There are many available implementations to choose from, here are some options:
     * [`stderrlog`](https://docs.rs/stderrlog/*/stderrlog/)
     * [`flexi_logger`](https://docs.rs/flexi_logger/*/flexi_logger/)
     * [`call_logger`](https://docs.rs/call_logger/*/call_logger/)
+    * [`std-logger`](https://docs.rs/std-logger/*/std_logger/)
 * Complex configurable frameworks:
     * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
     * [`fern`](https://docs.rs/fern/*/fern/)
