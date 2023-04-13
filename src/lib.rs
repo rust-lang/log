@@ -1217,7 +1217,35 @@ where
 ///
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
+#[cfg(atomic_cas)]
 pub fn set_max_level(level: LevelFilter) {
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
+}
+
+/// A thread-unsafe version of [`set_max_level`].
+///
+/// This function is available on all platforms, even those that do not have
+/// support for atomics that is needed by [`set_max_level`].
+///
+/// In almost all cases, [`set_max_level`] should be preferred.
+///
+/// # Safety
+///
+/// This function is only safe to call when no other level setting function is
+/// called while this function still executes.
+///
+/// This can be upheld by (for example) making sure that **there are no other
+/// threads**, and (on embedded) that **interrupts are disabled**.
+///
+/// Is is safe to use all other logging functions while this function runs
+/// (including all logging macros).
+///
+/// [`set_max_level`]: fn.set_max_level.html
+#[inline]
+pub unsafe fn set_max_level_racy(level: LevelFilter) {
+    // `MAX_LOG_LEVEL_FILTER` uses a `Cell` as the underlying primitive when a
+    // platform doesn't support `atomic_cas`, so even though this looks the same
+    // as `set_max_level` it may have different safety properties.
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
 
