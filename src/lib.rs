@@ -1217,7 +1217,7 @@ where
 ///
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
-#[cfg(atomic_cas)]
+#[cfg(target_has_atomic = "ptr")]
 pub fn set_max_level(level: LevelFilter) {
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
@@ -1244,7 +1244,7 @@ pub fn set_max_level(level: LevelFilter) {
 #[inline]
 pub unsafe fn set_max_level_racy(level: LevelFilter) {
     // `MAX_LOG_LEVEL_FILTER` uses a `Cell` as the underlying primitive when a
-    // platform doesn't support `atomic_cas`, so even though this looks the same
+    // platform doesn't support `target_has_atomic = "ptr"`, so even though this looks the same
     // as `set_max_level` it may have different safety properties.
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
