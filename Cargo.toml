@@ -13,6 +13,7 @@ A lightweight logging facade for Rust
 categories = ["development-tools::debugging"]
 keywords = ["logging"]
 exclude = ["rfcs/**/*"]
+rust-version = "1.60.0"
 
 [package.metadata.docs.rs]
 features = ["std", "serde", "kv_unstable_std", "kv_unstable_sval", "kv_unstable_serde"]
