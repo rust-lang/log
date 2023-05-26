@@ -690,7 +690,7 @@ impl<'a> MaybeStaticStr<'a> {
 /// struct SimpleLogger;
 ///
 /// impl log::Log for SimpleLogger {
-///    fn enabled(&self, metadata: &log::Metadata) -> bool {
+///    fn enabled(&self, _metadata: &log::Metadata) -> bool {
 ///        true
 ///    }
 ///
