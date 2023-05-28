@@ -344,20 +344,20 @@ mod serde;
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
 
-#[cfg(target_has_atomic = "ptr")]
+#[cfg(has_atomics)]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[cfg(not(target_has_atomic = "ptr"))]
+#[cfg(not(has_atomics))]
 use std::cell::Cell;
-#[cfg(not(target_has_atomic = "ptr"))]
+#[cfg(not(has_atomics))]
 use std::sync::atomic::Ordering;
 
-#[cfg(not(target_has_atomic = "ptr"))]
+#[cfg(not(has_atomics))]
 struct AtomicUsize {
     v: Cell<usize>,
 }
 
-#[cfg(not(target_has_atomic = "ptr"))]
+#[cfg(not(has_atomics))]
 impl AtomicUsize {
     const fn new(v: usize) -> AtomicUsize {
         AtomicUsize { v: Cell::new(v) }
@@ -371,7 +371,7 @@ impl AtomicUsize {
         self.v.set(val)
     }
 
-    #[cfg(target_has_atomic = "ptr")]
+    #[cfg(atomic_cas)]
     fn compare_exchange(
         &self,
         current: usize,
@@ -389,7 +389,7 @@ impl AtomicUsize {
 
 // Any platform without atomics is unlikely to have multiple cores, so
 // writing via Cell will not be a race condition.
-#[cfg(not(target_has_atomic = "ptr"))]
+#[cfg(not(has_atomics))]
 unsafe impl Sync for AtomicUsize {}
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
@@ -1217,7 +1217,6 @@ where
 ///
 /// Note that `Trace` is the maximum level, because it provides the maximum amount of detail in the emitted logs.
 #[inline]
-#[cfg(target_has_atomic = "ptr")]
 pub fn set_max_level(level: LevelFilter) {
     MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
 }
@@ -1286,7 +1285,7 @@ pub fn max_level() -> LevelFilter {
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(all(feature = "std", target_has_atomic = "ptr"))]
+#[cfg(all(feature = "std", atomic_cas))]
 pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
     set_logger_inner(|| Box::leak(logger))
 }
@@ -1344,12 +1343,12 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 /// ```
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
-#[cfg(target_has_atomic = "ptr")]
+#[cfg(atomic_cas)]
 pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
-#[cfg(target_has_atomic = "ptr")]
+#[cfg(atomic_cas)]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
