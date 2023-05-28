@@ -344,20 +344,20 @@ mod serde;
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
 
-#[cfg(has_atomics)]
+#[cfg(target_has_atomic = "ptr")]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 use std::cell::Cell;
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 use std::sync::atomic::Ordering;
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 struct AtomicUsize {
     v: Cell<usize>,
 }
 
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 impl AtomicUsize {
     const fn new(v: usize) -> AtomicUsize {
         AtomicUsize { v: Cell::new(v) }
@@ -389,7 +389,7 @@ impl AtomicUsize {
 
 // Any platform without atomics is unlikely to have multiple cores, so
 // writing via Cell will not be a race condition.
-#[cfg(not(has_atomics))]
+#[cfg(not(target_has_atomic = "ptr"))]
 unsafe impl Sync for AtomicUsize {}
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
