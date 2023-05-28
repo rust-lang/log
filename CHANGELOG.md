@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.4.18] - 2023-05-28
+
+* fix markdown links (again) by @hellow554 in https://github.com/rust-lang/log/pull/513
+* add cargo doc to workflow by @hellow554 in https://github.com/rust-lang/log/pull/515
+* Apply Clippy lints by @hellow554 in https://github.com/rust-lang/log/pull/516
+* Replace ad-hoc eq_ignore_ascii_case with slice::eq_ignore_ascii_case by @glandium in https://github.com/rust-lang/log/pull/519
+* fix up windows targets by @KodrAus in https://github.com/rust-lang/log/pull/528
+* typo fix by @jiangying000 in https://github.com/rust-lang/log/pull/529
+* Remove dependency on cfg_if by @EriKWDev in https://github.com/rust-lang/log/pull/536
+* GitHub Workflows security hardening by @sashashura in https://github.com/rust-lang/log/pull/538
+* Fix build status badge by @atouchet in https://github.com/rust-lang/log/pull/539
+* Add call_logger to the documentation by @a1ecbr0wn in https://github.com/rust-lang/log/pull/547
+* Remove build.rs file by @GuillaumeGomez in https://github.com/rust-lang/log/pull/543
+* Use stable internals for key-value API by @KodrAus in https://github.com/rust-lang/log/pull/550
+* Change wording of list of implementations by @Thomasdezeeuw in https://github.com/rust-lang/log/pull/553
+* Add std-logger to list of implementations by @Thomasdezeeuw in https://github.com/rust-lang/log/pull/554
+* Add `set_max_level_racy` and gate `set_max_level` by @djkoloski in https://github.com/rust-lang/log/pull/544
+* [doc] src/lib.rs : prefix an unused variable with an underscore by @OccupyMars2025 in https://github.com/rust-lang/log/pull/561
+* [doc] src/macros.rs :  correct  grammar errors of an example in lib documentation by @OccupyMars2025 in https://github.com/rust-lang/log/pull/562
+
 ## [0.4.17] - 2022-04-29
 
 * Update `kv_unstable` internal dependencies.
