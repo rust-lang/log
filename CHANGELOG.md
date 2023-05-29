@@ -4,7 +4,7 @@
 
 ## [0.4.19] - 2023-06-10
 
-* Use target_has_atomic instead of the old atomic_cas cfg by @KodrAus in https://github.com/rust-lang/log/pull/555
+* Use target_has_atomic instead of the old atomic_cas cfg by @GuillaumeGomez in https://github.com/rust-lang/log/pull/555
 * Put MSRV into Cargo.toml by @est31 in https://github.com/rust-lang/log/pull/557
 
 ## [0.4.18] - 2023-05-28
@@ -19,7 +19,6 @@
 * GitHub Workflows security hardening by @sashashura in https://github.com/rust-lang/log/pull/538
 * Fix build status badge by @atouchet in https://github.com/rust-lang/log/pull/539
 * Add call_logger to the documentation by @a1ecbr0wn in https://github.com/rust-lang/log/pull/547
-* Remove build.rs file by @GuillaumeGomez in https://github.com/rust-lang/log/pull/543
 * Use stable internals for key-value API by @KodrAus in https://github.com/rust-lang/log/pull/550
 * Change wording of list of implementations by @Thomasdezeeuw in https://github.com/rust-lang/log/pull/553
 * Add std-logger to list of implementations by @Thomasdezeeuw in https://github.com/rust-lang/log/pull/554
