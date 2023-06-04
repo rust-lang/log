@@ -137,6 +137,7 @@
 //!     * [stderrlog]
 //!     * [flexi_logger]
 //!     * [call_logger]
+//!     * [structured-logger]
 //! * Complex configurable frameworks:
 //!     * [log4rs]
 //!     * [fern]
@@ -313,6 +314,7 @@
 //! [win_dbg_logger]: https://docs.rs/win_dbg_logger/*/win_dbg_logger/
 //! [db_logger]: https://docs.rs/db_logger/*/db_logger/
 //! [console_log]: https://docs.rs/console_log/*/console_log/
+//! [structured-logger]: https://docs.rs/structured-logger/latest/structured_logger/
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
