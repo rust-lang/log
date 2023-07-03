@@ -176,7 +176,9 @@ fn implicit_named_args() {
     all_log_macros!(target: "my_target", "hello {world}");
     all_log_macros!(target: "my_target", "hello {world}",);
 
+    #[cfg(feature = "kv_unstable")]
     all_log_macros!(target = "my_target"; "hello {world}");
+    #[cfg(feature = "kv_unstable")]
     all_log_macros!(target = "my_target"; "hello {world}",);
 }
 
