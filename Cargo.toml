@@ -59,7 +59,6 @@ sval_ref = { version = "2.1", optional = true, default-features = false }
 value-bag = { version = "1.4", optional = true, default-features = false }
 
 [dev-dependencies]
-rustversion = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_test = "1.0"
 sval = { version = "2.1" }
