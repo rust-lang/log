@@ -985,6 +985,10 @@ impl<'a> RecordBuilder<'a> {
     pub fn build(&self) -> Record<'a> {
         self.record.clone()
     }
+
+    fn into_record(&self) -> Record<'a> {
+        self.record.clone()
+    }
 }
 
 impl<'a> Default for RecordBuilder<'a> {
@@ -1113,6 +1117,10 @@ impl<'a> MetadataBuilder<'a> {
     #[inline]
     pub fn build(&self) -> Metadata<'a> {
         self.metadata.clone()
+    }
+
+    fn into_metadata(self) -> Metadata<'a> {
+        self.metadata
     }
 }
 
@@ -1479,16 +1487,17 @@ pub fn __private_api_log(
         )
     }
 
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .build(),
-    );
+    let mut builder = Record::builder();
+
+    builder
+        .args(args)
+        .level(level)
+        .target(target)
+        .module_path_static(Some(module_path))
+        .file_static(Some(file))
+        .line(Some(line));
+
+    logger().log(&builder.into_record());
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
@@ -1500,23 +1509,28 @@ pub fn __private_api_log(
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
     kvs: Option<&[(&str, &dyn kv::ToValue)]>,
 ) {
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .key_values(&kvs)
-            .build(),
-    );
+    let mut builder = Record::builder();
+
+    builder
+        .args(args)
+        .level(level)
+        .target(target)
+        .module_path_static(Some(module_path))
+        .file_static(Some(file))
+        .line(Some(line))
+        .key_values(&kvs);
+
+    logger().log(&builder.into_record());
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
 pub fn __private_api_enabled(level: Level, target: &str) -> bool {
-    logger().enabled(&Metadata::builder().level(level).target(target).build())
+    let mut builder = Metadata::builder();
+
+    builder.level(level).target(target);
+
+    logger().enabled(&builder.into_metadata())
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
