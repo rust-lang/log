@@ -1523,6 +1523,7 @@ pub fn __private_api_enabled(level: Level, target: &str) -> bool {
 #[doc(hidden)]
 pub mod __private_api {
     pub use std::option::Option;
+    pub use std::{file, format_args, line, module_path, stringify};
 }
 
 /// The statically resolved maximum log level.
