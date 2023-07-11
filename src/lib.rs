@@ -987,7 +987,7 @@ impl<'a> RecordBuilder<'a> {
     }
 
     fn into_record(&self) -> Record<'a> {
-        self.record.clone()
+        self.record
     }
 }
 
