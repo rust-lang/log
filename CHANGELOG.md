@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.4.20] - 2023-07-11
+
+* Remove rustversion dev-dependency by @Thomasdezeeuw in https://github.com/rust-lang/log/pull/568
+* Remove `local_inner_macros` usage by @EFanZh in https://github.com/rust-lang/log/pull/570
+
 ## [0.4.19] - 2023-06-10
 
 * Use target_has_atomic instead of the old atomic_cas cfg by @GuillaumeGomez in https://github.com/rust-lang/log/pull/555
@@ -244,6 +249,7 @@ version using log 0.4.x to avoid losing module and file information.
 Look at the [release tags] for information about older releases.
 
 [Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.18...HEAD
+[0.4.20]: https://github.com/rust-lang-nursery/log/compare/0.4.19...0.4.20
 [0.4.19]: https://github.com/rust-lang-nursery/log/compare/0.4.18...0.4.19
 [0.4.18]: https://github.com/rust-lang-nursery/log/compare/0.4.17...0.4.18
 [0.4.17]: https://github.com/rust-lang-nursery/log/compare/0.4.16...0.4.17
