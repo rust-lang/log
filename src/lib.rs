@@ -332,6 +332,9 @@
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
+#[macro_use]
+extern crate cfg_if;
+
 use std::cmp;
 #[cfg(feature = "std")]
 use std::error;
