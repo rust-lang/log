@@ -986,6 +986,7 @@ impl<'a> RecordBuilder<'a> {
         self.record.clone()
     }
 
+    #[inline]
     fn into_record(self) -> Record<'a> {
         self.record
     }
@@ -1119,6 +1120,7 @@ impl<'a> MetadataBuilder<'a> {
         self.metadata.clone()
     }
 
+    #[inline]
     fn into_metadata(self) -> Metadata<'a> {
         self.metadata
     }
