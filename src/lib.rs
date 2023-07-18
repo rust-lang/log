@@ -1466,65 +1466,7 @@ pub fn logger() -> &'static dyn Log {
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
-#[cfg(not(feature = "kv_unstable"))]
-pub fn __private_api_log(
-    args: fmt::Arguments,
-    level: Level,
-    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
-    kvs: Option<&[(&str, &str)]>,
-) {
-    if kvs.is_some() {
-        panic!(
-            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
-        )
-    }
-
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .build(),
-    );
-}
-
-// WARNING: this is not part of the crate's public API and is subject to change at any time
-#[doc(hidden)]
-#[cfg(feature = "kv_unstable")]
-pub fn __private_api_log(
-    args: fmt::Arguments,
-    level: Level,
-    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
-    kvs: Option<&[(&str, &dyn kv::ToValue)]>,
-) {
-    logger().log(
-        &Record::builder()
-            .args(args)
-            .level(level)
-            .target(target)
-            .module_path_static(Some(module_path))
-            .file_static(Some(file))
-            .line(Some(line))
-            .key_values(&kvs)
-            .build(),
-    );
-}
-
-// WARNING: this is not part of the crate's public API and is subject to change at any time
-#[doc(hidden)]
-pub fn __private_api_enabled(level: Level, target: &str) -> bool {
-    logger().enabled(&Metadata::builder().level(level).target(target).build())
-}
-
-// WARNING: this is not part of the crate's public API and is subject to change at any time
-#[doc(hidden)]
-pub mod __private_api {
-    pub use std::option::Option;
-    pub use std::{file, format_args, line, module_path, stringify};
-}
+pub mod __private_api;
 
 /// The statically resolved maximum log level.
 ///
