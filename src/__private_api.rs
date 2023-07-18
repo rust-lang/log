@@ -26,11 +26,11 @@ mod sealed {
     }
 
     pub trait LogTarget {
-        fn with(self, module_path: &'static str, f: impl FnOnce(&str));
+        fn as_str(&self, module_path: &'static str) -> &str;
     }
 
     pub trait LogKVs {
-        fn with(self, f: impl FnOnce(&[(&str, &super::LogKvValue)]));
+        fn as_slice(&self) -> &[(&str, &super::LogKvValue)];
     }
 }
 
@@ -103,7 +103,7 @@ define_static_levels![
 
 // `LogArgs`.
 
-impl LogArgs for &str {
+impl LogArgs for &'static str {
     #[inline]
     fn with(self, f: impl FnOnce(Arguments)) {
         f(format_args!("{self}"))
@@ -111,6 +111,7 @@ impl LogArgs for &str {
 }
 
 impl LogArgs for Arguments<'_> {
+    #[inline]
     fn with(self, f: impl FnOnce(Arguments)) {
         f(self)
     }
@@ -120,8 +121,8 @@ impl LogArgs for Arguments<'_> {
 
 impl LogTarget for &str {
     #[inline]
-    fn with(self, _module_path: &'static str, f: impl FnOnce(&str)) {
-        f(self)
+    fn as_str(&self, _module_path: &'static str) -> &str {
+        self
     }
 }
 
@@ -130,8 +131,8 @@ pub struct TargetIsModulePath;
 
 impl LogTarget for TargetIsModulePath {
     #[inline]
-    fn with(self, module_path: &'static str, f: impl FnOnce(&str)) {
-        f(module_path)
+    fn as_str(&self, module_path: &'static str) -> &str {
+        module_path
     }
 }
 
@@ -139,8 +140,8 @@ impl LogTarget for TargetIsModulePath {
 
 impl LogKVs for &[(&str, &LogKvValue<'_>)] {
     #[inline]
-    fn with(self, f: impl FnOnce(&[(&str, &LogKvValue)])) {
-        f(self)
+    fn as_slice(&self) -> &[(&str, &LogKvValue)] {
+        self
     }
 }
 
@@ -149,8 +150,8 @@ pub struct EmptyKVs;
 
 impl LogKVs for EmptyKVs {
     #[inline]
-    fn with(self, f: impl FnOnce(&[(&str, &LogKvValue)])) {
-        f(&[])
+    fn as_slice(&self) -> &[(&str, &LogKvValue)] {
+        &[]
     }
 }
 
@@ -197,7 +198,14 @@ fn log_1<K>(
 ) where
     K: LogKVs,
 {
-    kvs.with(|kvs| log_0(module_path_and_file, line, level, args, target, kvs));
+    log_0(
+        module_path_and_file,
+        line,
+        level,
+        args,
+        target,
+        kvs.as_slice(),
+    );
 }
 
 fn log_2<T, K>(
@@ -211,9 +219,14 @@ fn log_2<T, K>(
     T: LogTarget,
     K: LogKVs,
 {
-    target.with(module_path_and_file.0, |target| {
-        log_1(module_path_and_file, line, level, args, target, kvs)
-    });
+    log_1(
+        module_path_and_file,
+        line,
+        level,
+        args,
+        target.as_str(module_path_and_file.0),
+        kvs,
+    )
 }
 
 pub fn log_3<A, T, K>(
@@ -258,6 +271,7 @@ pub fn enabled(level: Level, target: &str) -> bool {
     crate::logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
 
+/// Check whether the format argument can be treated as a string literal.
 pub const fn is_literal(s: &str) -> bool {
     let s = s.as_bytes();
     let n = s.len();
@@ -274,7 +288,9 @@ pub const fn is_literal(s: &str) -> bool {
     true
 }
 
-pub fn unused() -> usize {
+/// This function is used for persuading the compiler to generate all `log` generic function instances, so they can be
+/// reused by downstream crates, it is not intended for calling by anyone.
+pub fn instantiate_log_functions() -> usize {
     fn for_all_kvs<L, A, T>() -> usize
     where
         L: LogLevel,
