@@ -9,7 +9,8 @@ pub use std::{file, format_args, line, module_path, stringify};
 pub fn log(
     args: Arguments,
     level: Level,
-    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+    &(target, module_path, file): &(&str, &'static str, &'static str),
+    line: u32,
     kvs: Option<&[(&str, &str)]>,
 ) {
     if kvs.is_some() {
@@ -34,7 +35,8 @@ pub fn log(
 pub fn log(
     args: Arguments,
     level: Level,
-    &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
+    &(target, module_path, file): &(&str, &'static str, &'static str),
+    line: u32,
     kvs: Option<&[(&str, &dyn crate::kv::ToValue)]>,
 ) {
     crate::logger().log(
