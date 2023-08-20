@@ -61,7 +61,11 @@ jobs:
         rustup update stable --no-self-update
         rustup default stable
         rustup component add rustfmt
+      # log repo does not use Cargo workspaces, so `cargo fmt` will not check all the code
+      # perhaps this should be changed in the future
     - run: cargo fmt -- --check
+    - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
+    - run: cargo fmt --manifest-path tests/Cargo.toml -- --check
 
   clippy:
     name: Clippy
@@ -74,6 +78,8 @@ jobs:
         rustup default stable
         rustup component add clippy
     - run: cargo clippy --verbose
+    - run: cargo clippy --verbose --manifest-path test_max_level_features/Cargo.toml
+    - run: cargo clippy --verbose --manifest-path tests/Cargo.toml
 
   doc:
     name: Check Documentation

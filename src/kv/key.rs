@@ -103,11 +103,8 @@ mod std_support {
 mod sval_support {
     use super::*;
 
-    extern crate sval;
-    extern crate sval_ref;
-
-    use self::sval::Value;
-    use self::sval_ref::ValueRef;
+    use sval::Value;
+    use sval_ref::ValueRef;
 
     impl<'a> Value for Key<'a> {
         fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(
@@ -119,10 +116,7 @@ mod sval_support {
     }
 
     impl<'a> ValueRef<'a> for Key<'a> {
-        fn stream_ref<S: self::sval::Stream<'a> + ?Sized>(
-            &self,
-            stream: &mut S,
-        ) -> self::sval::Result {
+        fn stream_ref<S: sval::Stream<'a> + ?Sized>(&self, stream: &mut S) -> sval::Result {
             self.key.stream(stream)
         }
     }
@@ -132,9 +126,7 @@ mod sval_support {
 mod serde_support {
     use super::*;
 
-    extern crate serde;
-
-    use self::serde::{Serialize, Serializer};
+    use serde::{Serialize, Serializer};
 
     impl<'a> Serialize for Key<'a> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

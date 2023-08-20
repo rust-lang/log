@@ -2,19 +2,9 @@
 
 use std::fmt;
 
-extern crate value_bag;
+pub use crate::kv::Error;
 
-#[cfg(feature = "kv_unstable_sval")]
-extern crate sval;
-#[cfg(feature = "kv_unstable_sval")]
-extern crate sval_ref;
-
-#[cfg(feature = "kv_unstable_serde")]
-extern crate serde;
-
-use self::value_bag::ValueBag;
-
-pub use kv::Error;
+use value_bag::ValueBag;
 
 /// A type that can be converted into a [`Value`](struct.Value.html).
 pub trait ToValue {
@@ -199,7 +189,7 @@ impl<'v> Value<'v> {
     /// Get a value from a type implementing `serde::Serialize`.
     pub fn capture_serde<T>(value: &'v T) -> Self
     where
-        T: self::serde::Serialize + 'static,
+        T: serde::Serialize + 'static,
     {
         Value {
             inner: ValueBag::capture_serde1(value),
@@ -210,7 +200,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_sval")]
     pub fn capture_sval<T>(value: &'v T) -> Self
     where
-        T: self::sval::Value + 'static,
+        T: sval::Value + 'static,
     {
         Value {
             inner: ValueBag::capture_sval2(value),
@@ -241,7 +231,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_serde")]
     pub fn from_serde<T>(value: &'v T) -> Self
     where
-        T: self::serde::Serialize,
+        T: serde::Serialize,
     {
         Value {
             inner: ValueBag::from_serde1(value),
@@ -252,7 +242,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_sval")]
     pub fn from_sval<T>(value: &'v T) -> Self
     where
-        T: self::sval::Value,
+        T: sval::Value,
     {
         Value {
             inner: ValueBag::from_sval2(value),
@@ -406,29 +396,26 @@ impl ToValue for dyn std::error::Error + 'static {
 }
 
 #[cfg(feature = "kv_unstable_serde")]
-impl<'v> self::serde::Serialize for Value<'v> {
+impl<'v> serde::Serialize for Value<'v> {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
-        S: self::serde::Serializer,
+        S: serde::Serializer,
     {
         self.inner.serialize(s)
     }
 }
 
 #[cfg(feature = "kv_unstable_sval")]
-impl<'v> self::sval::Value for Value<'v> {
-    fn stream<'sval, S: self::sval::Stream<'sval> + ?Sized>(
-        &'sval self,
-        stream: &mut S,
-    ) -> self::sval::Result {
-        self::sval::Value::stream(&self.inner, stream)
+impl<'v> sval::Value for Value<'v> {
+    fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut S) -> sval::Result {
+        sval::Value::stream(&self.inner, stream)
     }
 }
 
 #[cfg(feature = "kv_unstable_sval")]
-impl<'v> self::sval_ref::ValueRef<'v> for Value<'v> {
-    fn stream_ref<S: self::sval::Stream<'v> + ?Sized>(&self, stream: &mut S) -> self::sval::Result {
-        self::sval_ref::ValueRef::stream_ref(&self.inner, stream)
+impl<'v> sval_ref::ValueRef<'v> for Value<'v> {
+    fn stream_ref<S: sval::Stream<'v> + ?Sized>(&self, stream: &mut S) -> sval::Result {
+        sval_ref::ValueRef::stream_ref(&self.inner, stream)
     }
 }
 
@@ -601,9 +588,9 @@ impl<'v> Value<'v> {
 
 #[cfg(feature = "kv_unstable_std")]
 mod std_support {
-    use super::*;
-
     use std::borrow::Cow;
+
+    use super::*;
 
     impl<T> ToValue for Box<T>
     where
@@ -773,8 +760,7 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-
-    pub(crate) use super::value_bag::test::TestToken as Token;
+    pub(crate) use value_bag::test::TestToken as Token;
 
     impl<'v> Value<'v> {
         pub(crate) fn to_token(&self) -> Token {
@@ -874,7 +860,7 @@ pub(crate) mod tests {
         assert_eq!("a loong string".to_value().to_string(), "a loong string");
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
-        assert_eq!(Option::None::<bool>.to_value().to_string(), "None");
+        assert_eq!(None::<bool>.to_value().to_string(), "None");
     }
 
     #[test]
@@ -890,7 +876,7 @@ pub(crate) mod tests {
         );
         assert_eq!(Some(true).to_value().to_token(), Token::Bool(true));
         assert_eq!(().to_value().to_token(), Token::None);
-        assert_eq!(Option::None::<bool>.to_value().to_token(), Token::None);
+        assert_eq!(None::<bool>.to_value().to_token(), Token::None);
     }
 
     #[test]

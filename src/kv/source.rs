@@ -1,14 +1,6 @@
 //! Sources for key-value pairs.
 
-#[cfg(feature = "kv_unstable_sval")]
-extern crate sval;
-#[cfg(feature = "kv_unstable_sval")]
-extern crate sval_ref;
-
-#[cfg(feature = "kv_unstable_serde")]
-extern crate serde;
-
-use kv::{Error, Key, ToKey, ToValue, Value};
+use crate::kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;
 
 /// A source of key-value pairs.
@@ -39,12 +31,12 @@ pub trait Source {
     /// A source that can provide a more efficient implementation of this method
     /// should override it.
     #[cfg(not(test))]
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         get_default(self, key)
     }
 
     #[cfg(test)]
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>>;
+    fn get(&self, key: Key) -> Option<Value<'_>>;
 
     /// Count the number of key-value pairs that can be visited.
     ///
@@ -64,7 +56,7 @@ pub trait Source {
     fn count(&self) -> usize;
 }
 
-/// The default implemention of `Source::get`
+/// The default implementation of `Source::get`
 pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
     struct Get<'k, 'v> {
         key: Key<'k>,
@@ -112,7 +104,7 @@ where
         Source::visit(&**self, visitor)
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         Source::get(&**self, key)
     }
 
@@ -130,7 +122,7 @@ where
         visitor.visit_pair(self.0.to_key(), self.1.to_value())
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         if self.0.to_key() == key {
             Some(self.1.to_value())
         } else {
@@ -155,7 +147,7 @@ where
         Ok(())
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         for source in self {
             if let Some(found) = source.get(key.clone()) {
                 return Some(found);
@@ -182,7 +174,7 @@ where
         Ok(())
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         self.as_ref().and_then(|s| s.get(key))
     }
 
@@ -250,7 +242,7 @@ mod std_support {
             Source::visit(&**self, visitor)
         }
 
-        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        fn get(&self, key: Key) -> Option<Value<'_>> {
             Source::get(&**self, key)
         }
 
@@ -267,7 +259,7 @@ mod std_support {
             Source::visit(&**self, visitor)
         }
 
-        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        fn get(&self, key: Key) -> Option<Value<'_>> {
             Source::get(&**self, key)
         }
 
@@ -298,7 +290,7 @@ mod std_support {
             Ok(())
         }
 
-        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        fn get(&self, key: Key) -> Option<Value<'_>> {
             HashMap::get(self, key.as_str()).map(|v| v.to_value())
         }
 
@@ -319,7 +311,7 @@ mod std_support {
             Ok(())
         }
 
-        fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+        fn get(&self, key: Key) -> Option<Value<'_>> {
             BTreeMap::get(self, key.as_str()).map(|v| v.to_value())
         }
 
@@ -330,9 +322,11 @@ mod std_support {
 
     #[cfg(test)]
     mod tests {
-        use super::*;
-        use kv::value::tests::Token;
         use std::collections::{BTreeMap, HashMap};
+
+        use crate::kv::value::tests::Token;
+
+        use super::*;
 
         #[test]
         fn count() {
@@ -348,7 +342,7 @@ mod std_support {
                 Source::get(&source, Key::from_str("a")).unwrap().to_token()
             );
 
-            let source = Box::new(Option::None::<(&str, i32)>);
+            let source = Box::new(None::<(&str, i32)>);
             assert!(Source::get(&source, Key::from_str("a")).is_none());
         }
 
@@ -399,7 +393,7 @@ where
         self.0.visit(visitor)
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         self.0.get(key)
     }
 
@@ -438,7 +432,7 @@ where
         self.0.visit(visitor)
     }
 
-    fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+    fn get(&self, key: Key) -> Option<Value<'_>> {
         self.0.get(key)
     }
 
@@ -462,17 +456,17 @@ where
 mod sval_support {
     use super::*;
 
-    impl<S> self::sval::Value for AsMap<S>
+    impl<S> sval::Value for AsMap<S>
     where
         S: Source,
     {
-        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(
+        fn stream<'sval, SV: sval::Stream<'sval> + ?Sized>(
             &'sval self,
             stream: &mut SV,
-        ) -> self::sval::Result {
+        ) -> sval::Result {
             struct StreamVisitor<'a, V: ?Sized>(&'a mut V);
 
-            impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
+            impl<'a, 'kvs, V: sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
                     self.0
                         .map_key_begin()
@@ -498,31 +492,31 @@ mod sval_support {
 
             stream
                 .map_begin(Some(self.count()))
-                .map_err(|_| self::sval::Error::new())?;
+                .map_err(|_| sval::Error::new())?;
 
             self.visit(&mut StreamVisitor(stream))
-                .map_err(|_| self::sval::Error::new())?;
+                .map_err(|_| sval::Error::new())?;
 
-            stream.map_end().map_err(|_| self::sval::Error::new())
+            stream.map_end().map_err(|_| sval::Error::new())
         }
     }
 
-    impl<S> self::sval::Value for AsList<S>
+    impl<S> sval::Value for AsList<S>
     where
         S: Source,
     {
-        fn stream<'sval, SV: self::sval::Stream<'sval> + ?Sized>(
+        fn stream<'sval, SV: sval::Stream<'sval> + ?Sized>(
             &'sval self,
             stream: &mut SV,
-        ) -> self::sval::Result {
+        ) -> sval::Result {
             struct StreamVisitor<'a, V: ?Sized>(&'a mut V);
 
-            impl<'a, 'kvs, V: self::sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
+            impl<'a, 'kvs, V: sval::Stream<'kvs> + ?Sized> Visitor<'kvs> for StreamVisitor<'a, V> {
                 fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
                     self.0
                         .seq_value_begin()
                         .map_err(|_| Error::msg("failed to stream seq value"))?;
-                    self::sval_ref::stream_ref(self.0, (key, value))
+                    sval_ref::stream_ref(self.0, (key, value))
                         .map_err(|_| Error::msg("failed to stream seq value"))?;
                     self.0
                         .seq_value_end()
@@ -534,37 +528,32 @@ mod sval_support {
 
             stream
                 .seq_begin(Some(self.count()))
-                .map_err(|_| self::sval::Error::new())?;
+                .map_err(|_| sval::Error::new())?;
 
             self.visit(&mut StreamVisitor(stream))
-                .map_err(|_| self::sval::Error::new())?;
+                .map_err(|_| sval::Error::new())?;
 
-            stream.seq_end().map_err(|_| self::sval::Error::new())
+            stream.seq_end().map_err(|_| sval::Error::new())
         }
     }
 
     #[cfg(test)]
     mod tests {
-        extern crate sval_derive;
-
         use super::*;
-
-        use self::sval_derive::Value;
-
-        use crate::kv::source;
+        use sval_derive::Value;
 
         #[test]
         fn derive_stream() {
             #[derive(Value)]
             pub struct MyRecordAsMap<'a> {
                 msg: &'a str,
-                kvs: source::AsMap<&'a dyn Source>,
+                kvs: AsMap<&'a dyn Source>,
             }
 
             #[derive(Value)]
             pub struct MyRecordAsList<'a> {
                 msg: &'a str,
-                kvs: source::AsList<&'a dyn Source>,
+                kvs: AsList<&'a dyn Source>,
             }
         }
     }
@@ -575,8 +564,7 @@ pub mod as_map {
     //! `serde` adapters for serializing a `Source` as a map.
 
     use super::*;
-
-    use self::serde::{Serialize, Serializer};
+    use serde::{Serialize, Serializer};
 
     /// Serialize a `Source` as a map.
     pub fn serialize<T, S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
@@ -593,8 +581,7 @@ pub mod as_list {
     //! `serde` adapters for serializing a `Source` as a list.
 
     use super::*;
-
-    use self::serde::{Serialize, Serializer};
+    use serde::{Serialize, Serializer};
 
     /// Serialize a `Source` as a list.
     pub fn serialize<T, S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
@@ -609,8 +596,7 @@ pub mod as_list {
 #[cfg(feature = "kv_unstable_serde")]
 mod serde_support {
     use super::*;
-
-    use self::serde::ser::{Error as SerError, Serialize, SerializeMap, SerializeSeq, Serializer};
+    use serde::ser::{Error as SerError, Serialize, SerializeMap, SerializeSeq, Serializer};
 
     impl<T> Serialize for AsMap<T>
     where
@@ -677,10 +663,8 @@ mod serde_support {
     #[cfg(test)]
     mod tests {
         use super::*;
-
-        use self::serde::Serialize;
-
         use crate::kv::source;
+        use serde::Serialize;
 
         #[test]
         fn derive_serialize() {
@@ -705,8 +689,9 @@ mod serde_support {
 
 #[cfg(test)]
 mod tests {
+    use crate::kv::value::tests::Token;
+
     use super::*;
-    use kv::value::tests::Token;
 
     #[test]
     fn source_is_object_safe() {
@@ -730,7 +715,7 @@ mod tests {
                 visitor.visit_pair(self.key.to_key(), self.value.to_value())
             }
 
-            fn get<'v>(&'v self, key: Key) -> Option<Value<'v>> {
+            fn get(&self, key: Key) -> Option<Value<'_>> {
                 get_default(self, key)
             }
 
@@ -741,7 +726,7 @@ mod tests {
 
         assert_eq!(1, Source::count(&("a", 1)));
         assert_eq!(2, Source::count(&[("a", 1), ("b", 2)] as &[_]));
-        assert_eq!(0, Source::count(&Option::None::<(&str, i32)>));
+        assert_eq!(0, Source::count(&None::<(&str, i32)>));
         assert_eq!(1, Source::count(&OnePair { key: "a", value: 1 }));
     }
 
@@ -758,7 +743,7 @@ mod tests {
         );
         assert!(Source::get(&source, Key::from_str("c")).is_none());
 
-        let source = Option::None::<(&str, i32)>;
+        let source = None::<(&str, i32)>;
         assert!(Source::get(&source, Key::from_str("a")).is_none());
     }
 
