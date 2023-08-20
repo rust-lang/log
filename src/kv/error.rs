@@ -47,10 +47,10 @@ impl fmt::Display for Error {
         use self::Inner::*;
         match &self.inner {
             #[cfg(feature = "std")]
-            &Boxed(ref err) => err.fmt(f),
-            &Value(ref err) => err.fmt(f),
-            &Msg(ref msg) => msg.fmt(f),
-            &Fmt => fmt::Error.fmt(f),
+            Boxed(err) => err.fmt(f),
+            Value(err) => err.fmt(f),
+            Msg(msg) => msg.fmt(f),
+            Fmt => fmt::Error.fmt(f),
         }
     }
 }
