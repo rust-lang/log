@@ -187,7 +187,7 @@ where
     }
 
     fn count(&self) -> usize {
-        self.as_ref().map(Source::count).unwrap_or(0)
+        self.as_ref().map_or(0, Source::count)
     }
 }
 

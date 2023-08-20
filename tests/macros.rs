@@ -150,7 +150,7 @@ fn kv_named_args() {
 fn kv_expr_context() {
     match "chashu" {
         cat_1 => {
-            info!(target: "target", cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats")
+            info!(target: "target", cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats");
         }
     };
 }

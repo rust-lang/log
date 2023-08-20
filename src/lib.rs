@@ -1191,10 +1191,10 @@ where
     }
 
     fn log(&self, record: &Record) {
-        self.as_ref().log(record)
+        self.as_ref().log(record);
     }
     fn flush(&self) {
-        self.as_ref().flush()
+        self.as_ref().flush();
     }
 }
 
@@ -1208,10 +1208,10 @@ where
     }
 
     fn log(&self, record: &Record) {
-        self.as_ref().log(record)
+        self.as_ref().log(record);
     }
     fn flush(&self) {
-        self.as_ref().flush()
+        self.as_ref().flush();
     }
 }
 
