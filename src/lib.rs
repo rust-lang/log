@@ -48,24 +48,24 @@
 //!
 //! ### Examples
 //!
-//! ```edition2018
+//! ```edition2021
 //! # #[derive(Debug)] pub struct Yak(String);
 //! # impl Yak { fn shave(&mut self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
 //! use log::{info, warn};
 //!
 //! pub fn shave_the_yak(yak: &mut Yak) {
-//!     info!(target: "yak_events", "Commencing yak shaving for {:?}", yak);
+//!     info!(target: "yak_events", "Commencing yak shaving for {yak:?}");
 //!
 //!     loop {
 //!         match find_a_razor() {
 //!             Ok(razor) => {
-//!                 info!("Razor located: {}", razor);
+//!                 info!("Razor located: {razor}");
 //!                 yak.shave(razor);
 //!                 break;
 //!             }
 //!             Err(err) => {
-//!                 warn!("Unable to locate a razor: {}, retrying", err);
+//!                 warn!("Unable to locate a razor: {err}, retrying");
 //!             }
 //!         }
 //!     }
@@ -92,7 +92,7 @@
 //! with your log records. If we take the example from before, we can include
 //! some additional context besides what's in the formatted message:
 //!
-//! ```edition2018
+//! ```edition2021
 //! # use serde::Serialize;
 //! # #[derive(Debug, Serialize)] pub struct Yak(String);
 //! # impl Yak { fn shave(&mut self, _: u32) {} }
@@ -160,7 +160,7 @@
 //! logs all messages at the [`Error`][level_link], [`Warn`][level_link] or
 //! [`Info`][level_link] levels to stdout:
 //!
-//! ```edition2018
+//! ```edition2021
 //! use log::{Record, Level, Metadata};
 //!
 //! struct SimpleLogger;
@@ -193,7 +193,7 @@
 //! provide a function that wraps a call to [`set_logger`] and
 //! [`set_max_level`], handling initialization of the logger:
 //!
-//! ```edition2018
+//! ```edition2021
 //! # use log::{Level, Metadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
@@ -223,7 +223,7 @@
 //! identical to `set_logger` except that it takes a `Box<Log>` rather than a
 //! `&'static Log`:
 //!
-//! ```edition2018
+//! ```edition2021
 //! # use log::{Level, LevelFilter, Log, SetLoggerError, Metadata};
 //! # struct SimpleLogger;
 //! # impl log::Log for SimpleLogger {
@@ -688,7 +688,7 @@ impl<'a> MaybeStaticStr<'a> {
 /// The following example shows a simple logger that displays the level,
 /// module path, and message of any `Record` that is passed to it.
 ///
-/// ```edition2018
+/// ```edition2021
 /// struct SimpleLogger;
 ///
 /// impl log::Log for SimpleLogger {
@@ -845,7 +845,7 @@ impl<'a> Record<'a> {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::{Level, Record};
 ///
 /// let record = Record::builder()
@@ -860,7 +860,7 @@ impl<'a> Record<'a> {
 ///
 /// Alternatively, use [`MetadataBuilder`](struct.MetadataBuilder.html):
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::{Record, Level, MetadataBuilder};
 ///
 /// let error_metadata = MetadataBuilder::new()
@@ -1011,7 +1011,7 @@ impl<'a> Default for RecordBuilder<'a> {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::{Record, Level, Metadata};
 ///
 /// struct MyLogger;
@@ -1065,7 +1065,7 @@ impl<'a> Metadata<'a> {
 ///
 /// # Example
 ///
-/// ```edition2018
+/// ```edition2021
 /// let target = "myApp";
 /// use log::{Level, MetadataBuilder};
 /// let metadata = MetadataBuilder::new()
@@ -1315,7 +1315,7 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::{error, info, warn, Record, Level, Metadata, LevelFilter};
 ///
 /// static MY_LOGGER: MyLogger = MyLogger;

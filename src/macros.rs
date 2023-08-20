@@ -15,7 +15,7 @@
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::{log, Level};
 ///
 /// # fn main() {
@@ -65,14 +65,14 @@ macro_rules! log {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::error;
 ///
 /// # fn main() {
 /// let (err_info, port) = ("No connection", 22);
 ///
-/// error!("Error: {} on port {}", err_info, port);
-/// error!(target: "app_events", "App Error: {}, Port: {}", err_info, 22);
+/// error!("Error: {err_info} on port {port}");
+/// error!(target: "app_events", "App Error: {err_info}, Port: {port}");
 /// # }
 /// ```
 #[macro_export]
@@ -89,14 +89,14 @@ macro_rules! error {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::warn;
 ///
 /// # fn main() {
 /// let warn_description = "Invalid Input";
 ///
-/// warn!("Warning! {}!", warn_description);
-/// warn!(target: "input_events", "App received warning: {}", warn_description);
+/// warn!("Warning! {warn_description}!");
+/// warn!(target: "input_events", "App received warning: {warn_description}");
 /// # }
 /// ```
 #[macro_export]
@@ -113,7 +113,7 @@ macro_rules! warn {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::info;
 ///
 /// # fn main() {
@@ -139,7 +139,7 @@ macro_rules! info {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::debug;
 ///
 /// # fn main() {
@@ -164,7 +164,7 @@ macro_rules! debug {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::trace;
 ///
 /// # fn main() {
@@ -195,7 +195,7 @@ macro_rules! trace {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```edition2021
 /// use log::Level::Debug;
 /// use log::{debug, log_enabled};
 ///

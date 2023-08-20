@@ -43,12 +43,12 @@ pub fn shave_the_yak(yak: &mut Yak) {
     loop {
         match find_a_razor() {
             Ok(razor) => {
-                info!("Razor located: {}", razor);
+                info!("Razor located: {razor}");
                 yak.shave(razor);
                 break;
             }
             Err(err) => {
-                warn!("Unable to locate a razor: {}, retrying", err);
+                warn!("Unable to locate a razor: {err}, retrying");
             }
         }
     }
