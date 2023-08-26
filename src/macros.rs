@@ -38,6 +38,7 @@ macro_rules! log {
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
                 $crate::__private_api::line!(),
+                $crate::__private_api::column!(),
                 $crate::__private_api::Option::Some(&[$(($crate::__log_key!($key), &$value)),+])
             );
         }
@@ -52,6 +53,7 @@ macro_rules! log {
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
                 $crate::__private_api::line!(),
+                $crate::__private_api::column!(),
                 $crate::__private_api::Option::None,
             );
         }

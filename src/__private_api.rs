@@ -3,7 +3,7 @@
 use crate::{Level, Metadata, Record};
 use std::fmt::Arguments;
 pub use std::option::Option;
-pub use std::{file, format_args, line, module_path, stringify};
+pub use std::{column, file, format_args, line, module_path, stringify};
 
 #[cfg(not(feature = "kv_unstable"))]
 pub fn log(
@@ -11,6 +11,7 @@ pub fn log(
     level: Level,
     &(target, module_path, file): &(&str, &'static str, &'static str),
     line: u32,
+    column: u32,
     kvs: Option<&[(&str, &str)]>,
 ) {
     if kvs.is_some() {
@@ -27,6 +28,7 @@ pub fn log(
             .module_path_static(Some(module_path))
             .file_static(Some(file))
             .line(Some(line))
+            .column(Some(column))
             .build(),
     );
 }
@@ -37,6 +39,7 @@ pub fn log(
     level: Level,
     &(target, module_path, file): &(&str, &'static str, &'static str),
     line: u32,
+    column: u32,
     kvs: Option<&[(&str, &dyn crate::kv::ToValue)]>,
 ) {
     crate::logger().log(
@@ -47,6 +50,7 @@ pub fn log(
             .module_path_static(Some(module_path))
             .file_static(Some(file))
             .line(Some(line))
+            .column(Some(column))
             .key_values(&kvs)
             .build(),
     );
