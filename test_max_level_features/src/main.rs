@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "std")]
 use log::set_boxed_logger;
+
 #[cfg(not(feature = "std"))]
 fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
     log::set_logger(Box::leak(logger))
@@ -44,21 +45,21 @@ fn main() {
 fn test(a: &State, filter: LevelFilter) {
     log::set_max_level(filter);
     error!("");
-    last(&a, t(Level::Error, filter));
+    last(a, t(Level::Error, filter));
     warn!("");
-    last(&a, t(Level::Warn, filter));
+    last(a, t(Level::Warn, filter));
     info!("");
-    last(&a, t(Level::Info, filter));
+    last(a, t(Level::Info, filter));
 
     debug!("");
     if cfg!(debug_assertions) {
-        last(&a, t(Level::Debug, filter));
+        last(a, t(Level::Debug, filter));
     } else {
-        last(&a, None);
+        last(a, None);
     }
 
     trace!("");
-    last(&a, None);
+    last(a, None);
 
     fn t(lvl: Level, filter: LevelFilter) -> Option<Level> {
         if lvl <= filter {

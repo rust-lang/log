@@ -1,5 +1,4 @@
 [package]
-
 name = "log"
 version = "0.4.20" # remember to update html_root_url
 authors = ["The Rust Project Developers"]
@@ -73,3 +72,10 @@ value-bag = { version = "1.4", features = ["test"] }
 # By defining the crate as direct dependency we can increase it's minimal
 # version making the minimal (crate) version CI happy.
 proc-macro2 = { version = "1.0.63", default-features = false }
+
+[workspace]
+# TODO: the tests/ dir for historic reasons has a hacky setup as both tests/ dir and as tests crate.
+#       It breaks if it is added here, so this should be done at some later time
+members = [".", "test_max_level_features"]
+# The test_max_level_features test crate would not compile by default for no_std targets
+default-members = ["."]

@@ -48,8 +48,8 @@ jobs:
     - run: cargo test --verbose --features kv_unstable_sval
     - run: cargo test --verbose --features kv_unstable_serde
     - run: cargo test --verbose --features "kv_unstable kv_unstable_std kv_unstable_sval kv_unstable_serde"
-    - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
-    - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
+    - run: cargo run --verbose -p test_max_level_features
+    - run: cargo run --verbose -p test_max_level_features --release
 
   rustfmt:
     name: Rustfmt
@@ -61,10 +61,7 @@ jobs:
         rustup update stable --no-self-update
         rustup default stable
         rustup component add rustfmt
-      # log repo does not use Cargo workspaces, so `cargo fmt` will not check all the code
-      # perhaps this should be changed in the future
     - run: cargo fmt -- --check
-    - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
     - run: cargo fmt --manifest-path tests/Cargo.toml -- --check
 
   clippy:
@@ -78,7 +75,6 @@ jobs:
         rustup default stable
         rustup component add clippy
     - run: cargo clippy --verbose
-    - run: cargo clippy --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo clippy --verbose --manifest-path tests/Cargo.toml
 
   doc:
@@ -135,6 +131,7 @@ jobs:
         run: |
           rustup update 1.60.0 --no-self-update
           rustup default 1.60.0
+      - run: cargo test --verbose
       - run: cargo test --verbose --manifest-path tests/Cargo.toml
 
   embedded:

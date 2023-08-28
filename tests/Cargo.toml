@@ -1,3 +1,6 @@
+# This is a hack, see comment in the root Cargo.toml
+[workspace]
+
 [package]
 name = "integration"
 version = "0.1.0"
@@ -8,8 +11,8 @@ build = "src/build.rs"
 [features]
 std = ["log/std"]
 
-[dependencies.log]
-path = ".."
+[dependencies]
+log = { path = ".." }
 
-[dev-dependencies.rustversion]
-version = "1.0"
+[dev-dependencies]
+rustversion = "1.0"
