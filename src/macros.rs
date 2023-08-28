@@ -15,7 +15,7 @@
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::{log, Level};
 ///
 /// # fn main() {
@@ -65,7 +65,7 @@ macro_rules! log {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::error;
 ///
 /// # fn main() {
@@ -89,7 +89,7 @@ macro_rules! error {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::warn;
 ///
 /// # fn main() {
@@ -113,7 +113,7 @@ macro_rules! warn {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::info;
 ///
 /// # fn main() {
@@ -139,7 +139,7 @@ macro_rules! info {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::debug;
 ///
 /// # fn main() {
@@ -164,7 +164,7 @@ macro_rules! debug {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::trace;
 ///
 /// # fn main() {
@@ -195,7 +195,7 @@ macro_rules! trace {
 ///
 /// # Examples
 ///
-/// ```edition2021
+/// ```
 /// use log::Level::Debug;
 /// use log::{debug, log_enabled};
 ///
