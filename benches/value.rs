@@ -1,9 +1,6 @@
 #![cfg(feature = "kv_unstable")]
 #![feature(test)]
 
-extern crate log;
-extern crate test;
-
 use log::kv::Value;
 
 #[bench]

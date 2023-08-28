@@ -93,7 +93,7 @@
 //! some additional context besides what's in the formatted message:
 //!
 //! ```edition2018
-//! # #[macro_use] extern crate serde;
+//! # use serde::Serialize;
 //! # #[derive(Debug, Serialize)] pub struct Yak(String);
 //! # impl Yak { fn shave(&mut self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
@@ -334,12 +334,10 @@
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
-use std::cmp;
 #[cfg(feature = "std")]
 use std::error;
-use std::fmt;
-use std::mem;
 use std::str::FromStr;
+use std::{cmp, fmt, mem};
 
 #[macro_use]
 mod macros;
@@ -906,7 +904,7 @@ impl<'a> RecordBuilder<'a> {
                 file: None,
                 line: None,
                 #[cfg(feature = "kv_unstable")]
-                key_values: KeyValues(&Option::None::<(kv::Key, kv::Value)>),
+                key_values: KeyValues(&None::<(kv::Key, kv::Value)>),
             },
         }
     }
@@ -1537,9 +1535,7 @@ const fn get_max_level_inner() -> LevelFilter {
 
 #[cfg(test)]
 mod tests {
-    extern crate std;
     use super::{Level, LevelFilter, ParseLevelError};
-    use tests::std::string::ToString;
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1748,7 +1744,7 @@ mod tests {
     #[cfg(feature = "kv_unstable")]
     fn test_record_key_values_builder() {
         use super::Record;
-        use kv::{self, Visitor};
+        use crate::kv::{self, Visitor};
 
         struct TestVisitor {
             seen_pairs: usize,
