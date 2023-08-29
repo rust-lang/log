@@ -49,7 +49,7 @@ pub trait Source {
 }
 
 /// The default implementation of `Source::get`
-pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
+fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
     struct Get<'k, 'v> {
         key: Key<'k>,
         found: Option<Value<'v>>,
@@ -72,7 +72,7 @@ pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> O
 }
 
 /// The default implementation of `Source::count`.
-pub(crate) fn count_default(source: impl Source) -> usize {
+fn count_default(source: impl Source) -> usize {
     struct Count(usize);
 
     impl<'kvs> Visitor<'kvs> for Count {
@@ -159,7 +159,7 @@ where
     S: Source,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
-        if let Some(ref source) = *self {
+        if let Some(source) = self {
             source.visit(visitor)?;
         }
 
