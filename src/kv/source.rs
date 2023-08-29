@@ -225,6 +225,7 @@ mod std_support {
     use std::borrow::Borrow;
     use std::collections::{BTreeMap, HashMap};
     use std::hash::{BuildHasher, Hash};
+    use std::rc::Rc;
     use std::sync::Arc;
 
     impl<S> Source for Box<S>
@@ -245,6 +246,23 @@ mod std_support {
     }
 
     impl<S> Source for Arc<S>
+    where
+        S: Source + ?Sized,
+    {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+            Source::visit(&**self, visitor)
+        }
+
+        fn get(&self, key: Key) -> Option<Value<'_>> {
+            Source::get(&**self, key)
+        }
+
+        fn count(&self) -> usize {
+            Source::count(&**self)
+        }
+    }
+
+    impl<S> Source for Rc<S>
     where
         S: Source + ?Sized,
     {
