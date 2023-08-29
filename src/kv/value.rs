@@ -589,6 +589,7 @@ impl<'v> Value<'v> {
 #[cfg(feature = "kv_unstable_std")]
 mod std_support {
     use std::borrow::Cow;
+    use std::rc::Rc;
     use std::sync::Arc;
 
     use super::*;
@@ -603,6 +604,15 @@ mod std_support {
     }
 
     impl<T> ToValue for Arc<T>
+    where
+        T: ToValue + ?Sized,
+    {
+        fn to_value(&self) -> Value {
+            (**self).to_value()
+        }
+    }
+
+    impl<T> ToValue for Rc<T>
     where
         T: ToValue + ?Sized,
     {
