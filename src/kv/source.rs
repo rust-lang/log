@@ -374,6 +374,12 @@ mod std_support {
     }
 }
 
+// REVIEW: I'm not a 100% convinced that AsmAp and AsList are pulling their
+// weight. Their Source implementation simply calls the underlying type's
+// implementation, the only difference I can see is the sval::Value and
+// serde::Serialize implementations (ignoring fmt::Debug). Does that fall within
+// scope for the log crate?
+
 /// The result of calling `Source::as_map`.
 pub struct AsMap<S>(S);
 

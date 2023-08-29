@@ -83,6 +83,11 @@ macro_rules! as_sval {
 /// - Using the `ToValue` trait.
 /// - Using the standard `From` trait.
 ///
+// REVIEW: maybe add a section about which conversion method to use and when? Or
+// "the prefered ordering" of which methods to use. For example I think it's
+// quite confusing when the use capture_* and when to use from_* (the only
+// difference I can spot is the support for downcasting in capture_*).
+///
 /// ## Using the `Value::capture_*` methods
 ///
 /// `Value` offers a few constructor methods that capture values of different kinds.
@@ -376,6 +381,9 @@ impl<'v> fmt::Display for Value<'v> {
     }
 }
 
+// REVIEW: I'm wondering if people will accidentally use these implementations
+// when converting a T: fmt::Debug/Display to a Value, losing the ability to
+// downcast (without knowing it).
 impl ToValue for dyn fmt::Debug {
     fn to_value(&self) -> Value {
         Value::from_dyn_debug(self)
@@ -615,6 +623,9 @@ mod std_support {
 
     impl<'v> Value<'v> {
         /// Try convert this value into a string.
+        // REVIEW: maybe rename this to contain COW somehow? I would expect &str
+        // be returned based on the to_str method name (same as e.g.
+        // Key::to_str).
         pub fn to_str(&self) -> Option<Cow<str>> {
             self.inner.to_str()
         }
@@ -635,6 +646,9 @@ pub trait Visit<'v> {
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
     /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
+    // REVIEW: Do we want seperate methods for sval and serde values? Otherwise
+    // we still have sort of "catch all" method in visit_any. Of course they can
+    // default to calling visit_any (as all other methods do).
     fn visit_any(&mut self, value: Value) -> Result<(), Error>;
 
     /// Visit an unsigned integer.

@@ -49,6 +49,8 @@ impl<'k> Key<'k> {
         self.key
     }
 
+    // REVIEW: do we still want this? Isn't most of log's API based on borrowed
+    // types?
     /// Try get a string borrowed for the `'k` lifetime from this key.
     pub fn to_borrowed_str(&self) -> Option<&'k str> {
         // NOTE: This API leaves room for keys to be owned
