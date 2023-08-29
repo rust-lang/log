@@ -121,15 +121,6 @@ macro_rules! as_sval {
 /// assert_eq!(Some(42), value.to_i64());
 /// ```
 ///
-/// ```
-/// # use std::fmt::Debug;
-/// use log::kv::ToValue;
-///
-/// let value = (&42i32 as &dyn Debug).to_value();
-///
-/// assert_eq!(None, value.to_i64());
-/// ```
-///
 /// ## Using the standard `From` trait
 ///
 /// Standard types that implement `ToValue` also implement `From`.
@@ -373,25 +364,6 @@ impl<'v> fmt::Debug for Value<'v> {
 impl<'v> fmt::Display for Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.inner, f)
-    }
-}
-
-impl ToValue for dyn fmt::Debug {
-    fn to_value(&self) -> Value {
-        Value::from_dyn_debug(self)
-    }
-}
-
-impl ToValue for dyn fmt::Display {
-    fn to_value(&self) -> Value {
-        Value::from_dyn_display(self)
-    }
-}
-
-#[cfg(feature = "kv_unstable_std")]
-impl ToValue for dyn std::error::Error + 'static {
-    fn to_value(&self) -> Value {
-        Value::from_dyn_error(self)
     }
 }
 
