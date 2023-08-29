@@ -30,13 +30,9 @@ pub trait Source {
     ///
     /// A source that can provide a more efficient implementation of this method
     /// should override it.
-    #[cfg(not(test))]
     fn get(&self, key: Key) -> Option<Value<'_>> {
         get_default(self, key)
     }
-
-    #[cfg(test)]
-    fn get(&self, key: Key) -> Option<Value<'_>>;
 
     /// Count the number of key-value pairs that can be visited.
     ///
@@ -47,17 +43,13 @@ pub trait Source {
     ///
     /// A subsequent call to `visit` should yield the same number of key-value pairs
     /// to the visitor, unless that visitor fails part way through.
-    #[cfg(not(test))]
     fn count(&self) -> usize {
         count_default(self)
     }
-
-    #[cfg(test)]
-    fn count(&self) -> usize;
 }
 
 /// The default implementation of `Source::get`
-pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
+fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value<'v>> {
     struct Get<'k, 'v> {
         key: Key<'k>,
         found: Option<Value<'v>>,
@@ -80,7 +72,7 @@ pub(crate) fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> O
 }
 
 /// The default implementation of `Source::count`.
-pub(crate) fn count_default(source: impl Source) -> usize {
+fn count_default(source: impl Source) -> usize {
     struct Count(usize);
 
     impl<'kvs> Visitor<'kvs> for Count {
@@ -158,7 +150,7 @@ where
     }
 
     fn count(&self) -> usize {
-        self.len()
+        self.iter().map(Source::count).sum()
     }
 }
 
@@ -167,7 +159,7 @@ where
     S: Source,
 {
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
-        if let Some(ref source) = *self {
+        if let Some(source) = self {
             source.visit(visitor)?;
         }
 
@@ -233,8 +225,44 @@ mod std_support {
     use std::borrow::Borrow;
     use std::collections::{BTreeMap, HashMap};
     use std::hash::{BuildHasher, Hash};
+    use std::rc::Rc;
+    use std::sync::Arc;
 
     impl<S> Source for Box<S>
+    where
+        S: Source + ?Sized,
+    {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+            Source::visit(&**self, visitor)
+        }
+
+        fn get(&self, key: Key) -> Option<Value<'_>> {
+            Source::get(&**self, key)
+        }
+
+        fn count(&self) -> usize {
+            Source::count(&**self)
+        }
+    }
+
+    impl<S> Source for Arc<S>
+    where
+        S: Source + ?Sized,
+    {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+            Source::visit(&**self, visitor)
+        }
+
+        fn get(&self, key: Key) -> Option<Value<'_>> {
+            Source::get(&**self, key)
+        }
+
+        fn count(&self) -> usize {
+            Source::count(&**self)
+        }
+    }
+
+    impl<S> Source for Rc<S>
     where
         S: Source + ?Sized,
     {
@@ -713,14 +741,6 @@ mod tests {
         impl Source for OnePair {
             fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
                 visitor.visit_pair(self.key.to_key(), self.value.to_value())
-            }
-
-            fn get(&self, key: Key) -> Option<Value<'_>> {
-                get_default(self, key)
-            }
-
-            fn count(&self) -> usize {
-                count_default(self)
             }
         }
 
