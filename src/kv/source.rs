@@ -150,7 +150,7 @@ where
     }
 
     fn count(&self) -> usize {
-        self.len()
+        self.iter().map(Source::count).sum()
     }
 }
 
