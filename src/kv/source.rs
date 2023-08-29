@@ -30,13 +30,9 @@ pub trait Source {
     ///
     /// A source that can provide a more efficient implementation of this method
     /// should override it.
-    #[cfg(not(test))]
     fn get(&self, key: Key) -> Option<Value<'_>> {
         get_default(self, key)
     }
-
-    #[cfg(test)]
-    fn get(&self, key: Key) -> Option<Value<'_>>;
 
     /// Count the number of key-value pairs that can be visited.
     ///
@@ -47,13 +43,9 @@ pub trait Source {
     ///
     /// A subsequent call to `visit` should yield the same number of key-value pairs
     /// to the visitor, unless that visitor fails part way through.
-    #[cfg(not(test))]
     fn count(&self) -> usize {
         count_default(self)
     }
-
-    #[cfg(test)]
-    fn count(&self) -> usize;
 }
 
 /// The default implementation of `Source::get`
@@ -713,14 +705,6 @@ mod tests {
         impl Source for OnePair {
             fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
                 visitor.visit_pair(self.key.to_key(), self.value.to_value())
-            }
-
-            fn get(&self, key: Key) -> Option<Value<'_>> {
-                get_default(self, key)
-            }
-
-            fn count(&self) -> usize {
-                count_default(self)
             }
         }
 
