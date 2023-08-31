@@ -722,6 +722,7 @@ pub struct Record<'a> {
     module_path: Option<MaybeStaticStr<'a>>,
     file: Option<MaybeStaticStr<'a>>,
     line: Option<u32>,
+    column: Option<u32>,
     #[cfg(feature = "kv_unstable")]
     key_values: KeyValues<'a>,
 }
@@ -810,6 +811,12 @@ impl<'a> Record<'a> {
         self.line
     }
 
+    /// The column containing the message.
+    #[inline]
+    pub fn column(&self) -> Option<u32> {
+        self.column
+    }
+
     /// The structured key-value pairs associated with the message.
     #[cfg(feature = "kv_unstable")]
     #[inline]
@@ -831,6 +838,7 @@ impl<'a> Record<'a> {
                 module_path: self.module_path,
                 file: self.file,
                 line: self.line,
+                column: self.column,
                 key_values: self.key_values.clone(),
             },
         }
@@ -854,6 +862,7 @@ impl<'a> Record<'a> {
 ///                 .target("myApp")
 ///                 .file(Some("server.rs"))
 ///                 .line(Some(144))
+///                 .column(Some(12))
 ///                 .module_path(Some("server"))
 ///                 .build();
 /// ```
@@ -872,6 +881,7 @@ impl<'a> Record<'a> {
 ///                 .metadata(error_metadata)
 ///                 .args(format_args!("Error!"))
 ///                 .line(Some(433))
+///                 .column(Some(22))
 ///                 .file(Some("app.rs"))
 ///                 .module_path(Some("server"))
 ///                 .build();
@@ -891,6 +901,7 @@ impl<'a> RecordBuilder<'a> {
     /// - `module_path`: `None`
     /// - `file`: `None`
     /// - `line`: `None`
+    /// - `column`: `None`
     ///
     /// [`format_args!("")`]: https://doc.rust-lang.org/std/macro.format_args.html
     /// [`Metadata::builder().build()`]: struct.MetadataBuilder.html#method.build
@@ -903,6 +914,7 @@ impl<'a> RecordBuilder<'a> {
                 module_path: None,
                 file: None,
                 line: None,
+                column: None,
                 #[cfg(feature = "kv_unstable")]
                 key_values: KeyValues(&None::<(kv::Key, kv::Value)>),
             },
@@ -969,6 +981,13 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn line(&mut self, line: Option<u32>) -> &mut RecordBuilder<'a> {
         self.record.line = line;
+        self
+    }
+
+    /// Set [`column`](struct.Record.html#method.column)
+    #[inline]
+    pub fn column(&mut self, column: Option<u32>) -> &mut RecordBuilder<'a> {
+        self.record.column = column;
         self
     }
 
@@ -1696,11 +1715,13 @@ mod tests {
             .module_path(Some("foo"))
             .file(Some("bar"))
             .line(Some(30))
+            .column(Some(12))
             .build();
         assert_eq!(record_test.metadata().target(), "myApp");
         assert_eq!(record_test.module_path(), Some("foo"));
         assert_eq!(record_test.file(), Some("bar"));
         assert_eq!(record_test.line(), Some(30));
+        assert_eq!(record_test.column(), Some(12));
     }
 
     #[test]
@@ -1715,11 +1736,13 @@ mod tests {
             .module_path(Some("foo"))
             .file(Some("bar"))
             .line(Some(30))
+            .column(Some(12))
             .build();
         assert_eq!(record_test.target(), "myApp");
         assert_eq!(record_test.module_path(), Some("foo"));
         assert_eq!(record_test.file(), Some("bar"));
         assert_eq!(record_test.line(), Some(30));
+        assert_eq!(record_test.column(), Some(12));
     }
 
     #[test]
@@ -1730,6 +1753,7 @@ mod tests {
             .module_path(Some("foo"))
             .file(Some("bar"))
             .line(Some(30))
+            .column(Some(12))
             .target(target)
             .level(Level::Error)
             .build();
@@ -1738,6 +1762,7 @@ mod tests {
         assert_eq!(record_test.module_path(), Some("foo"));
         assert_eq!(record_test.file(), Some("bar"));
         assert_eq!(record_test.line(), Some(30));
+        assert_eq!(record_test.column(), Some(12));
     }
 
     #[test]
