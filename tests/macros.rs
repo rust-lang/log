@@ -1,14 +1,12 @@
-#[cfg(not(lib_build))]
-#[macro_use]
-extern crate log;
+use log::{log, log_enabled};
 
 macro_rules! all_log_macros {
     ($($arg:tt)*) => ({
-        trace!($($arg)*);
-        debug!($($arg)*);
-        info!($($arg)*);
-        warn!($($arg)*);
-        error!($($arg)*);
+        ::log::trace!($($arg)*);
+        ::log::debug!($($arg)*);
+        ::log::info!($($arg)*);
+        ::log::warn!($($arg)*);
+        ::log::error!($($arg)*);
     });
 }
 
@@ -150,7 +148,7 @@ fn kv_named_args() {
 fn kv_expr_context() {
     match "chashu" {
         cat_1 => {
-            info!(target: "target", cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats")
+            log::info!(target: "target", cat_1 = cat_1, cat_2 = "nori"; "hello {}", "cats");
         }
     };
 }

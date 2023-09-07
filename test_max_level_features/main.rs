@@ -1,13 +1,10 @@
-#[macro_use]
-extern crate log;
-
+use log::{debug, error, info, trace, warn, Level, LevelFilter, Log, Metadata, Record};
 use std::sync::{Arc, Mutex};
-use log::{Level, LevelFilter, Log, Record, Metadata};
 
 #[cfg(feature = "std")]
 use log::set_boxed_logger;
 #[cfg(not(feature = "std"))]
-fn set_boxed_logger(logger: Box<Log>) -> Result<(), log::SetLoggerError> {
+fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
     log::set_logger(Box::leak(logger))
 }
 
@@ -30,7 +27,9 @@ impl Log for Logger {
 }
 
 fn main() {
-    let me = Arc::new(State { last_log: Mutex::new(None) });
+    let me = Arc::new(State {
+        last_log: Mutex::new(None),
+    });
     let a = me.clone();
     set_boxed_logger(Box::new(Logger(me))).unwrap();
 
@@ -62,7 +61,11 @@ fn test(a: &State, filter: LevelFilter) {
     last(&a, None);
 
     fn t(lvl: Level, filter: LevelFilter) -> Option<Level> {
-        if lvl <= filter {Some(lvl)} else {None}
+        if lvl <= filter {
+            Some(lvl)
+        } else {
+            None
+        }
     }
 }
 

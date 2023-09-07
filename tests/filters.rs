@@ -1,10 +1,6 @@
 #![allow(dead_code, unused_imports)]
 
-#[cfg(not(lib_build))]
-#[macro_use]
-extern crate log;
-
-use log::{Level, LevelFilter, Log, Metadata, Record};
+use log::{debug, error, info, trace, warn, Level, LevelFilter, Log, Metadata, Record};
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "std")]

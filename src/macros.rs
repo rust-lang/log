@@ -33,10 +33,11 @@ macro_rules! log {
     (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api_log(
+            $crate::__private_api::log(
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!(), $crate::__private_api::line!()),
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                $crate::__private_api::line!(),
                 $crate::__private_api::Option::Some(&[$(($crate::__log_key!($key), &$value)),+])
             );
         }
@@ -46,10 +47,11 @@ macro_rules! log {
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api_log(
+            $crate::__private_api::log(
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!(), $crate::__private_api::line!()),
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                $crate::__private_api::line!(),
                 $crate::__private_api::Option::None,
             );
         }
@@ -59,7 +61,7 @@ macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: $crate::__private_api::module_path!(), $lvl, $($arg)+));
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
@@ -106,7 +108,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
@@ -153,7 +155,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
@@ -201,7 +203,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
@@ -247,7 +249,7 @@ cfg_if! {
         }
     }
 }
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
@@ -329,7 +331,7 @@ macro_rules! log_enabled {
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL
             && lvl <= $crate::max_level()
-            && $crate::__private_api_enabled(lvl, $target)
+            && $crate::__private_api::enabled(lvl, $target)
     }};
     ($lvl:expr) => {
         $crate::log_enabled!(target: $crate::__private_api::module_path!(), $lvl)
