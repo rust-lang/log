@@ -66,7 +66,7 @@ cfg_if::cfg_if! {
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
             feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")),
-        all(not(feature = "release_max_level_off"),
+        all(not(any(feature = "release_max_level_off")),
             any(feature = "release_max_level_error", feature = "release_max_level_warn", feature = "release_max_level_info",
                 feature = "release_max_level_debug", feature = "release_max_level_trace")
         )
@@ -113,7 +113,7 @@ cfg_if::cfg_if! {
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
             feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")),
-        all(not(feature = "release_max_level_off"),
+        all(not(any(feature = "release_max_level_off", feature = "release_max_level_error")),
             any(feature = "release_max_level_warn", feature = "release_max_level_info", feature = "release_max_level_debug",
                 feature = "release_max_level_trace")
         )
@@ -160,7 +160,7 @@ cfg_if::cfg_if! {
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
             feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")),
-        all(not(feature = "release_max_level_off"),
+        all(not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn")),
             any(feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")
         )
     ))]{
@@ -208,7 +208,8 @@ cfg_if::cfg_if! {
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
             feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")),
-        all(not(feature = "release_max_level_off"),
+        all(not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn", 
+                feature = "release_max_level_info")),
             any(feature = "release_max_level_debug", feature = "release_max_level_trace")
         )
     ))]{
@@ -254,7 +255,8 @@ cfg_if::cfg_if! {
         debug_assertions,
         not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn",
             feature = "release_max_level_info", feature = "release_max_level_debug", feature = "release_max_level_trace")),
-        all(not(feature = "release_max_level_off"),
+        all(not(any(feature = "release_max_level_off", feature = "release_max_level_error", feature = "release_max_level_warn", 
+                feature = "release_max_level_info", feature = "release_max_level_debug")),
             any(feature = "release_max_level_trace")
         )
     ))]{
