@@ -795,7 +795,7 @@ impl<'a> Record<'a> {
         self.file.map(|s| s.get())
     }
 
-    /// The module path of the message, if it is a `'static` string.
+    /// The source file containing the message, if it is a `'static` string.
     #[inline]
     pub fn file_static(&self) -> Option<&'static str> {
         match self.file {
