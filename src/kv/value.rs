@@ -607,7 +607,7 @@ mod std_support {
 
     impl<'v> Value<'v> {
         /// Try convert this value into a string.
-        pub fn to_str(&self) -> Option<Cow<'v, str>> {
+        pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
             self.inner.to_str()
         }
     }
