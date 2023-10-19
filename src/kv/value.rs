@@ -132,6 +132,18 @@ macro_rules! as_sval {
 ///
 /// assert_eq!(Some(42), value.to_i64());
 /// ```
+///
+/// # Serialization
+///
+/// `Value` provides a number of ways to be serialized.
+///
+/// For basic types the [`Value::visit`] method can be used to extract the
+/// underlying typed value. However this is limited in the amount of types
+/// supported (see the [`Visit`] trait methods).
+///
+/// For more complex types one of the following traits can be used:
+///  * [`sval::Value`], requires the `kv_unstable_sval` feature.
+///  * [`serde::Serialize`], requires the `kv_unstable_serde` feature.
 pub struct Value<'v> {
     inner: ValueBag<'v>,
 }
@@ -620,6 +632,10 @@ mod std_support {
 }
 
 /// A visitor for a `Value`.
+///
+/// Also see [`Value`'s documentation on seralization].
+///
+/// [`Value`'s documentation on seralization]: Value#serialization
 pub trait Visit<'v> {
     /// Visit a `Value`.
     ///
