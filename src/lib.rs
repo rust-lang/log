@@ -241,9 +241,7 @@
 //!
 //! # Compile time filters
 //!
-//! Log levels can be statically disabled at compile time via Cargo features. Log invocations at
-//! disabled levels will be skipped and will not even be present in the resulting binary.
-//! This level is configured separately for release and debug builds. The features are:
+//! Log levels can be statically disabled at compile time by enabling one of these Cargo features:
 //!
 //! * `max_level_off`
 //! * `max_level_error`
@@ -251,15 +249,19 @@
 //! * `max_level_info`
 //! * `max_level_debug`
 //! * `max_level_trace`
+//!
+//! Log invocations at disabled levels will be skipped and will not even be present in the
+//! resulting binary. These features control the value of the `STATIC_MAX_LEVEL` constant. The
+//! logging macros check this value before logging a message. By default, no levels are disabled.
+//!
+//! It is possible to override this level for release builds only with the following features:
+//!
 //! * `release_max_level_off`
 //! * `release_max_level_error`
 //! * `release_max_level_warn`
 //! * `release_max_level_info`
 //! * `release_max_level_debug`
 //! * `release_max_level_trace`
-//!
-//! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
-//! this value before logging a message. By default, no levels are disabled.
 //!
 //! Libraries should avoid using the max level features because they're global and can't be changed
 //! once they're set.
