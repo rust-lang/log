@@ -1480,9 +1480,7 @@ pub mod __private_api;
 /// should compare the level against this value.
 ///
 /// [`logger`]: fn.logger.html
-pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
-
-const MAX_LEVEL_INNER: LevelFilter = match cfg!(debug_assertions) {
+pub const STATIC_MAX_LEVEL: LevelFilter = match cfg!(debug_assertions) {
     false if cfg!(feature = "release_max_level_off") => LevelFilter::Off,
     false if cfg!(feature = "release_max_level_error") => LevelFilter::Error,
     false if cfg!(feature = "release_max_level_warn") => LevelFilter::Warn,
