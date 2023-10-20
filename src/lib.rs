@@ -1482,59 +1482,20 @@ pub mod __private_api;
 /// [`logger`]: fn.logger.html
 pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
 
-const MAX_LEVEL_INNER: LevelFilter = get_max_level_inner();
-
-const fn get_max_level_inner() -> LevelFilter {
-    #[allow(unreachable_code)]
-    {
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_off"))]
-        {
-            return LevelFilter::Off;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_error"))]
-        {
-            return LevelFilter::Error;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_warn"))]
-        {
-            return LevelFilter::Warn;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_info"))]
-        {
-            return LevelFilter::Info;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_debug"))]
-        {
-            return LevelFilter::Debug;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_trace"))]
-        {
-            return LevelFilter::Trace;
-        }
-        #[cfg(feature = "max_level_off")]
-        {
-            return LevelFilter::Off;
-        }
-        #[cfg(feature = "max_level_error")]
-        {
-            return LevelFilter::Error;
-        }
-        #[cfg(feature = "max_level_warn")]
-        {
-            return LevelFilter::Warn;
-        }
-        #[cfg(feature = "max_level_info")]
-        {
-            return LevelFilter::Info;
-        }
-        #[cfg(feature = "max_level_debug")]
-        {
-            return LevelFilter::Debug;
-        }
-
-        LevelFilter::Trace
-    }
-}
+const MAX_LEVEL_INNER: LevelFilter = match cfg!(debug_assertions) {
+    false if cfg!(feature = "release_max_level_off") => LevelFilter::Off,
+    false if cfg!(feature = "release_max_level_error") => LevelFilter::Error,
+    false if cfg!(feature = "release_max_level_warn") => LevelFilter::Warn,
+    false if cfg!(feature = "release_max_level_info") => LevelFilter::Info,
+    false if cfg!(feature = "release_max_level_debug") => LevelFilter::Debug,
+    false if cfg!(feature = "release_max_level_trace") => LevelFilter::Trace,
+    _ if cfg!(feature = "max_level_off") => LevelFilter::Off,
+    _ if cfg!(feature = "max_level_error") => LevelFilter::Error,
+    _ if cfg!(feature = "max_level_warn") => LevelFilter::Warn,
+    _ if cfg!(feature = "max_level_info") => LevelFilter::Info,
+    _ if cfg!(feature = "max_level_debug") => LevelFilter::Debug,
+    _ => LevelFilter::Trace,
+};
 
 #[cfg(test)]
 mod tests {
