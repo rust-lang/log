@@ -441,15 +441,13 @@ impl<'v> From<&'v i128> for Value<'v> {
 
 impl<'v> From<&'v std::num::NonZeroU128> for Value<'v> {
     fn from(v: &'v std::num::NonZeroU128) -> Value<'v> {
-        // SAFETY: `NonZeroU128` and `u128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroU128 as *const u128) })
+        Value::from_value_bag::<&'v u128>(zerocopy::transmute_ref!(v))
     }
 }
 
 impl<'v> From<&'v std::num::NonZeroI128> for Value<'v> {
     fn from(v: &'v std::num::NonZeroI128) -> Value<'v> {
-        // SAFETY: `NonZeroI128` and `i128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroI128 as *const i128) })
+        Value::from_value_bag::<&'v i128>(zerocopy::transmute_ref!(v))
     }
 }
 
