@@ -245,9 +245,7 @@
 //!
 //! # Compile time filters
 //!
-//! Log levels can be statically disabled at compile time via Cargo features. Log invocations at
-//! disabled levels will be skipped and will not even be present in the resulting binary.
-//! This level is configured separately for release and debug builds. The features are:
+//! Log levels can be statically disabled at compile time by enabling one of these Cargo features:
 //!
 //! * `max_level_off`
 //! * `max_level_error`
@@ -255,15 +253,19 @@
 //! * `max_level_info`
 //! * `max_level_debug`
 //! * `max_level_trace`
+//!
+//! Log invocations at disabled levels will be skipped and will not even be present in the
+//! resulting binary. These features control the value of the `STATIC_MAX_LEVEL` constant. The
+//! logging macros check this value before logging a message. By default, no levels are disabled.
+//!
+//! It is possible to override this level for release builds only with the following features:
+//!
 //! * `release_max_level_off`
 //! * `release_max_level_error`
 //! * `release_max_level_warn`
 //! * `release_max_level_info`
 //! * `release_max_level_debug`
 //! * `release_max_level_trace`
-//!
-//! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
-//! this value before logging a message. By default, no levels are disabled.
 //!
 //! Libraries should avoid using the max level features because they're global and can't be changed
 //! once they're set.
@@ -341,6 +343,7 @@
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
 
+use std::cfg;
 #[cfg(feature = "std")]
 use std::error;
 use std::str::FromStr;
@@ -1484,65 +1487,24 @@ pub mod __private_api;
 /// should compare the level against this value.
 ///
 /// [`logger`]: fn.logger.html
-pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
-
-const MAX_LEVEL_INNER: LevelFilter = get_max_level_inner();
-
-const fn get_max_level_inner() -> LevelFilter {
-    #[allow(unreachable_code)]
-    {
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_off"))]
-        {
-            return LevelFilter::Off;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_error"))]
-        {
-            return LevelFilter::Error;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_warn"))]
-        {
-            return LevelFilter::Warn;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_info"))]
-        {
-            return LevelFilter::Info;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_debug"))]
-        {
-            return LevelFilter::Debug;
-        }
-        #[cfg(all(not(debug_assertions), feature = "release_max_level_trace"))]
-        {
-            return LevelFilter::Trace;
-        }
-        #[cfg(feature = "max_level_off")]
-        {
-            return LevelFilter::Off;
-        }
-        #[cfg(feature = "max_level_error")]
-        {
-            return LevelFilter::Error;
-        }
-        #[cfg(feature = "max_level_warn")]
-        {
-            return LevelFilter::Warn;
-        }
-        #[cfg(feature = "max_level_info")]
-        {
-            return LevelFilter::Info;
-        }
-        #[cfg(feature = "max_level_debug")]
-        {
-            return LevelFilter::Debug;
-        }
-
-        LevelFilter::Trace
-    }
-}
+pub const STATIC_MAX_LEVEL: LevelFilter = match cfg!(debug_assertions) {
+    false if cfg!(feature = "release_max_level_off") => LevelFilter::Off,
+    false if cfg!(feature = "release_max_level_error") => LevelFilter::Error,
+    false if cfg!(feature = "release_max_level_warn") => LevelFilter::Warn,
+    false if cfg!(feature = "release_max_level_info") => LevelFilter::Info,
+    false if cfg!(feature = "release_max_level_debug") => LevelFilter::Debug,
+    false if cfg!(feature = "release_max_level_trace") => LevelFilter::Trace,
+    _ if cfg!(feature = "max_level_off") => LevelFilter::Off,
+    _ if cfg!(feature = "max_level_error") => LevelFilter::Error,
+    _ if cfg!(feature = "max_level_warn") => LevelFilter::Warn,
+    _ if cfg!(feature = "max_level_info") => LevelFilter::Info,
+    _ if cfg!(feature = "max_level_debug") => LevelFilter::Debug,
+    _ => LevelFilter::Trace,
+};
 
 #[cfg(test)]
 mod tests {
-    use super::{Level, LevelFilter, ParseLevelError};
+    use super::{Level, LevelFilter, ParseLevelError, STATIC_MAX_LEVEL};
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1652,6 +1614,54 @@ mod tests {
         ];
         for (input, expected) in tests {
             assert_eq!(*expected, input.as_str());
+        }
+    }
+
+    #[test]
+    #[cfg_attr(not(debug_assertions), ignore)]
+    fn test_static_max_level_debug() {
+        if cfg!(feature = "max_level_off") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Off);
+        } else if cfg!(feature = "max_level_error") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Error);
+        } else if cfg!(feature = "max_level_warn") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Warn);
+        } else if cfg!(feature = "max_level_info") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Info);
+        } else if cfg!(feature = "max_level_debug") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Debug);
+        } else {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Trace);
+        }
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, ignore)]
+    fn test_static_max_level_release() {
+        if cfg!(feature = "release_max_level_off") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Off);
+        } else if cfg!(feature = "release_max_level_error") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Error);
+        } else if cfg!(feature = "release_max_level_warn") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Warn);
+        } else if cfg!(feature = "release_max_level_info") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Info);
+        } else if cfg!(feature = "release_max_level_debug") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Debug);
+        } else if cfg!(feature = "release_max_level_trace") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Trace);
+        } else if cfg!(feature = "max_level_off") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Off);
+        } else if cfg!(feature = "max_level_error") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Error);
+        } else if cfg!(feature = "max_level_warn") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Warn);
+        } else if cfg!(feature = "max_level_info") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Info);
+        } else if cfg!(feature = "max_level_debug") {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Debug);
+        } else {
+            assert_eq!(STATIC_MAX_LEVEL, LevelFilter::Trace);
         }
     }
 
