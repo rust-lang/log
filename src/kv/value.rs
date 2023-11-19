@@ -619,7 +619,7 @@ mod std_support {
 
     impl<'v> Value<'v> {
         /// Try convert this value into a string.
-        pub fn to_str(&self) -> Option<Cow<'v, str>> {
+        pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
             self.inner.to_str()
         }
     }
@@ -910,12 +910,12 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_to_str() {
+    fn test_to_cow_str() {
         for v in str() {
             assert!(v.to_borrowed_str().is_some());
 
             #[cfg(feature = "kv_unstable_std")]
-            assert!(v.to_str().is_some());
+            assert!(v.to_cow_str().is_some());
         }
 
         let short_lived = String::from("short lived");
@@ -924,13 +924,13 @@ pub(crate) mod tests {
         assert!(v.to_borrowed_str().is_some());
 
         #[cfg(feature = "kv_unstable_std")]
-        assert!(v.to_str().is_some());
+        assert!(v.to_cow_str().is_some());
 
         for v in unsigned().chain(signed()).chain(float()).chain(bool()) {
             assert!(v.to_borrowed_str().is_none());
 
             #[cfg(feature = "kv_unstable_std")]
-            assert!(v.to_str().is_none());
+            assert!(v.to_cow_str().is_none());
         }
     }
 
