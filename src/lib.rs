@@ -149,10 +149,14 @@
 //!     * [win_dbg_logger]
 //!     * [db_logger]
 //!     * [log-to-defmt]
+//!     * [logcontrol-log]
 //! * For WebAssembly binaries:
 //!     * [console_log]
 //! * For dynamic libraries:
 //!     * You may need to construct an FFI-safe wrapper over `log` to initialize in your libraries
+//! * Utilities:
+//!     * [log_err]
+//!     * [log-reload]
 //!
 //! # Implementing a Logger
 //!
@@ -317,6 +321,9 @@
 //! [log-to-defmt]: https://docs.rs/log-to-defmt/*/log_to_defmt/
 //! [console_log]: https://docs.rs/console_log/*/console_log/
 //! [structured-logger]: https://docs.rs/structured-logger/latest/structured_logger/
+//! [logcontrol-log]: https://docs.rs/logcontrol-log/*/logcontrol_log/
+//! [log_err]: https://docs.rs/log_err/*/log_err/
+//! [log-reload]: https://docs.rs/log-reload/*/log_reload/
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
