@@ -1,6 +1,8 @@
 # Change Log
 
 ## [Unreleased]
+* Migrate to 2021 edition and minor cleanups by @nyurik in https://github.com/rust-lang/log/pull/580
+* Use inline format args by @nyurik in https://github.com/rust-lang/log/pull/577
 
 ## [0.4.20] - 2023-07-11
 

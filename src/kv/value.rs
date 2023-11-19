@@ -983,7 +983,7 @@ pub(crate) mod tests {
 
         impl<'v> Visit<'v> for Extract {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
-                unimplemented!("unexpected value: {:?}", value)
+                unimplemented!("unexpected value: {value:?}")
             }
 
             fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
@@ -1005,7 +1005,7 @@ pub(crate) mod tests {
 
         impl<'v> Visit<'v> for Extract<'v> {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
-                unimplemented!("unexpected value: {:?}", value)
+                unimplemented!("unexpected value: {value:?}")
             }
 
             fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {

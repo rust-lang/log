@@ -337,7 +337,7 @@ fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     // Write each key-value pair on a new line
     record
         .key_values()
-        .for_each(|k, v| writeln!("{}: {}", k, v))?;
+        .for_each(|k, v| writeln!("{k}: {v}"))?;
 
     Ok(())
 }
