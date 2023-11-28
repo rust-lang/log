@@ -3,7 +3,7 @@
 use self::sealed::KVs;
 use crate::{Level, Metadata, Record};
 use std::fmt::Arguments;
-pub use std::{file, format_args, line, module_path, stringify};
+pub use std::{format_args, module_path, stringify};
 
 #[cfg(feature = "kv_unstable")]
 pub type Value<'a> = dyn crate::kv::value::ToValue + 'a;
@@ -32,6 +32,16 @@ impl<'a> KVs<'a> for () {
     fn into_kvs(self) -> Option<&'a [(&'a str, &'a Value<'a>)]> {
         None
     }
+}
+
+#[track_caller]
+pub fn file<'a>() -> &'a str {
+    ::std::panic::Location::caller().file()
+}
+
+#[track_caller]
+pub fn line() -> u32 {
+    ::std::panic::Location::caller().line()
 }
 
 // Log implementation.

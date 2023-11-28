@@ -36,8 +36,8 @@ macro_rules! log {
             $crate::__private_api::log::<&_>(
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
-                $crate::__private_api::line!(),
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file()),
+                $crate::__private_api::line(),
                 &[$(($crate::__log_key!($key), &$value)),+]
             );
         }
@@ -50,8 +50,8 @@ macro_rules! log {
             $crate::__private_api::log(
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
-                $crate::__private_api::line!(),
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file()),
+                $crate::__private_api::line(),
                 (),
             );
         }
