@@ -333,21 +333,26 @@
     html_root_url = "https://docs.rs/log/0.4.20"
 )]
 #![warn(missing_docs)]
-#![deny(missing_debug_implementations, unconditional_recursion)]
+#![deny(
+    missing_debug_implementations,
+    unconditional_recursion,
+    unsafe_op_in_unsafe_fn
+)]
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 // When compiled for the rustc compiler itself we want to make sure that this is
 // an unstable crate
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
-#[cfg(all(not(feature = "std"), not(test)))]
-extern crate core as std;
+use core::cfg;
+use core::str::FromStr;
+use core::{cmp, fmt, mem};
 
-use std::cfg;
+#[cfg(target_has_atomic = "ptr")]
+use core::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+
 #[cfg(feature = "std")]
 use std::error;
-use std::str::FromStr;
-use std::{cmp, fmt, mem};
 
 #[macro_use]
 mod macros;
@@ -356,68 +361,271 @@ mod serde;
 #[cfg(feature = "kv_unstable")]
 pub mod kv;
 
-#[cfg(target_has_atomic = "ptr")]
-use std::sync::atomic::{AtomicUsize, Ordering};
+// Implementation of initialization of singleton
+// using std methods. Most effective and easy to reason about
+// because uses locking so thread scheduler cannot cause starvation here.
+#[cfg(feature = "std")]
+mod impl_ {
+    use std::sync::Once;
 
-#[cfg(not(target_has_atomic = "ptr"))]
-use std::cell::Cell;
-#[cfg(not(target_has_atomic = "ptr"))]
-use std::sync::atomic::Ordering;
+    use crate::{Log, NopLogger, SetLoggerError};
 
-#[cfg(not(target_has_atomic = "ptr"))]
-struct AtomicUsize {
-    v: Cell<usize>,
-}
+    // Fallback logger for cases when LOGGER is not initialized
+    static NOP_LOGGER: NopLogger = NopLogger;
+    // Used to access initialized logger.
+    // Access protected by ONCE.
+    static mut LOGGER: &dyn Log = &NOP_LOGGER;
+    // TODO(rust 1.70.0): Switch to std::sync::OnceLock.
+    static ONCE: Once = Once::new();
 
-#[cfg(not(target_has_atomic = "ptr"))]
-impl AtomicUsize {
-    const fn new(v: usize) -> AtomicUsize {
-        AtomicUsize { v: Cell::new(v) }
-    }
-
-    fn load(&self, _order: Ordering) -> usize {
-        self.v.get()
-    }
-
-    fn store(&self, val: usize, _order: Ordering) {
-        self.v.set(val)
-    }
-
-    #[cfg(target_has_atomic = "ptr")]
-    fn compare_exchange(
-        &self,
-        current: usize,
-        new: usize,
-        _success: Ordering,
-        _failure: Ordering,
-    ) -> Result<usize, usize> {
-        let prev = self.v.get();
-        if current == prev {
-            self.v.set(new);
+    #[inline]
+    pub(crate) fn get_logger() -> &'static dyn Log {
+        if ONCE.is_completed() {
+            // SAFETY: We initialized it in ONCE
+            // and never would modify it after.
+            unsafe { LOGGER }
+        } else {
+            // Load nop logger to avoid data race on LOGGER variable.
+            &NOP_LOGGER
         }
-        Ok(prev)
+    }
+
+    #[inline]
+    pub(crate) fn set_logger(
+        make_logger: impl FnOnce() -> &'static dyn Log,
+    ) -> Result<(), SetLoggerError> {
+        // `make_logger` should't panic so `ONCE` cannot be poisoned.
+        // TODO(rust 1.70.0): Switch to std::sync::OnceLock::get_or_init.
+        // Note that `OnceLock::get_or_init` is preferred to `OnceLock::set`
+        // because calls to `make_logger` may leak data.
+        let mut was_init = false;
+
+        // SAFETY:
+        // 1. We write to LOGGER exactly once.
+        // 2. We never read from LOGGER before running this function.
+        ONCE.call_once(|| unsafe {
+            LOGGER = make_logger();
+            was_init = true;
+        });
+
+        if was_init {
+            Ok(())
+        } else {
+            Err(SetLoggerError(()))
+        }
+    }
+
+    /// # Safety
+    /// Same requirements as of [`crate::set_logger_racy`].
+    #[inline]
+    pub(crate) unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+        // Note that we still need to call `Once::call_once` here
+        // because we need to complete it so we would be able to access logger.
+
+        // Since calling this concurently violates safety requirements,
+        // it is OK to do anything, including blocking, in such case.
+        set_logger(move || logger)
     }
 }
 
-// Any platform without atomics is unlikely to have multiple cores, so
-// writing via Cell will not be a race condition.
-#[cfg(not(target_has_atomic = "ptr"))]
-unsafe impl Sync for AtomicUsize {}
+// Implementation of initialization of singleton using atomics.
+// It can cause starvation in case of concurrent initialization of logger
+// because OS can unschedule initializer thread during update of logger.
+//
+// However, it is not a big concern because it is unlikely for users
+// to initialize logger simultaneously from multiple threads because
+// most apps initialize loggers during start up.
+#[cfg(all(not(feature = "std"), target_has_atomic = "ptr"))]
+mod impl_ {
+    use core::sync::atomic::AtomicUsize;
+    use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
-// The LOGGER static holds a pointer to the global logger. It is protected by
-// the STATE static which determines whether LOGGER has been initialized yet.
-static mut LOGGER: &dyn Log = &NopLogger;
+    use crate::{Log, NopLogger, SetLoggerError};
 
-static STATE: AtomicUsize = AtomicUsize::new(0);
+    // Fallback logger for cases when LOGGER is not initialized
+    static NOP_LOGGER: NopLogger = NopLogger;
+    // Used to access initialized logger.
+    // Access protected by STATE.
+    static mut LOGGER: &dyn Log = &NOP_LOGGER;
+    // Atomic variable that tracks state of the logger
+    // and does memory synchronization for LOGGER variable.
+    static STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
 
-// There are three different states that we care about: the logger's
-// uninitialized, the logger's initializing (set_logger's been called but
-// LOGGER hasn't actually been set yet), or the logger's active.
-const UNINITIALIZED: usize = 0;
-const INITIALIZING: usize = 1;
-const INITIALIZED: usize = 2;
+    // Use reversed order of constants
+    // because most often we need to compare integer
+    // with INITIALIZED and comparing with zero generates
+    // smaller machine code.
+    const UNINITIALIZED: usize = 2;
+    const IN_PROGRESS: usize = 1;
+    const INITIALIZED: usize = 0;
 
+    #[inline]
+    pub(crate) fn get_logger() -> &'static dyn Log {
+        if STATE.load(Acquire) == INITIALIZED {
+            // SAFETY: Initialized once and never would modify after that.
+            // Acquire ordering guarantees that every memory changes
+            // during initialization is visible because initialization
+            // does Release store after writing to LOGGER.
+            unsafe { LOGGER }
+        } else {
+            // Load nop logger to avoid data race on LOGGER variable.
+            &NOP_LOGGER
+        }
+    }
+
+    #[inline]
+    pub(crate) fn set_logger(
+        make_logger: impl FnOnce() -> &'static dyn Log,
+    ) -> Result<(), SetLoggerError> {
+        // Use Relaxed memory ordering because:
+        // 1. We don't need to read any values set by other threads yet.
+        // 2. Other threads can access LOGGER only using `get_logger()`
+        // which uses Acquire load to synchronize with writes from this function.
+        let (Ok(old_state) | Err(old_state)) =
+            STATE.compare_exchange(UNINITIALIZED, IN_PROGRESS, Relaxed, Relaxed);
+        match old_state {
+            UNINITIALIZED => {
+                // SAFETY: only one thread can reach here
+                // unless user calls `set_logger_racy` which is not sound
+                // to call during initialization of logger in another thread.
+                unsafe {
+                    LOGGER = make_logger();
+                }
+                // Release store here makes memory in pointee of LOGGER
+                // and LOGGER itself visible for other threads if they acquire logger using `get_logger`.
+                STATE.store(INITIALIZED, Release);
+                Ok(())
+            }
+            IN_PROGRESS => {
+                // Wait until other thread initializes LOGGER.
+                // Stronger memory ordering is not needed here
+                // because after function returns, users would be able to
+                // access LOGGER only using `get_logger` which does memory sync
+                // for us.
+
+                // However, we still need to wait because we guarantee
+                // that if `set_logger` returns, the LOGGER is initialized.
+                while STATE.load(Relaxed) != INITIALIZED {
+                    core::hint::spin_loop();
+                }
+
+                Err(SetLoggerError(()))
+            }
+            INITIALIZED => Err(SetLoggerError(())),
+            #[cfg(debug_assertions)]
+            unexpected_state => unreachable!("log::STATE has invalid value {}", unexpected_state),
+            // SAFETY: We never write any other value to `STATE`
+            #[cfg(not(debug_assertions))]
+            _ => unsafe { core::hint::unreachable_unchecked() },
+        }
+    }
+
+    /// # Safety
+    /// Same requirements as of [`crate::set_logger_racy`].
+    #[inline]
+    pub(crate) unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+        match STATE.load(Relaxed) {
+            INITIALIZED => Err(SetLoggerError(())),
+            // There is no point in testing user code for undefined behaviour
+            // if user compiles code for release.
+            #[cfg(debug_assertions)]
+            IN_PROGRESS => unreachable!("data race caused by unsound call to log::set_logger_racy"),
+            _ => {
+                #[cfg(debug_assertions)]
+                STATE.store(IN_PROGRESS, Relaxed);
+
+                // SAFETY: Caller must ensure that there is no data races.
+                unsafe {
+                    LOGGER = logger;
+                }
+
+                // Release store here makes memory in pointee of LOGGER
+                // and LOGGER itself visible for other threads if they acquire logger using `get_logger`.
+                STATE.store(INITIALIZED, Release);
+                Ok(())
+            }
+        }
+    }
+}
+
+// Implementation of initialization of singleton on platforms
+// without atomics and std.
+// Any platform without atomics is unlikely to have multiple cores
+// so writing and reading from mutable statics without keeping references to them
+// should not be race condition.
+#[cfg(not(any(feature = "std", target_has_atomic = "ptr")))]
+mod impl_ {
+    use core::cell::Cell;
+
+    use crate::{Log, NopLogger, SetLoggerError};
+
+    pub(crate) struct SharedCell<T>(pub(crate) Cell<T>);
+
+    // SAFETY: See comment on module.
+    unsafe impl<T: Sync + Send> Sync for SharedCell<T> {}
+
+    impl<T: Copy> SharedCell<T> {
+        pub(crate) const fn new(value: T) -> Self {
+            Self(Cell::new(value))
+        }
+
+        // # Safety
+        // Must be used only in absence of concurrent threads
+        #[inline]
+        pub(crate) unsafe fn get(&self) -> T {
+            self.0.get()
+        }
+
+        // # Safety
+        // Must be used only in absence of concurrent threads
+        #[inline]
+        pub(crate) unsafe fn set(&self, value: T) {
+            self.0.set(value);
+        }
+    }
+
+    // Global logger. Access is NOT protected.
+    static LOGGER: SharedCell<&dyn Log> = SharedCell::new(&NopLogger);
+    // Tracks state of the logger.
+    // Used only to signal user if `set_logger_racy`` failed.
+    static IS_INIT: SharedCell<bool> = SharedCell::new(false);
+
+    pub(crate) fn get_logger() -> &'static dyn Log {
+        // SAFETY: See comment above module.
+        // Value of LOGGER is always initialized.
+        unsafe { LOGGER.get() }
+    }
+
+    /// # Safety
+    /// Same requirements as of [`crate::set_logger_racy`].
+    #[inline]
+    pub(crate) unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+        use core::sync::atomic::{compiler_fence, Ordering::Release};
+        // SAFETY: See comment above module.
+        unsafe {
+            if IS_INIT.get() {
+                Err(SetLoggerError(()))
+            } else {
+                LOGGER.set(logger);
+                // To prevent moving change of IS_INIT before LOGGER
+                // by compiler.
+                compiler_fence(Release);
+                IS_INIT.set(true);
+                Ok(())
+            }
+        }
+    }
+}
+
+#[cfg(target_has_atomic = "ptr")]
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
+
+// For targets without atomic sized pointers,
+// we assume lack of threads.
+// See also comment on `impl_` module.
+#[cfg(not(target_has_atomic = "ptr"))]
+static MAX_LOG_LEVEL_FILTER: impl_::SharedCell<LevelFilter> =
+    impl_::SharedCell::new(LevelFilter::Off);
 
 static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
@@ -1220,7 +1428,7 @@ where
 #[inline]
 #[cfg(target_has_atomic = "ptr")]
 pub fn set_max_level(level: LevelFilter) {
-    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
+    MAX_LOG_LEVEL_FILTER.store(level as usize, Relaxed);
 }
 
 /// A thread-unsafe version of [`set_max_level`].
@@ -1244,10 +1452,19 @@ pub fn set_max_level(level: LevelFilter) {
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline]
 pub unsafe fn set_max_level_racy(level: LevelFilter) {
-    // `MAX_LOG_LEVEL_FILTER` uses a `Cell` as the underlying primitive when a
-    // platform doesn't support `target_has_atomic = "ptr"`, so even though this looks the same
-    // as `set_max_level` it may have different safety properties.
-    MAX_LOG_LEVEL_FILTER.store(level as usize, Ordering::Relaxed);
+    #[cfg(target_has_atomic = "ptr")]
+    {
+        set_max_level(level);
+    }
+
+    #[cfg(not(target_has_atomic = "ptr"))]
+    // SAFETY: See comment on `impl_` module.
+    unsafe {
+        // When platform doesn't support atomics,
+        // implementation uses a `Cell` as a substitute.
+        // See comment on `impl_` module for det
+        MAX_LOG_LEVEL_FILTER.set(level);
+    }
 }
 
 /// Returns the current maximum log level.
@@ -1265,13 +1482,24 @@ pub unsafe fn set_max_level_racy(level: LevelFilter) {
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
-    // Since `LevelFilter` is `repr(usize)`,
-    // this transmute is sound if and only if `MAX_LOG_LEVEL_FILTER`
-    // is set to a usize that is a valid discriminant for `LevelFilter`.
-    // Since `MAX_LOG_LEVEL_FILTER` is private, the only time it's set
-    // is by `set_max_level` above, i.e. by casting a `LevelFilter` to `usize`.
-    // So any usize stored in `MAX_LOG_LEVEL_FILTER` is a valid discriminant.
-    unsafe { mem::transmute(MAX_LOG_LEVEL_FILTER.load(Ordering::Relaxed)) }
+    #[cfg(target_has_atomic = "ptr")]
+    {
+        let level_uint: usize = MAX_LOG_LEVEL_FILTER.load(Relaxed);
+
+        // Since `LevelFilter` is `repr(usize)`,
+        // this transmute is sound if and only if `MAX_LOG_LEVEL_FILTER`
+        // is set to a usize that is a valid discriminant for `LevelFilter`.
+        // Since `MAX_LOG_LEVEL_FILTER` is private, the only time it's set
+        // is by `set_max_level` above, i.e. by casting a `LevelFilter` to `usize`.
+        // So any usize stored in `MAX_LOG_LEVEL_FILTER` is a valid discriminant.
+        unsafe { mem::transmute(level_uint) }
+    }
+
+    #[cfg(not(target_has_atomic = "ptr"))]
+    // SAFETY: See comment on `impl_` module.
+    unsafe {
+        MAX_LOG_LEVEL_FILTER.get()
+    }
 }
 
 /// Sets the global logger to a `Box<Log>`.
@@ -1287,9 +1515,9 @@ pub fn max_level() -> LevelFilter {
 /// An error is returned if a logger has already been set.
 ///
 /// [`set_logger`]: fn.set_logger.html
-#[cfg(all(feature = "std", target_has_atomic = "ptr"))]
+#[cfg(feature = "std")]
 pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| Box::leak(logger))
+    impl_::set_logger(|| Box::leak(logger))
 }
 
 /// Sets the global logger to a `&'static Log`.
@@ -1345,42 +1573,9 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 /// ```
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
-#[cfg(target_has_atomic = "ptr")]
+#[cfg(any(target_has_atomic = "ptr", feature = "std"))]
 pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    set_logger_inner(|| logger)
-}
-
-#[cfg(target_has_atomic = "ptr")]
-fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
-where
-    F: FnOnce() -> &'static dyn Log,
-{
-    let old_state = match STATE.compare_exchange(
-        UNINITIALIZED,
-        INITIALIZING,
-        Ordering::SeqCst,
-        Ordering::SeqCst,
-    ) {
-        Ok(s) | Err(s) => s,
-    };
-    match old_state {
-        UNINITIALIZED => {
-            unsafe {
-                LOGGER = make_logger();
-            }
-            STATE.store(INITIALIZED, Ordering::SeqCst);
-            Ok(())
-        }
-        INITIALIZING => {
-            while STATE.load(Ordering::SeqCst) == INITIALIZING {
-                // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
-                #[allow(deprecated)]
-                std::sync::atomic::spin_loop_hint();
-            }
-            Err(SetLoggerError(()))
-        }
-        _ => Err(SetLoggerError(())),
-    }
+    impl_::set_logger(|| logger)
 }
 
 /// A thread-unsafe version of [`set_logger`].
@@ -1389,6 +1584,8 @@ where
 /// support for atomics that is needed by [`set_logger`].
 ///
 /// In almost all cases, [`set_logger`] should be preferred.
+///
+/// This function may be implemented internally as a call to [`set_logger`].
 ///
 /// # Safety
 ///
@@ -1403,18 +1600,8 @@ where
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    match STATE.load(Ordering::SeqCst) {
-        UNINITIALIZED => {
-            LOGGER = logger;
-            STATE.store(INITIALIZED, Ordering::SeqCst);
-            Ok(())
-        }
-        INITIALIZING => {
-            // This is just plain UB, since we were racing another initialization function
-            unreachable!("set_logger_racy must not be used with other initialization functions")
-        }
-        _ => Err(SetLoggerError(())),
-    }
+    // SAFETY: It have same safety requirements.
+    unsafe { impl_::set_logger_racy(logger) }
 }
 
 /// The type returned by [`set_logger`] if [`set_logger`] has already been called.
@@ -1455,12 +1642,7 @@ impl error::Error for ParseLevelError {}
 ///
 /// If a logger has not been set, a no-op implementation is returned.
 pub fn logger() -> &'static dyn Log {
-    if STATE.load(Ordering::SeqCst) != INITIALIZED {
-        static NOP: NopLogger = NopLogger;
-        &NOP
-    } else {
-        unsafe { LOGGER }
-    }
+    impl_::get_logger()
 }
 
 // WARNING: this is not part of the crate's public API and is subject to change at any time

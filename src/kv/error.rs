@@ -1,4 +1,4 @@
-use std::fmt;
+use core::fmt;
 
 /// An error encountered while working with structured data.
 #[derive(Debug)]

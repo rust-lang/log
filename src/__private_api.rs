@@ -2,8 +2,8 @@
 
 use self::sealed::KVs;
 use crate::{Level, Metadata, Record};
-use std::fmt::Arguments;
-pub use std::{file, format_args, line, module_path, stringify};
+use core::fmt::Arguments;
+pub use core::{file, format_args, line, module_path, stringify};
 
 #[cfg(feature = "kv_unstable")]
 pub type Value<'a> = dyn crate::kv::value::ToValue + 'a;

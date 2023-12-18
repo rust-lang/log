@@ -8,8 +8,9 @@ use serde::ser::{Serialize, Serializer};
 
 use crate::{Level, LevelFilter, LOG_LEVEL_NAMES};
 
-use std::fmt;
-use std::str::{self, FromStr};
+use core::fmt;
+use core::str;
+use core::str::FromStr;
 
 // The Deserialize impls are handwritten to be case insensitive using FromStr.
 
