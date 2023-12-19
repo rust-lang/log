@@ -340,14 +340,11 @@
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
-#[cfg(all(not(feature = "std"), not(test)))]
-extern crate core as std;
-
-use std::cfg;
+use core::cfg;
+use core::str::FromStr;
+use core::{cmp, fmt, mem};
 #[cfg(feature = "std")]
 use std::error;
-use std::str::FromStr;
-use std::{cmp, fmt, mem};
 
 #[macro_use]
 mod macros;
@@ -357,12 +354,12 @@ mod serde;
 pub mod kv;
 
 #[cfg(target_has_atomic = "ptr")]
-use std::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(not(target_has_atomic = "ptr"))]
-use std::cell::Cell;
+use core::cell::Cell;
 #[cfg(not(target_has_atomic = "ptr"))]
-use std::sync::atomic::Ordering;
+use core::sync::atomic::Ordering;
 
 #[cfg(not(target_has_atomic = "ptr"))]
 struct AtomicUsize {
@@ -1375,7 +1372,7 @@ where
             while STATE.load(Ordering::SeqCst) == INITIALIZING {
                 // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
                 #[allow(deprecated)]
-                std::sync::atomic::spin_loop_hint();
+                core::sync::atomic::spin_loop_hint();
             }
             Err(SetLoggerError(()))
         }

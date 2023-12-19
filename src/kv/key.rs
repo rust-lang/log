@@ -1,7 +1,7 @@
 //! Structured keys.
 
-use std::borrow::Borrow;
-use std::fmt;
+use core::borrow::Borrow;
+use core::fmt;
 
 /// A type that can be converted into a [`Key`](struct.Key.html).
 pub trait ToKey {

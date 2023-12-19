@@ -1,7 +1,7 @@
 //! Sources for key-value pairs.
 
 use crate::kv::{Error, Key, ToKey, ToValue, Value};
-use std::fmt;
+use core::fmt;
 
 /// A source of key-value pairs.
 ///

@@ -1,6 +1,6 @@
 //! Structured values.
 
-use std::fmt;
+use core::fmt;
 
 pub use crate::kv::Error;
 
@@ -421,13 +421,13 @@ impl ToValue for i128 {
     }
 }
 
-impl ToValue for std::num::NonZeroU128 {
+impl ToValue for core::num::NonZeroU128 {
     fn to_value(&self) -> Value {
         Value::from(self)
     }
 }
 
-impl ToValue for std::num::NonZeroI128 {
+impl ToValue for core::num::NonZeroI128 {
     fn to_value(&self) -> Value {
         Value::from(self)
     }
@@ -451,17 +451,17 @@ impl<'v> From<&'v i128> for Value<'v> {
     }
 }
 
-impl<'v> From<&'v std::num::NonZeroU128> for Value<'v> {
-    fn from(v: &'v std::num::NonZeroU128) -> Value<'v> {
+impl<'v> From<&'v core::num::NonZeroU128> for Value<'v> {
+    fn from(v: &'v core::num::NonZeroU128) -> Value<'v> {
         // SAFETY: `NonZeroU128` and `u128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroU128 as *const u128) })
+        Value::from_value_bag(unsafe { &*(v as *const core::num::NonZeroU128 as *const u128) })
     }
 }
 
-impl<'v> From<&'v std::num::NonZeroI128> for Value<'v> {
-    fn from(v: &'v std::num::NonZeroI128) -> Value<'v> {
+impl<'v> From<&'v core::num::NonZeroI128> for Value<'v> {
+    fn from(v: &'v core::num::NonZeroI128) -> Value<'v> {
         // SAFETY: `NonZeroI128` and `i128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroI128 as *const i128) })
+        Value::from_value_bag(unsafe { &*(v as *const core::num::NonZeroI128 as *const i128) })
     }
 }
 
@@ -504,14 +504,14 @@ macro_rules! impl_to_value_primitive {
 macro_rules! impl_to_value_nonzero_primitive {
     ($($into_ty:ident,)*) => {
         $(
-            impl ToValue for std::num::$into_ty {
+            impl ToValue for ::core::num::$into_ty {
                 fn to_value(&self) -> Value {
                     Value::from(self.get())
                 }
             }
 
-            impl<'v> From<std::num::$into_ty> for Value<'v> {
-                fn from(value: std::num::$into_ty) -> Self {
+            impl<'v> From<::core::num::$into_ty> for Value<'v> {
+                fn from(value: ::core::num::$into_ty) -> Self {
                     Value::from(value.get())
                 }
             }
@@ -783,11 +783,11 @@ pub(crate) mod tests {
             Value::from(32u32),
             Value::from(64u64),
             Value::from(1usize),
-            Value::from(std::num::NonZeroU8::new(8).unwrap()),
-            Value::from(std::num::NonZeroU16::new(16).unwrap()),
-            Value::from(std::num::NonZeroU32::new(32).unwrap()),
-            Value::from(std::num::NonZeroU64::new(64).unwrap()),
-            Value::from(std::num::NonZeroUsize::new(1).unwrap()),
+            Value::from(core::num::NonZeroU8::new(8).unwrap()),
+            Value::from(core::num::NonZeroU16::new(16).unwrap()),
+            Value::from(core::num::NonZeroU32::new(32).unwrap()),
+            Value::from(core::num::NonZeroU64::new(64).unwrap()),
+            Value::from(core::num::NonZeroUsize::new(1).unwrap()),
         ]
         .into_iter()
     }
@@ -799,11 +799,11 @@ pub(crate) mod tests {
             Value::from(-32i32),
             Value::from(-64i64),
             Value::from(-1isize),
-            Value::from(std::num::NonZeroI8::new(-8).unwrap()),
-            Value::from(std::num::NonZeroI16::new(-16).unwrap()),
-            Value::from(std::num::NonZeroI32::new(-32).unwrap()),
-            Value::from(std::num::NonZeroI64::new(-64).unwrap()),
-            Value::from(std::num::NonZeroIsize::new(-1).unwrap()),
+            Value::from(core::num::NonZeroI8::new(-8).unwrap()),
+            Value::from(core::num::NonZeroI16::new(-16).unwrap()),
+            Value::from(core::num::NonZeroI32::new(-32).unwrap()),
+            Value::from(core::num::NonZeroI64::new(-64).unwrap()),
+            Value::from(core::num::NonZeroIsize::new(-1).unwrap()),
         ]
         .into_iter()
     }
