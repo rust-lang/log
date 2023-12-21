@@ -417,7 +417,7 @@ const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 
-static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(0);
+static MAX_LOG_LEVEL_FILTER: AtomicUsize = AtomicUsize::new(LevelFilter::Off as usize);
 
 static LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
@@ -1355,24 +1355,21 @@ fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
     F: FnOnce() -> &'static dyn Log,
 {
-    let old_state = match STATE.compare_exchange(
+    match STATE.compare_exchange(
         UNINITIALIZED,
         INITIALIZING,
-        Ordering::SeqCst,
-        Ordering::SeqCst,
+        Ordering::Acquire,
+        Ordering::Relaxed,
     ) {
-        Ok(s) | Err(s) => s,
-    };
-    match old_state {
-        UNINITIALIZED => {
+        Ok(UNINITIALIZED) => {
             unsafe {
                 LOGGER = make_logger();
             }
-            STATE.store(INITIALIZED, Ordering::SeqCst);
+            STATE.store(INITIALIZED, Ordering::Release);
             Ok(())
         }
-        INITIALIZING => {
-            while STATE.load(Ordering::SeqCst) == INITIALIZING {
+        Err(INITIALIZING) => {
+            while STATE.load(Ordering::Relaxed) == INITIALIZING {
                 // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
                 #[allow(deprecated)]
                 std::sync::atomic::spin_loop_hint();
@@ -1403,10 +1400,10 @@ where
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    match STATE.load(Ordering::SeqCst) {
+    match STATE.load(Ordering::Acquire) {
         UNINITIALIZED => {
             LOGGER = logger;
-            STATE.store(INITIALIZED, Ordering::SeqCst);
+            STATE.store(INITIALIZED, Ordering::Release);
             Ok(())
         }
         INITIALIZING => {
@@ -1455,11 +1452,11 @@ impl error::Error for ParseLevelError {}
 ///
 /// If a logger has not been set, a no-op implementation is returned.
 pub fn logger() -> &'static dyn Log {
-    if STATE.load(Ordering::SeqCst) != INITIALIZED {
+    if STATE.load(Ordering::Acquire) == INITIALIZED {
+        unsafe { LOGGER }
+    } else {
         static NOP: NopLogger = NopLogger;
         &NOP
-    } else {
-        unsafe { LOGGER }
     }
 }
 
