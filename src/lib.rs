@@ -1455,7 +1455,15 @@ impl error::Error for ParseLevelError {}
 ///
 /// If a logger has not been set, a no-op implementation is returned.
 pub fn logger() -> &'static dyn Log {
-    if STATE.load(Ordering::SeqCst) != INITIALIZED {
+    // Acquire memory ordering guarantees that current thread would see any
+    // memory writes that happened before store of the value
+    // into `STATE` with memory ordering `Release` or stronger.
+    //
+    // Since the value `INITIALIZED` is written only after `LOGGER` was
+    // initialized, observing it after `Acquire` load here makes both
+    // write to the `LOGGER` static and initialization of the logger
+    // internal state synchronized with current thread.
+    if STATE.load(Ordering::Acquire) != INITIALIZED {
         static NOP: NopLogger = NopLogger;
         &NOP
     } else {
