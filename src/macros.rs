@@ -8,6 +8,100 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __private_api_log_impl {
+    // The real log macro implementation.
+    (
+        @impl
+        $target:expr => $target_ty:ty,
+        $lvl:expr => $lvl_ty:ty,
+        $kvs:expr => $kvs_ty:ty,
+        $($arg:tt)+
+    ) => {{
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api::log::<$target_ty, $lvl_ty, $kvs_ty>(
+                $crate::__private_api::format_args!($($arg)+),
+                &(
+                    $crate::__private_api::module_path!(),
+                    $crate::__private_api::file!(),
+                ),
+                $crate::__private_api::line!(),
+                $target,
+                $lvl,
+                $kvs,
+            );
+        }
+    }};
+
+    // Parse key value data.
+
+    // The key value data is specified explicitly.
+    (@parse_kvs $target:expr => $target_ty:ty, $lvl:expr => $lvl_ty:ty, $($key:tt = $value:expr),+; $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @impl
+            $target => $target_ty,
+            $lvl => $lvl_ty,
+            &[$(($crate::__log_key!($key), &$value)),+] => &_, // Stores the parsed key value data.
+            $($arg)+
+        )
+    );
+
+    // The key value data is not specified.
+    (@parse_kvs $target:expr => $target_ty:ty, $lvl:expr => $lvl_ty:ty, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @impl
+            $target => $target_ty,
+            $lvl => $lvl_ty,
+            () => (), // Stores the parsed key value data.
+            $($arg)+
+        )
+    );
+
+    // Parse level.
+
+    // The level is specified at runtime with the `log` macro.
+    (@parse_level $target:expr => $target_ty:ty, $lvl:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @parse_kvs
+            $target => $target_ty,
+            $lvl => $crate::Level, // Stores the parsed level.
+            $($arg)+
+        )
+    );
+
+    // The level is specified statically with the individual log macros (`info`, `warn`, ...).
+    (@parse_level $target:expr => $target_ty:ty, @static $lvl:ident, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @parse_kvs
+            $target => $target_ty,
+            $crate::__private_api::$lvl => $crate::__private_api::$lvl, // Stores the parsed level.
+            $($arg)+
+        )
+    );
+
+    // Parse target.
+
+    // The target is specified explicitly.
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @parse_level
+            $target => &_, // Stores the parsed target.
+            $($arg)+
+        )
+    );
+
+    // The target is not specified explicitly.
+    ($($arg:tt)+) => (
+        $crate::__private_api_log_impl!(
+            @parse_level
+            () => (), // Stores the parsed target.
+            $($arg)+
+        )
+    );
+}
+
 /// The standard logging macro.
 ///
 /// This macro will generically log with the specified `Level` and `format!`
@@ -30,35 +124,17 @@
 #[macro_export]
 macro_rules! log {
     // log!(target: "my_target", Level::Info, key1 = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
-        let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api::log::<&_>(
-                $crate::__private_api::format_args!($($arg)+),
-                lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
-                $crate::__private_api::line!(),
-                &[$(($crate::__log_key!($key), &$value)),+]
-            );
-        }
-    });
+    (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, $lvl, $($key = $value),+; $($arg)+)
+    );
 
     // log!(target: "my_target", Level::Info, "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        let lvl = $lvl;
-        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api::log(
-                $crate::__private_api::format_args!($($arg)+),
-                lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
-                $crate::__private_api::line!(),
-                (),
-            );
-        }
-    });
+    (target: $target:expr, $lvl:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, $lvl, $($arg)+)
+    );
 
     // log!(Level::Info, "a log event")
-    ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: $crate::__private_api::module_path!(), $lvl, $($arg)+));
+    ($lvl:expr, $($arg:tt)+) => ($crate::__private_api_log_impl!($lvl, $($arg)+));
 }
 
 /// Logs a message at the error level.
@@ -79,10 +155,12 @@ macro_rules! log {
 macro_rules! error {
     // error!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // error!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Error, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, @static LevelError, $($arg)+)
+    );
 
     // error!("a {} event", "log")
-    ($($arg:tt)+) => ($crate::log!($crate::Level::Error, $($arg)+))
+    ($($arg:tt)+) => ($crate::__private_api_log_impl!(@static LevelError, $($arg)+));
 }
 
 /// Logs a message at the warn level.
@@ -103,10 +181,12 @@ macro_rules! error {
 macro_rules! warn {
     // warn!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // warn!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Warn, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, @static LevelWarn, $($arg)+)
+    );
 
     // warn!("a {} event", "log")
-    ($($arg:tt)+) => ($crate::log!($crate::Level::Warn, $($arg)+))
+    ($($arg:tt)+) => ($crate::__private_api_log_impl!(@static LevelWarn, $($arg)+));
 }
 
 /// Logs a message at the info level.
@@ -129,10 +209,12 @@ macro_rules! warn {
 macro_rules! info {
     // info!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // info!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Info, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, @static LevelInfo, $($arg)+)
+    );
 
     // info!("a {} event", "log")
-    ($($arg:tt)+) => ($crate::log!($crate::Level::Info, $($arg)+))
+    ($($arg:tt)+) => ($crate::__private_api_log_impl!(@static LevelInfo, $($arg)+));
 }
 
 /// Logs a message at the debug level.
@@ -154,10 +236,12 @@ macro_rules! info {
 macro_rules! debug {
     // debug!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // debug!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Debug, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, @static LevelDebug, $($arg)+)
+    );
 
     // debug!("a {} event", "log")
-    ($($arg:tt)+) => ($crate::log!($crate::Level::Debug, $($arg)+))
+    ($($arg:tt)+) => ($crate::__private_api_log_impl!(@static LevelDebug, $($arg)+));
 }
 
 /// Logs a message at the trace level.
@@ -181,10 +265,12 @@ macro_rules! debug {
 macro_rules! trace {
     // trace!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // trace!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Trace, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => (
+        $crate::__private_api_log_impl!(target: $target, @static LevelTrace, $($arg)+)
+    );
 
     // trace!("a {} event", "log")
-    ($($arg:tt)+) => ($crate::log!($crate::Level::Trace, $($arg)+))
+    ($($arg:tt)+) => ($crate::__private_api_log_impl!(@static LevelTrace, $($arg)+));
 }
 
 /// Determines if a message logged at the specified level in that module will
