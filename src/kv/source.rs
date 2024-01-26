@@ -1,23 +1,31 @@
-//! Sources for key-value pairs.
+//! Sources for user-defined attributes.
 
 use crate::kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;
 
-/// A source of key-value pairs.
+/// A source of user-defined attributes.
 ///
 /// The source may be a single pair, a set of pairs, or a filter over a set of pairs.
 /// Use the [`Visitor`](trait.Visitor.html) trait to inspect the structured data
 /// in a source.
+///
+/// # Examples
+///
+/// Enumerating the attributes in a source:
+///
+/// ```
+/// ..
+/// ```
 pub trait Source {
-    /// Visit key-value pairs.
+    /// Visit attributes.
     ///
-    /// A source doesn't have to guarantee any ordering or uniqueness of key-value pairs.
+    /// A source doesn't have to guarantee any ordering or uniqueness of attributes.
     /// If the given visitor returns an error then the source may early-return with it,
-    /// even if there are more key-value pairs.
+    /// even if there are more attributes.
     ///
     /// # Implementation notes
     ///
-    /// A source should yield the same key-value pairs to a subsequent visitor unless
+    /// A source should yield the same attributes to a subsequent visitor unless
     /// that visitor itself fails.
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
 
@@ -34,14 +42,14 @@ pub trait Source {
         get_default(self, key)
     }
 
-    /// Count the number of key-value pairs that can be visited.
+    /// Count the number of attributes that can be visited.
     ///
     /// # Implementation notes
     ///
-    /// A source that knows the number of key-value pairs upfront may provide a more
+    /// A source that knows the number of attributes upfront may provide a more
     /// efficient implementation.
     ///
-    /// A subsequent call to `visit` should yield the same number of key-value pairs
+    /// A subsequent call to `visit` should yield the same number of attributes
     /// to the visitor, unless that visitor fails part way through.
     fn count(&self) -> usize {
         count_default(self)

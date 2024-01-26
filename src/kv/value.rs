@@ -29,72 +29,17 @@ impl<'v> ToValue for Value<'v> {
     }
 }
 
-/// Get a value from a type implementing `std::fmt::Debug`.
-#[macro_export]
-macro_rules! as_debug {
-    ($capture:expr) => {
-        $crate::kv::Value::from_debug(&$capture)
-    };
-}
-
-/// Get a value from a type implementing `std::fmt::Display`.
-#[macro_export]
-macro_rules! as_display {
-    ($capture:expr) => {
-        $crate::kv::Value::from_display(&$capture)
-    };
-}
-
-/// Get a value from an error.
-#[cfg(feature = "kv_unstable_std")]
-#[macro_export]
-macro_rules! as_error {
-    ($capture:expr) => {
-        $crate::kv::Value::from_dyn_error(&$capture)
-    };
-}
-
-#[cfg(feature = "kv_unstable_serde")]
-/// Get a value from a type implementing `serde::Serialize`.
-#[macro_export]
-macro_rules! as_serde {
-    ($capture:expr) => {
-        $crate::kv::Value::from_serde(&$capture)
-    };
-}
-
-/// Get a value from a type implementing `sval::Value`.
-#[cfg(feature = "kv_unstable_sval")]
-#[macro_export]
-macro_rules! as_sval {
-    ($capture:expr) => {
-        $crate::kv::Value::from_sval(&$capture)
-    };
-}
-
-/// A value in a structured key-value pair.
+/// A value in a user-defined attribute.
+///
+/// Values are an anonymous bag containing some structured datum.
 ///
 /// # Capturing values
 ///
 /// There are a few ways to capture a value:
 ///
-/// - Using the `Value::capture_*` methods.
 /// - Using the `Value::from_*` methods.
 /// - Using the `ToValue` trait.
 /// - Using the standard `From` trait.
-///
-/// ## Using the `Value::capture_*` methods
-///
-/// `Value` offers a few constructor methods that capture values of different kinds.
-/// These methods require a `T: 'static` to support downcasting.
-///
-/// ```
-/// use log::kv::Value;
-///
-/// let value = Value::capture_debug(&42i32);
-///
-/// assert_eq!(Some(42), value.to_i64());
-/// ```
 ///
 /// ## Using the `Value::from_*` methods
 ///
@@ -155,59 +100,6 @@ impl<'v> Value<'v> {
         T: ToValue,
     {
         value.to_value()
-    }
-
-    /// Get a value from a type implementing `std::fmt::Debug`.
-    pub fn capture_debug<T>(value: &'v T) -> Self
-    where
-        T: fmt::Debug + 'static,
-    {
-        Value {
-            inner: ValueBag::capture_debug(value),
-        }
-    }
-
-    /// Get a value from a type implementing `std::fmt::Display`.
-    pub fn capture_display<T>(value: &'v T) -> Self
-    where
-        T: fmt::Display + 'static,
-    {
-        Value {
-            inner: ValueBag::capture_display(value),
-        }
-    }
-
-    /// Get a value from an error.
-    #[cfg(feature = "kv_unstable_std")]
-    pub fn capture_error<T>(err: &'v T) -> Self
-    where
-        T: std::error::Error + 'static,
-    {
-        Value {
-            inner: ValueBag::capture_error(err),
-        }
-    }
-
-    #[cfg(feature = "kv_unstable_serde")]
-    /// Get a value from a type implementing `serde::Serialize`.
-    pub fn capture_serde<T>(value: &'v T) -> Self
-    where
-        T: serde::Serialize + 'static,
-    {
-        Value {
-            inner: ValueBag::capture_serde1(value),
-        }
-    }
-
-    /// Get a value from a type implementing `sval::Value`.
-    #[cfg(feature = "kv_unstable_sval")]
-    pub fn capture_sval<T>(value: &'v T) -> Self
-    where
-        T: sval::Value + 'static,
-    {
-        Value {
-            inner: ValueBag::capture_sval2(value),
-        }
     }
 
     /// Get a value from a type implementing `std::fmt::Debug`.
@@ -284,17 +176,10 @@ impl<'v> Value<'v> {
         }
     }
 
-    /// Check whether this value can be downcast to `T`.
-    pub fn is<T: 'static>(&self) -> bool {
-        self.inner.is::<T>()
-    }
-
-    /// Try downcast this value to `T`.
-    pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
-        self.inner.downcast_ref::<T>()
-    }
-
     /// Inspect this value using a simple visitor.
+    ///
+    /// When the `kv_unstable_serde` or `kv_unstable_sval` features are enabled, you can also
+    /// serialize a value using its `Serialize` or `Value` implementation.
     pub fn visit(&self, visitor: impl Visit<'v>) -> Result<(), Error> {
         struct Visitor<V>(V);
 
@@ -825,40 +710,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_capture_fmt() {
-        assert_eq!(Some(42u64), Value::capture_display(&42).to_u64());
-        assert_eq!(Some(42u64), Value::capture_debug(&42).to_u64());
-
-        assert!(Value::from_display(&42).to_u64().is_none());
-        assert!(Value::from_debug(&42).to_u64().is_none());
-    }
-
-    #[cfg(feature = "kv_unstable_std")]
-    #[test]
-    fn test_capture_error() {
-        let err = std::io::Error::from(std::io::ErrorKind::Other);
-
-        assert!(Value::capture_error(&err).to_borrowed_error().is_some());
-        assert!(Value::from_dyn_error(&err).to_borrowed_error().is_some());
-    }
-
-    #[cfg(feature = "kv_unstable_serde")]
-    #[test]
-    fn test_capture_serde() {
-        assert_eq!(Some(42u64), Value::capture_serde(&42).to_u64());
-
-        assert_eq!(Some(42u64), Value::from_serde(&42).to_u64());
-    }
-
-    #[cfg(feature = "kv_unstable_sval")]
-    #[test]
-    fn test_capture_sval() {
-        assert_eq!(Some(42u64), Value::capture_sval(&42).to_u64());
-
-        assert_eq!(Some(42u64), Value::from_sval(&42).to_u64());
-    }
-
-    #[test]
     fn test_to_value_display() {
         assert_eq!(42u64.to_value().to_string(), "42");
         assert_eq!(42i64.to_value().to_string(), "42");
@@ -964,17 +815,6 @@ pub(crate) mod tests {
         {
             assert!(v.to_char().is_none());
         }
-    }
-
-    #[test]
-    fn test_downcast_ref() {
-        #[derive(Debug)]
-        struct Foo(u64);
-
-        let v = Value::capture_debug(&Foo(42));
-
-        assert!(v.is::<Foo>());
-        assert_eq!(42u64, v.downcast_ref::<Foo>().expect("invalid downcast").0);
     }
 
     #[test]
