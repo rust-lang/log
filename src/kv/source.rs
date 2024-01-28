@@ -1,4 +1,7 @@
 //! Sources for user-defined attributes.
+//! 
+//! This module defines the [`Source`] type and supporting APIs for
+//! working with collections of attributes.
 
 use crate::kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;

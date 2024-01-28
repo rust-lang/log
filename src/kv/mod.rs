@@ -1,4 +1,4 @@
-//! **UNSTABLE:** Structured key-value pairs.
+//! **UNSTABLE:** Structured logging.
 //!
 //! This module is unstable and breaking changes may be made
 //! at any time. See [the tracking issue](https://github.com/rust-lang-nursery/log/issues/328)
@@ -62,11 +62,20 @@
 //! ```
 //!
 //! Visitors on values are lightweight and suitable for detecting primitive types.
-//! To serialize a value, you can also use either `serde` or `sval`. If you're
-//! in a no-std environment, you can use `sval`. In other cases, you can use `serde`.
+//! To serialize a value, you can also use either `serde` or `sval`:
+//! 
+//! ```
+//! ..
+//! ```
+//! 
+//! If you're in a no-std environment, you can use `sval`. In other cases, you can use `serde`.
 //!
 //! Values can also always be formatted using the standard `Debug` and `Display`
-//! traits.
+//! traits:
+//! 
+//! ```
+//! ..
+//! ```
 
 mod error;
 mod key;

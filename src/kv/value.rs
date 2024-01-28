@@ -1,4 +1,7 @@
 //! Structured values.
+//! 
+//! This module defines the [`Value`] type and supporting APIs for
+//! capturing and serializing them.
 
 use std::fmt;
 
@@ -89,6 +92,14 @@ impl<'v> ToValue for Value<'v> {
 /// For more complex types one of the following traits can be used:
 ///  * [`sval::Value`], requires the `kv_unstable_sval` feature.
 ///  * [`serde::Serialize`], requires the `kv_unstable_serde` feature.
+/// 
+/// You don't need a [`Visit`] to serialize values.
+/// 
+/// A value can always be serialized using any supported framework, regardless
+/// of how it was captured. If, for example, a value was captured using its
+/// `Display` implementation, it will serialize as a string. If it was captured
+/// as a struct using its `serde::Serialize`, it will also serialize as a struct
+/// through `sval`, or be formatted using a `Debug`-compatible representation.
 pub struct Value<'v> {
     inner: ValueBag<'v>,
 }
@@ -180,12 +191,12 @@ impl<'v> Value<'v> {
     ///
     /// When the `kv_unstable_serde` or `kv_unstable_sval` features are enabled, you can also
     /// serialize a value using its `Serialize` or `Value` implementation.
-    pub fn visit(&self, visitor: impl Visit<'v>) -> Result<(), Error> {
+    pub fn visit(&self, visitor: impl Visitor<'v>) -> Result<(), Error> {
         struct Visitor<V>(V);
 
-        impl<'v, V> value_bag::visit::Visit<'v> for Visitor<V>
+        impl<'v, V> value_bag::visit::Visitor<'v> for Visitor<V>
         where
-            V: Visit<'v>,
+            V: Visitor<'v>,
         {
             fn visit_any(&mut self, value: ValueBag) -> Result<(), value_bag::Error> {
                 self.0
@@ -521,7 +532,7 @@ mod std_support {
 /// Also see [`Value`'s documentation on seralization].
 ///
 /// [`Value`'s documentation on seralization]: Value#serialization
-pub trait Visit<'v> {
+pub trait Visitor<'v> {
     /// Visit a `Value`.
     ///
     /// This is the only required method on `Visit` and acts as a fallback for any
@@ -592,9 +603,9 @@ pub trait Visit<'v> {
     }
 }
 
-impl<'a, 'v, T: ?Sized> Visit<'v> for &'a mut T
+impl<'a, 'v, T: ?Sized> Visitor<'v> for &'a mut T
 where
-    T: Visit<'v>,
+    T: Visitor<'v>,
 {
     fn visit_any(&mut self, value: Value) -> Result<(), Error> {
         (**self).visit_any(value)
@@ -821,7 +832,7 @@ pub(crate) mod tests {
     fn test_visit_integer() {
         struct Extract(Option<u64>);
 
-        impl<'v> Visit<'v> for Extract {
+        impl<'v> Visitor<'v> for Extract {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
                 unimplemented!("unexpected value: {value:?}")
             }
@@ -843,7 +854,7 @@ pub(crate) mod tests {
     fn test_visit_borrowed_str() {
         struct Extract<'v>(Option<&'v str>);
 
-        impl<'v> Visit<'v> for Extract<'v> {
+        impl<'v> Visitor<'v> for Extract<'v> {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
                 unimplemented!("unexpected value: {value:?}")
             }

@@ -121,6 +121,8 @@
 //! # #[cfg(not(feature = "kv_unstable_serde"))]
 //! # fn main() {}
 //! ```
+//! 
+//! See the [`kv`] module documentation for more details.
 //!
 //! # Available logging implementations
 //!
