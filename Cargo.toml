@@ -48,7 +48,7 @@ std = []
 
 # requires the latest stable
 # this will have a tighter MSRV before stabilization
-kv_unstable = ["value-bag"]
+kv_unstable = []
 kv_unstable_sval = ["kv_unstable", "value-bag/sval", "sval", "sval_ref"]
 kv_unstable_std = ["std", "kv_unstable", "value-bag/error"]
 kv_unstable_serde = ["kv_unstable_std", "value-bag/serde", "serde"]

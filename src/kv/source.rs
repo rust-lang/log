@@ -363,7 +363,7 @@ mod std_support {
     mod tests {
         use std::collections::{BTreeMap, HashMap};
 
-        use crate::kv::value::tests::Token;
+        use crate::kv::value;
 
         use super::*;
 
@@ -377,7 +377,7 @@ mod std_support {
         fn get() {
             let source = vec![("a", 1), ("b", 2), ("a", 1)];
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&source, Key::from_str("a")).unwrap().to_token()
             );
 
@@ -393,7 +393,7 @@ mod std_support {
 
             assert_eq!(2, Source::count(&map));
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&map, Key::from_str("a")).unwrap().to_token()
             );
         }
@@ -406,7 +406,7 @@ mod std_support {
 
             assert_eq!(2, Source::count(&map));
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&map, Key::from_str("a")).unwrap().to_token()
             );
         }
@@ -415,7 +415,7 @@ mod std_support {
 
 #[cfg(test)]
 mod tests {
-    use crate::kv::value::tests::Token;
+    use crate::kv::value;
 
     use super::*;
 
@@ -452,11 +452,11 @@ mod tests {
     fn get() {
         let source = &[("a", 1), ("b", 2), ("a", 1)] as &[_];
         assert_eq!(
-            Token::I64(1),
+            value::inner::Token::I64(1),
             Source::get(source, Key::from_str("a")).unwrap().to_token()
         );
         assert_eq!(
-            Token::I64(2),
+            value::inner::Token::I64(2),
             Source::get(source, Key::from_str("b")).unwrap().to_token()
         );
         assert!(Source::get(&source, Key::from_str("c")).is_none());

@@ -7,8 +7,6 @@ use std::fmt;
 
 pub use crate::kv::Error;
 
-use value_bag::ValueBag;
-
 /// A type that can be converted into a [`Value`](struct.Value.html).
 pub trait ToValue {
     /// Perform the conversion.
@@ -101,7 +99,7 @@ impl<'v> ToValue for Value<'v> {
 /// as a struct using its `serde::Serialize`, it will also serialize as a struct
 /// through `sval`, or be formatted using a `Debug`-compatible representation.
 pub struct Value<'v> {
-    inner: ValueBag<'v>,
+    inner: inner::Inner<'v>,
 }
 
 impl<'v> Value<'v> {
@@ -119,7 +117,7 @@ impl<'v> Value<'v> {
         T: fmt::Debug,
     {
         Value {
-            inner: ValueBag::from_debug(value),
+            inner: inner::Inner::from_debug(value),
         }
     }
 
@@ -129,7 +127,7 @@ impl<'v> Value<'v> {
         T: fmt::Display,
     {
         Value {
-            inner: ValueBag::from_display(value),
+            inner: inner::Inner::from_display(value),
         }
     }
 
@@ -140,7 +138,7 @@ impl<'v> Value<'v> {
         T: serde::Serialize,
     {
         Value {
-            inner: ValueBag::from_serde1(value),
+            inner: inner::Inner::from_serde1(value),
         }
     }
 
@@ -151,21 +149,21 @@ impl<'v> Value<'v> {
         T: sval::Value,
     {
         Value {
-            inner: ValueBag::from_sval2(value),
+            inner: inner::Inner::from_sval2(value),
         }
     }
 
     /// Get a value from a dynamic `std::fmt::Debug`.
     pub fn from_dyn_debug(value: &'v dyn fmt::Debug) -> Self {
         Value {
-            inner: ValueBag::from_dyn_debug(value),
+            inner: inner::Inner::from_dyn_debug(value),
         }
     }
 
     /// Get a value from a dynamic `std::fmt::Display`.
     pub fn from_dyn_display(value: &'v dyn fmt::Display) -> Self {
         Value {
-            inner: ValueBag::from_dyn_display(value),
+            inner: inner::Inner::from_dyn_display(value),
         }
     }
 
@@ -173,14 +171,14 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_unstable_std")]
     pub fn from_dyn_error(err: &'v (dyn std::error::Error + 'static)) -> Self {
         Value {
-            inner: ValueBag::from_dyn_error(err),
+            inner: inner::Inner::from_dyn_error(err),
         }
     }
 
     /// Get a value from an internal primitive.
     fn from_value_bag<T>(value: T) -> Self
     where
-        T: Into<ValueBag<'v>>,
+        T: Into<inner::Inner<'v>>,
     {
         Value {
             inner: value.into(),
@@ -192,74 +190,7 @@ impl<'v> Value<'v> {
     /// When the `kv_unstable_serde` or `kv_unstable_sval` features are enabled, you can also
     /// serialize a value using its `Serialize` or `Value` implementation.
     pub fn visit(&self, visitor: impl Visitor<'v>) -> Result<(), Error> {
-        struct Visitor<V>(V);
-
-        impl<'v, V> value_bag::visit::Visitor<'v> for Visitor<V>
-        where
-            V: Visitor<'v>,
-        {
-            fn visit_any(&mut self, value: ValueBag) -> Result<(), value_bag::Error> {
-                self.0
-                    .visit_any(Value { inner: value })
-                    .map_err(Error::into_value)
-            }
-
-            fn visit_u64(&mut self, value: u64) -> Result<(), value_bag::Error> {
-                self.0.visit_u64(value).map_err(Error::into_value)
-            }
-
-            fn visit_i64(&mut self, value: i64) -> Result<(), value_bag::Error> {
-                self.0.visit_i64(value).map_err(Error::into_value)
-            }
-
-            fn visit_u128(&mut self, value: u128) -> Result<(), value_bag::Error> {
-                self.0.visit_u128(value).map_err(Error::into_value)
-            }
-
-            fn visit_i128(&mut self, value: i128) -> Result<(), value_bag::Error> {
-                self.0.visit_i128(value).map_err(Error::into_value)
-            }
-
-            fn visit_f64(&mut self, value: f64) -> Result<(), value_bag::Error> {
-                self.0.visit_f64(value).map_err(Error::into_value)
-            }
-
-            fn visit_bool(&mut self, value: bool) -> Result<(), value_bag::Error> {
-                self.0.visit_bool(value).map_err(Error::into_value)
-            }
-
-            fn visit_str(&mut self, value: &str) -> Result<(), value_bag::Error> {
-                self.0.visit_str(value).map_err(Error::into_value)
-            }
-
-            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), value_bag::Error> {
-                self.0.visit_borrowed_str(value).map_err(Error::into_value)
-            }
-
-            fn visit_char(&mut self, value: char) -> Result<(), value_bag::Error> {
-                self.0.visit_char(value).map_err(Error::into_value)
-            }
-
-            #[cfg(feature = "kv_unstable_std")]
-            fn visit_error(
-                &mut self,
-                err: &(dyn std::error::Error + 'static),
-            ) -> Result<(), value_bag::Error> {
-                self.0.visit_error(err).map_err(Error::into_value)
-            }
-
-            #[cfg(feature = "kv_unstable_std")]
-            fn visit_borrowed_error(
-                &mut self,
-                err: &'v (dyn std::error::Error + 'static),
-            ) -> Result<(), value_bag::Error> {
-                self.0.visit_borrowed_error(err).map_err(Error::into_value)
-            }
-        }
-
-        self.inner
-            .visit(&mut Visitor(visitor))
-            .map_err(Error::from_value)
+        inner::visit(&self.inner, visitor)
     }
 }
 
@@ -661,13 +592,113 @@ where
     }
 }
 
+#[cfg(feature = "value-bag")]
+pub(in crate::kv) mod inner {
+    use super::*;
+
+    pub use value_bag::ValueBag as Inner;
+
+    #[cfg(test)]
+    pub use value_bag::test::TestToken as Token;
+
+    #[cfg(test)]
+    pub fn to_test_token<'v>(inner: &Inner<'v>) -> Token {
+        inner.to_test_token()
+    }
+
+    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), Error> {
+        struct InnerVisitor<V>(V);
+
+        impl<'v, V> value_bag::visit::Visit<'v> for InnerVisitor<V>
+        where
+            V: Visitor<'v>,
+        {
+            fn visit_any(&mut self, value: value_bag::ValueBag) -> Result<(), value_bag::Error> {
+                self.0
+                    .visit_any(Value { inner: value })
+                    .map_err(Error::into_value)
+            }
+
+            fn visit_u64(&mut self, value: u64) -> Result<(), value_bag::Error> {
+                self.0.visit_u64(value).map_err(Error::into_value)
+            }
+
+            fn visit_i64(&mut self, value: i64) -> Result<(), value_bag::Error> {
+                self.0.visit_i64(value).map_err(Error::into_value)
+            }
+
+            fn visit_u128(&mut self, value: u128) -> Result<(), value_bag::Error> {
+                self.0.visit_u128(value).map_err(Error::into_value)
+            }
+
+            fn visit_i128(&mut self, value: i128) -> Result<(), value_bag::Error> {
+                self.0.visit_i128(value).map_err(Error::into_value)
+            }
+
+            fn visit_f64(&mut self, value: f64) -> Result<(), value_bag::Error> {
+                self.0.visit_f64(value).map_err(Error::into_value)
+            }
+
+            fn visit_bool(&mut self, value: bool) -> Result<(), value_bag::Error> {
+                self.0.visit_bool(value).map_err(Error::into_value)
+            }
+
+            fn visit_str(&mut self, value: &str) -> Result<(), value_bag::Error> {
+                self.0.visit_str(value).map_err(Error::into_value)
+            }
+
+            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), value_bag::Error> {
+                self.0.visit_borrowed_str(value).map_err(Error::into_value)
+            }
+
+            fn visit_char(&mut self, value: char) -> Result<(), value_bag::Error> {
+                self.0.visit_char(value).map_err(Error::into_value)
+            }
+
+            #[cfg(feature = "kv_unstable_std")]
+            fn visit_error(
+                &mut self,
+                err: &(dyn std::error::Error + 'static),
+            ) -> Result<(), value_bag::Error> {
+                self.0.visit_error(err).map_err(Error::into_value)
+            }
+
+            #[cfg(feature = "kv_unstable_std")]
+            fn visit_borrowed_error(
+                &mut self,
+                err: &'v (dyn std::error::Error + 'static),
+            ) -> Result<(), value_bag::Error> {
+                self.0.visit_borrowed_error(err).map_err(Error::into_value)
+            }
+        }
+
+        inner
+            .visit(&mut InnerVisitor(visitor))
+            .map_err(Error::from_value)
+    }
+}
+
+#[cfg(not(feature = "value-bag"))]
+pub(in crate::kv) mod inner {
+    use super::*;
+
+    pub enum Inner<'v> {
+
+    }
+
+    pub enum Token {}
+
+    pub fn visit(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), Error> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    pub(crate) use value_bag::test::TestToken as Token;
 
     impl<'v> Value<'v> {
-        pub(crate) fn to_token(&self) -> Token {
+        pub(crate) fn to_token(&self) -> inner::Token {
             self.inner.to_test_token()
         }
     }
@@ -735,18 +766,18 @@ pub(crate) mod tests {
 
     #[test]
     fn test_to_value_structured() {
-        assert_eq!(42u64.to_value().to_token(), Token::U64(42));
-        assert_eq!(42i64.to_value().to_token(), Token::I64(42));
-        assert_eq!(42.01f64.to_value().to_token(), Token::F64(42.01));
-        assert_eq!(true.to_value().to_token(), Token::Bool(true));
-        assert_eq!('a'.to_value().to_token(), Token::Char('a'));
+        assert_eq!(42u64.to_value().to_token(), inner::Token::U64(42));
+        assert_eq!(42i64.to_value().to_token(), inner::Token::I64(42));
+        assert_eq!(42.01f64.to_value().to_token(), inner::Token::F64(42.01));
+        assert_eq!(true.to_value().to_token(), inner::Token::Bool(true));
+        assert_eq!('a'.to_value().to_token(), inner::Token::Char('a'));
         assert_eq!(
             "a loong string".to_value().to_token(),
-            Token::Str("a loong string".into())
+            inner::Token::Str("a loong string".into())
         );
-        assert_eq!(Some(true).to_value().to_token(), Token::Bool(true));
-        assert_eq!(().to_value().to_token(), Token::None);
-        assert_eq!(None::<bool>.to_value().to_token(), Token::None);
+        assert_eq!(Some(true).to_value().to_token(), inner::Token::Bool(true));
+        assert_eq!(().to_value().to_token(), inner::Token::None);
+        assert_eq!(None::<bool>.to_value().to_token(), inner::Token::None);
     }
 
     #[test]
