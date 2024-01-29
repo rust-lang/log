@@ -1,34 +1,63 @@
-//! Sources for user-defined attributes.
+//! Sources for key-values.
 //! 
 //! This module defines the [`Source`] type and supporting APIs for
-//! working with collections of attributes.
+//! working with collections of key-values.
 
 use crate::kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;
 
-/// A source of user-defined attributes.
+/// A source of key-values.
 ///
 /// The source may be a single pair, a set of pairs, or a filter over a set of pairs.
 /// Use the [`Visitor`](trait.Visitor.html) trait to inspect the structured data
 /// in a source.
+/// 
+/// A source is like an iterator over its key-values, except with a push-based API
+/// instead of a pull-based one.
 ///
 /// # Examples
 ///
-/// Enumerating the attributes in a source:
+/// Enumerating the key-values in a source:
 ///
 /// ```
-/// ..
+/// # fn main() -> Result<(), log::kv::Error> {
+/// use log::kv::{self, Source, Key, Value, source::Visitor};
+/// 
+/// // A `Visitor` that prints all key-values
+/// // Visitors are fed the key-value pairs of each key-values
+/// struct Printer;
+/// 
+/// impl<'kvs> Visitor<'kvs> for Printer {
+///     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
+///         println!("{key}: {value}");
+/// 
+///         Ok(())
+///     }
+/// }
+/// 
+/// // A source with 3 key-values
+/// // Common collection types implement the `Source` trait
+/// let source = &[
+///     ("a", 1),
+///     ("b", 2),
+///     ("c", 3),
+/// ];
+/// 
+/// // Pass an instance of the `Visitor` to a `Source` to visit it
+/// source.visit(&mut Printer)?;
+/// # Ok(())
+/// # }
 /// ```
 pub trait Source {
-    /// Visit attributes.
+    /// Visit key-values.
     ///
-    /// A source doesn't have to guarantee any ordering or uniqueness of attributes.
+    /// A source doesn't have to guarantee any ordering or uniqueness of key-values.
     /// If the given visitor returns an error then the source may early-return with it,
-    /// even if there are more attributes.
+    /// even if there are more key-values.
     ///
     /// # Implementation notes
     ///
-    /// A source should yield the same attributes to a subsequent visitor unless
+    /// A source should yield the same key-values to a subsequent visitor unless
     /// that visitor itself fails.
     fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
 
@@ -45,14 +74,14 @@ pub trait Source {
         get_default(self, key)
     }
 
-    /// Count the number of attributes that can be visited.
+    /// Count the number of key-values that can be visited.
     ///
     /// # Implementation notes
     ///
-    /// A source that knows the number of attributes upfront may provide a more
+    /// A source that knows the number of key-values upfront may provide a more
     /// efficient implementation.
     ///
-    /// A subsequent call to `visit` should yield the same number of attributes
+    /// A subsequent call to `visit` should yield the same number of key-values
     /// to the visitor, unless that visitor fails part way through.
     fn count(&self) -> usize {
         count_default(self)
@@ -162,6 +191,23 @@ where
 
     fn count(&self) -> usize {
         self.iter().map(Source::count).sum()
+    }
+}
+
+impl<const N: usize, S> Source for [S; N]
+where
+    S: Source,
+{
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        Source::visit(self as &[_], visitor)
+    }
+
+    fn get(&self, key: Key) -> Option<Value<'_>> {
+        Source::get(self as &[_], key)
+    }
+
+    fn count(&self) -> usize {
+        Source::count(self as &[_])
     }
 }
 

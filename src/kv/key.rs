@@ -30,7 +30,7 @@ impl ToKey for str {
     }
 }
 
-/// A key in a user-defined attribute.
+/// A key in a key-value.
 // These impls must only be based on the as_str() representation of the key
 // If a new field (such as an optional index) is added to the key they must not affect comparison
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

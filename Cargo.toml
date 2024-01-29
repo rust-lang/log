@@ -61,6 +61,7 @@ value-bag = { version = "1.4", optional = true, default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 serde_test = "1.0"
 sval = { version = "2.1" }
 sval_derive = { version = "2.1" }

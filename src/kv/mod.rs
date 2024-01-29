@@ -19,62 +19,186 @@
 //! data processing techniques, without needing to find and parse attributes from
 //! unstructured text first.
 //!
-//! In `log`, user-defined attributes are part of a [`Source`] on the [`LogRecord`].
-//! Each attribute is a pair of [`Key`] and [`Value`]. Keys are strings and values
-//! are a datum of any type that can be formatted or serialized. Simple types like
-//! strings, booleans, and numbers are supported, as well as arbitrarily complex
+//! In `log`, user-defined attributes are part of a [`Source`] on the log record.
+//! Each attribute is a key-value; a pair of [`Key`] and [`Value`]. Keys are strings 
+//! and values are a datum of any type that can be formatted or serialized. Simple types 
+//! like strings, booleans, and numbers are supported, as well as arbitrarily complex
 //! structures involving nested objects and sequences.
 //!
-//! ## Adding attributes to log records
+//! ## Adding key-values to log records
 //!
-//! Attributes appear after the message format in the `log!` macros:
-//!
-//! ```
-//! ..
-//! ```
-//!
-//! ## Working with attributes on log records
-//!
-//! Use the [`LogRecord::source`] method to access user-defined attributes.
-//! Individual attributes can be pulled from the source:
+//! Key-values appear after the message format in the `log!` macros:
 //!
 //! ```
 //! ..
 //! ```
 //!
-//! This is convenient when an attribute of interest is known in advance.
-//! All attributes can also be enumerated using a [`Visitor`]:
+//! ## Working with key-values on log records
+//!
+//! Use the [`LogRecord::key_values`] method to access key-values.
+//! 
+//! Individual values can be pulled from the source by their key:
 //!
 //! ```
-//! ..
+//! # fn main() -> Result<(), log::kv::Error> {
+//! use log::kv::{Source, Key, Value};
+//! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
+//! 
+//! // info!("Something of interest"; a = 1);
+//! let a: Value = record.key_values().get(Key::from("a")).unwrap();
+//! # Ok(())
+//! # }
 //! ```
 //!
-//! [`Value`]s in attributes have methods for conversions to common types:
+//! All key-values can also be enumerated using a [`source::Visitor`]:
 //!
 //! ```
-//! ..
+//! # fn main() -> Result<(), log::kv::Error> {
+//! # let record = log::Record::builder().key_values(&[("a", 1), ("b", 2), ("c", 3)]).build();
+//! use std::collections::BTreeMap;
+//! 
+//! use log::kv::{self, Source, Key, Value, source::Visitor};
+//! 
+//! struct Collect<'kvs>(BTreeMap<Key<'kvs>, Value<'kvs>>);
+//! 
+//! impl<'kvs> Visitor<'kvs> for Collect<'kvs> {
+//!     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
+//!         self.0.insert(key, value);
+//! 
+//!         Ok(())
+//!     }
+//! }
+//! 
+//! let mut visitor = Collect(BTreeMap::new());
+//! 
+//! // info!("Something of interest"; a = 1, b = 2, c = 3);
+//! record.key_values().visit(&mut visitor)?;
+//! 
+//! let collected = visitor.0;
+//! 
+//! assert_eq!(
+//!     vec!["a", "b", "c"], 
+//!     collected
+//!         .keys()
+//!         .map(|k| k.as_str())
+//!         .collect::<Vec<_>>(),
+//! );
+//! # Ok(())
+//! # }
 //! ```
 //!
-//! Values also have their own [`value::Visitor`] type:
+//! [`Value`]s have methods for conversions to common types:
 //!
 //! ```
-//! ..
+//! # fn main() -> Result<(), log::kv::Error> {
+//! use log::kv::{Source, Key};
+//! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
+//! 
+//! // info!("Something of interest"; a = 1);
+//! let a = record.key_values().get(Key::from("a")).unwrap();
+//! 
+//! assert_eq!(1, a.to_i64().unwrap());
+//! # Ok(())
+//! # }
 //! ```
 //!
-//! Visitors on values are lightweight and suitable for detecting primitive types.
-//! To serialize a value, you can also use either `serde` or `sval`:
+//! Values also have their own [`value::Visitor`] type. Visitors are a lightweight
+//! API for working with primitives types:
+//!
+//! ```
+//! # fn main() -> Result<(), log::kv::Error> {
+//! use log::kv::{self, Source, Key, value::Visitor};
+//! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
+//! 
+//! struct IsNumeric(bool);
+//! 
+//! impl<'kvs> Visitor<'kvs> for IsNumeric {
+//!     fn visit_any(&mut self, _value: kv::Value) -> Result<(), kv::Error> {
+//!         self.0 = false;
+//!         Ok(())
+//!     }
+//!
+//!     fn visit_u64(&mut self, _value: u64) -> Result<(), kv::Error> {
+//!         self.0 = true;
+//!         Ok(())
+//!     }
+//!
+//!     fn visit_i64(&mut self, _value: i64) -> Result<(), kv::Error> {
+//!         self.0 = true;
+//!         Ok(())
+//!     }
+//!
+//!     fn visit_u128(&mut self, _value: u128) -> Result<(), kv::Error> {
+//!         self.0 = true;
+//!         Ok(())
+//!     }
+//!
+//!     fn visit_i128(&mut self, _value: i128) -> Result<(), kv::Error> {
+//!         self.0 = true;
+//!         Ok(())
+//!     }
+//!
+//!     fn visit_f64(&mut self, _value: f64) -> Result<(), kv::Error> {
+//!         self.0 = true;
+//!         Ok(())
+//!     }
+//! }
+//! 
+//! // info!("Something of interest"; a = 1);
+//! let a = record.key_values().get(Key::from("a")).unwrap();
+//! 
+//! let mut visitor = IsNumeric(false);
+//! 
+//! a.visit(&mut visitor)?;
+//! 
+//! let is_numeric = visitor.0;
+//! 
+//! assert!(is_numeric);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! To serialize a value to a format like JSON, you can also use either `serde` or `sval`:
 //! 
 //! ```
-//! ..
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # #[cfg(feature = "serde")]
+//! # {
+//! # use log::kv::Key;
+//! # #[derive(serde::Serialize)] struct Data { a: i32, b: bool, c: &'static str }
+//! let data = Data { a: 1, b: true, c: "Some data" };
+//! # let source = [("a", log::kv::Value::from_serde(&data))];
+//! # let record = log::Record::builder().key_values(&source).build();
+//! 
+//! // info!("Something of interest"; a = data);
+//! let a = record.key_values().get(Key::from("a")).unwrap();
+//! 
+//! assert_eq!("{\"a\":1,\"b\":true,\"c\":\"Some data\"}", serde_json::to_string(&a)?);
+//! # }
+//! # Ok(())
+//! # }
 //! ```
 //! 
+//! The choice of serialization framework depends on the needs of the consumer.
 //! If you're in a no-std environment, you can use `sval`. In other cases, you can use `serde`.
+//! Log producers and log consumers don't need to agree on the serialization framework.
+//! A value can be captured using its `serde::Serialize` implementation and still be serialized
+//! through `sval` without losing any structure.
 //!
 //! Values can also always be formatted using the standard `Debug` and `Display`
 //! traits:
 //! 
 //! ```
-//! ..
+//! # use log::kv::Key;
+//! # #[derive(Debug)] struct Data { a: i32, b: bool, c: &'static str }
+//! let data = Data { a: 1, b: true, c: "Some data" };
+//! # let source = [("a", log::kv::Value::from_debug(&data))];
+//! # let record = log::Record::builder().key_values(&source).build();
+//! 
+//! // info!("Something of interest"; a = data);
+//! let a = record.key_values().get(Key::from("a")).unwrap();
+//! 
+//! assert_eq!("Data { a: 1, b: true, c: \"Some data\" }", format!("{a:?}"));
 //! ```
 
 mod error;

@@ -30,7 +30,7 @@ impl<'v> ToValue for Value<'v> {
     }
 }
 
-/// A value in a user-defined attribute.
+/// A value in a key-value.
 ///
 /// Values are an anonymous bag containing some structured datum.
 ///
