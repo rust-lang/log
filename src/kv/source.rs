@@ -1,5 +1,5 @@
 //! Sources for key-values.
-//! 
+//!
 //! This module defines the [`Source`] type and supporting APIs for
 //! working with collections of key-values.
 
@@ -11,7 +11,7 @@ use std::fmt;
 /// The source may be a single pair, a set of pairs, or a filter over a set of pairs.
 /// Use the [`Visitor`](trait.Visitor.html) trait to inspect the structured data
 /// in a source.
-/// 
+///
 /// A source is like an iterator over its key-values, except with a push-based API
 /// instead of a pull-based one.
 ///
@@ -22,19 +22,19 @@ use std::fmt;
 /// ```
 /// # fn main() -> Result<(), log::kv::Error> {
 /// use log::kv::{self, Source, Key, Value, source::Visitor};
-/// 
+///
 /// // A `Visitor` that prints all key-values
 /// // Visitors are fed the key-value pairs of each key-values
 /// struct Printer;
-/// 
+///
 /// impl<'kvs> Visitor<'kvs> for Printer {
 ///     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
 ///         println!("{key}: {value}");
-/// 
+///
 ///         Ok(())
 ///     }
 /// }
-/// 
+///
 /// // A source with 3 key-values
 /// // Common collection types implement the `Source` trait
 /// let source = &[
@@ -42,7 +42,7 @@ use std::fmt;
 ///     ("b", 2),
 ///     ("c", 3),
 /// ];
-/// 
+///
 /// // Pass an instance of the `Visitor` to a `Source` to visit it
 /// source.visit(&mut Printer)?;
 /// # Ok(())

@@ -20,31 +20,33 @@
 //! unstructured text first.
 //!
 //! In `log`, user-defined attributes are part of a [`Source`] on the log record.
-//! Each attribute is a key-value; a pair of [`Key`] and [`Value`]. Keys are strings 
-//! and values are a datum of any type that can be formatted or serialized. Simple types 
+//! Each attribute is a key-value; a pair of [`Key`] and [`Value`]. Keys are strings
+//! and values are a datum of any type that can be formatted or serialized. Simple types
 //! like strings, booleans, and numbers are supported, as well as arbitrarily complex
 //! structures involving nested objects and sequences.
 //!
 //! ## Adding key-values to log records
 //!
-//! Key-values appear after the message format in the `log!` macros:
+//! Key-values appear before the message format in the `log!` macros:
 //!
 //! ```
-//! ..
+//! # use log::info;
+//! info!(a = 1; "Something of interest");
 //! ```
 //!
 //! ## Working with key-values on log records
 //!
 //! Use the [`LogRecord::key_values`] method to access key-values.
-//! 
+//!
 //! Individual values can be pulled from the source by their key:
 //!
 //! ```
 //! # fn main() -> Result<(), log::kv::Error> {
 //! use log::kv::{Source, Key, Value};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
-//! 
-//! // info!("Something of interest"; a = 1);
+//!
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a: Value = record.key_values().get(Key::from("a")).unwrap();
 //! # Ok(())
 //! # }
@@ -56,28 +58,29 @@
 //! # fn main() -> Result<(), log::kv::Error> {
 //! # let record = log::Record::builder().key_values(&[("a", 1), ("b", 2), ("c", 3)]).build();
 //! use std::collections::BTreeMap;
-//! 
+//!
 //! use log::kv::{self, Source, Key, Value, source::Visitor};
-//! 
+//!
 //! struct Collect<'kvs>(BTreeMap<Key<'kvs>, Value<'kvs>>);
-//! 
+//!
 //! impl<'kvs> Visitor<'kvs> for Collect<'kvs> {
 //!     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
 //!         self.0.insert(key, value);
-//! 
+//!
 //!         Ok(())
 //!     }
 //! }
-//! 
+//!
 //! let mut visitor = Collect(BTreeMap::new());
-//! 
-//! // info!("Something of interest"; a = 1, b = 2, c = 3);
+//!
+//! // info!(a = 1, b = 2, c = 3; "Something of interest");
+//!
 //! record.key_values().visit(&mut visitor)?;
-//! 
+//!
 //! let collected = visitor.0;
-//! 
+//!
 //! assert_eq!(
-//!     vec!["a", "b", "c"], 
+//!     vec!["a", "b", "c"],
 //!     collected
 //!         .keys()
 //!         .map(|k| k.as_str())
@@ -93,10 +96,11 @@
 //! # fn main() -> Result<(), log::kv::Error> {
 //! use log::kv::{Source, Key};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
-//! 
-//! // info!("Something of interest"; a = 1);
+//!
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
-//! 
+//!
 //! assert_eq!(1, a.to_i64().unwrap());
 //! # Ok(())
 //! # }
@@ -109,9 +113,9 @@
 //! # fn main() -> Result<(), log::kv::Error> {
 //! use log::kv::{self, Source, Key, value::Visitor};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
-//! 
+//!
 //! struct IsNumeric(bool);
-//! 
+//!
 //! impl<'kvs> Visitor<'kvs> for IsNumeric {
 //!     fn visit_any(&mut self, _value: kv::Value) -> Result<(), kv::Error> {
 //!         self.0 = false;
@@ -143,23 +147,24 @@
 //!         Ok(())
 //!     }
 //! }
-//! 
-//! // info!("Something of interest"; a = 1);
+//!
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
-//! 
+//!
 //! let mut visitor = IsNumeric(false);
-//! 
+//!
 //! a.visit(&mut visitor)?;
-//! 
+//!
 //! let is_numeric = visitor.0;
-//! 
+//!
 //! assert!(is_numeric);
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! To serialize a value to a format like JSON, you can also use either `serde` or `sval`:
-//! 
+//!
 //! ```
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # #[cfg(feature = "serde")]
@@ -169,16 +174,17 @@
 //! let data = Data { a: 1, b: true, c: "Some data" };
 //! # let source = [("a", log::kv::Value::from_serde(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
-//! 
-//! // info!("Something of interest"; a = data);
+//!
+//! // info!(a = data; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
-//! 
+//!
 //! assert_eq!("{\"a\":1,\"b\":true,\"c\":\"Some data\"}", serde_json::to_string(&a)?);
 //! # }
 //! # Ok(())
 //! # }
 //! ```
-//! 
+//!
 //! The choice of serialization framework depends on the needs of the consumer.
 //! If you're in a no-std environment, you can use `sval`. In other cases, you can use `serde`.
 //! Log producers and log consumers don't need to agree on the serialization framework.
@@ -187,17 +193,18 @@
 //!
 //! Values can also always be formatted using the standard `Debug` and `Display`
 //! traits:
-//! 
+//!
 //! ```
 //! # use log::kv::Key;
 //! # #[derive(Debug)] struct Data { a: i32, b: bool, c: &'static str }
 //! let data = Data { a: 1, b: true, c: "Some data" };
 //! # let source = [("a", log::kv::Value::from_debug(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
-//! 
-//! // info!("Something of interest"; a = data);
+//!
+//! // info!(a = data; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
-//! 
+//!
 //! assert_eq!("Data { a: 1, b: true, c: \"Some data\" }", format!("{a:?}"));
 //! ```
 

@@ -1,5 +1,5 @@
 //! Structured values.
-//! 
+//!
 //! This module defines the [`Value`] type and supporting APIs for
 //! capturing and serializing them.
 
@@ -45,7 +45,6 @@ impl<'v> ToValue for Value<'v> {
 /// ## Using the `Value::from_*` methods
 ///
 /// `Value` offers a few constructor methods that capture values of different kinds.
-/// These methods don't require `T: 'static`, but can't support downcasting.
 ///
 /// ```
 /// use log::kv::Value;
@@ -79,25 +78,43 @@ impl<'v> ToValue for Value<'v> {
 /// assert_eq!(Some(42), value.to_i64());
 /// ```
 ///
+/// # Data model
+///
+/// Values can hold one of a number of types:
+///
+/// - **Null:** The absence of any other meaningful value. Note that
+///   `Some(Value::null())` is not the same as `None`. The former is
+///   `null` while the latter is `undefined`. This is important to be
+///   able to tell the difference between a key-value that was logged,
+///   but its value was empty (`Some(Value::null())`) and a key-value
+///   that was never logged at all (`None`).
+/// - **Strings:** `str`, `char`.
+/// - **Booleans:** `bool`.
+/// - **Integers:** `u8`-`u128`, `i8`-`i128`, `NonZero*`.
+/// - **Floating point numbers:** `f32`-`f64`.
+/// - **Errors:** `dyn (Error + 'static)`.
+/// - **`serde`:** Any type in `serde`'s data model.
+/// - **`sval`:** Any type in `sval`'s data model.
+///
 /// # Serialization
 ///
-/// `Value` provides a number of ways to be serialized.
+/// Values provide a number of ways to be serialized.
 ///
 /// For basic types the [`Value::visit`] method can be used to extract the
 /// underlying typed value. However this is limited in the amount of types
-/// supported (see the [`Visit`] trait methods).
+/// supported (see the [`Visitor`] trait methods).
 ///
 /// For more complex types one of the following traits can be used:
-///  * [`sval::Value`], requires the `kv_unstable_sval` feature.
-///  * [`serde::Serialize`], requires the `kv_unstable_serde` feature.
-/// 
-/// You don't need a [`Visit`] to serialize values.
-/// 
+///  * `sval::Value`, requires the `kv_unstable_sval` feature.
+///  * `serde::Serialize`, requires the `kv_unstable_serde` feature.
+///
+/// You don't need a visitor to serialize values through `serde` or `sval`.
+///
 /// A value can always be serialized using any supported framework, regardless
 /// of how it was captured. If, for example, a value was captured using its
-/// `Display` implementation, it will serialize as a string. If it was captured
-/// as a struct using its `serde::Serialize`, it will also serialize as a struct
-/// through `sval`, or be formatted using a `Debug`-compatible representation.
+/// `Display` implementation, it will serialize through `serde` as a string. If it was
+/// captured as a struct using `serde`, it will also serialize as a struct
+/// through `sval`, or can be formatted using a `Debug`-compatible representation.
 pub struct Value<'v> {
     inner: inner::Inner<'v>,
 }
@@ -172,6 +189,13 @@ impl<'v> Value<'v> {
     pub fn from_dyn_error(err: &'v (dyn std::error::Error + 'static)) -> Self {
         Value {
             inner: inner::Inner::from_dyn_error(err),
+        }
+    }
+
+    /// Get a `null` value.
+    pub fn null() -> Self {
+        Value {
+            inner: inner::Inner::empty(),
         }
     }
 
@@ -458,15 +482,22 @@ mod std_support {
     }
 }
 
-/// A visitor for a `Value`.
+/// A visitor for a [`Value`].
 ///
-/// Also see [`Value`'s documentation on seralization].
+/// Also see [`Value`'s documentation on seralization]. Visitors are a simple alternative
+/// to a more fully-featured serialization framework like `serde` or `sval`. A visitor
+/// can differentiate primitive types through methods like [`Visitor::visit_bool`] and
+/// [`Visitor::visit_str`], but more complex types like maps and sequences
+/// will fallthrough to [`Visitor::visit_any`].
+///
+/// If you're trying to serialize a value to a format like JSON, you can use either `serde`
+/// or `sval` directly with the value. You don't need a visitor.
 ///
 /// [`Value`'s documentation on seralization]: Value#serialization
 pub trait Visitor<'v> {
     /// Visit a `Value`.
     ///
-    /// This is the only required method on `Visit` and acts as a fallback for any
+    /// This is the only required method on `Visitor` and acts as a fallback for any
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
     /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
@@ -622,39 +653,57 @@ pub(in crate::kv) mod inner {
             }
 
             fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
-                self.0.visit_u64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_u64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_i64(&mut self, value: i64) -> Result<(), Error> {
-                self.0.visit_i64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_i64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
-                self.0.visit_u128(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_u128(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
-                self.0.visit_i128(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_i128(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_f64(&mut self, value: f64) -> Result<(), Error> {
-                self.0.visit_f64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_f64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_bool(&mut self, value: bool) -> Result<(), Error> {
-                self.0.visit_bool(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_bool(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_str(&mut self, value: &str) -> Result<(), Error> {
-                self.0.visit_str(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_str(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
-                self.0.visit_borrowed_str(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_borrowed_str(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_char(&mut self, value: char) -> Result<(), Error> {
-                self.0.visit_char(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_char(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
@@ -662,7 +711,9 @@ pub(in crate::kv) mod inner {
                 &mut self,
                 err: &(dyn std::error::Error + 'static),
             ) -> Result<(), Error> {
-                self.0.visit_error(err).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_error(err)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
@@ -670,7 +721,9 @@ pub(in crate::kv) mod inner {
                 &mut self,
                 err: &'v (dyn std::error::Error + 'static),
             ) -> Result<(), Error> {
-                self.0.visit_borrowed_error(err).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_borrowed_error(err)
+                    .map_err(crate::kv::Error::into_value)
             }
         }
 
@@ -826,6 +879,10 @@ pub(in crate::kv) mod inner {
             todo!()
         }
 
+        pub fn empty() -> Self {
+            todo!()
+        }
+
         pub fn to_bool(&self) -> Option<bool> {
             todo!()
         }
@@ -873,7 +930,6 @@ pub(in crate::kv) mod inner {
         F64(f64),
         I64(i64),
         U64(u64),
-
     }
 
     #[derive(Debug)]
