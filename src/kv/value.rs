@@ -176,7 +176,7 @@ impl<'v> Value<'v> {
     }
 
     /// Get a value from an internal primitive.
-    fn from_value_bag<T>(value: T) -> Self
+    fn from_inner<T>(value: T) -> Self
     where
         T: Into<inner::Inner<'v>>,
     {
@@ -262,39 +262,39 @@ impl ToValue for std::num::NonZeroI128 {
 
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
-        Value::from_value_bag(value)
+        Value::from_inner(value)
     }
 }
 
 impl<'v> From<&'v u128> for Value<'v> {
     fn from(value: &'v u128) -> Self {
-        Value::from_value_bag(value)
+        Value::from_inner(value)
     }
 }
 
 impl<'v> From<&'v i128> for Value<'v> {
     fn from(value: &'v i128) -> Self {
-        Value::from_value_bag(value)
+        Value::from_inner(value)
     }
 }
 
 impl<'v> From<&'v std::num::NonZeroU128> for Value<'v> {
     fn from(v: &'v std::num::NonZeroU128) -> Value<'v> {
         // SAFETY: `NonZeroU128` and `u128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroU128 as *const u128) })
+        Value::from_inner(unsafe { &*(v as *const std::num::NonZeroU128 as *const u128) })
     }
 }
 
 impl<'v> From<&'v std::num::NonZeroI128> for Value<'v> {
     fn from(v: &'v std::num::NonZeroI128) -> Value<'v> {
         // SAFETY: `NonZeroI128` and `i128` have the same ABI
-        Value::from_value_bag(unsafe { &*(v as *const std::num::NonZeroI128 as *const i128) })
+        Value::from_inner(unsafe { &*(v as *const std::num::NonZeroI128 as *const i128) })
     }
 }
 
 impl ToValue for () {
     fn to_value(&self) -> Value {
-        Value::from_value_bag(())
+        Value::from_inner(())
     }
 }
 
@@ -305,7 +305,7 @@ where
     fn to_value(&self) -> Value {
         match *self {
             Some(ref value) => value.to_value(),
-            None => Value::from_value_bag(()),
+            None => Value::from_inner(()),
         }
     }
 }
@@ -321,7 +321,7 @@ macro_rules! impl_to_value_primitive {
 
             impl<'v> From<$into_ty> for Value<'v> {
                 fn from(value: $into_ty) -> Self {
-                    Value::from_value_bag(value)
+                    Value::from_inner(value)
                 }
             }
         )*
@@ -598,6 +598,8 @@ pub(in crate::kv) mod inner {
 
     pub use value_bag::ValueBag as Inner;
 
+    pub use value_bag::Error;
+
     #[cfg(test)]
     pub use value_bag::test::TestToken as Token;
 
@@ -606,75 +608,75 @@ pub(in crate::kv) mod inner {
         inner.to_test_token()
     }
 
-    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), Error> {
+    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
         struct InnerVisitor<V>(V);
 
         impl<'v, V> value_bag::visit::Visit<'v> for InnerVisitor<V>
         where
             V: Visitor<'v>,
         {
-            fn visit_any(&mut self, value: value_bag::ValueBag) -> Result<(), value_bag::Error> {
+            fn visit_any(&mut self, value: value_bag::ValueBag) -> Result<(), Error> {
                 self.0
                     .visit_any(Value { inner: value })
-                    .map_err(Error::into_value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_u64(&mut self, value: u64) -> Result<(), value_bag::Error> {
-                self.0.visit_u64(value).map_err(Error::into_value)
+            fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
+                self.0.visit_u64(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_i64(&mut self, value: i64) -> Result<(), value_bag::Error> {
-                self.0.visit_i64(value).map_err(Error::into_value)
+            fn visit_i64(&mut self, value: i64) -> Result<(), Error> {
+                self.0.visit_i64(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_u128(&mut self, value: u128) -> Result<(), value_bag::Error> {
-                self.0.visit_u128(value).map_err(Error::into_value)
+            fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
+                self.0.visit_u128(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_i128(&mut self, value: i128) -> Result<(), value_bag::Error> {
-                self.0.visit_i128(value).map_err(Error::into_value)
+            fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
+                self.0.visit_i128(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_f64(&mut self, value: f64) -> Result<(), value_bag::Error> {
-                self.0.visit_f64(value).map_err(Error::into_value)
+            fn visit_f64(&mut self, value: f64) -> Result<(), Error> {
+                self.0.visit_f64(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_bool(&mut self, value: bool) -> Result<(), value_bag::Error> {
-                self.0.visit_bool(value).map_err(Error::into_value)
+            fn visit_bool(&mut self, value: bool) -> Result<(), Error> {
+                self.0.visit_bool(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_str(&mut self, value: &str) -> Result<(), value_bag::Error> {
-                self.0.visit_str(value).map_err(Error::into_value)
+            fn visit_str(&mut self, value: &str) -> Result<(), Error> {
+                self.0.visit_str(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), value_bag::Error> {
-                self.0.visit_borrowed_str(value).map_err(Error::into_value)
+            fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
+                self.0.visit_borrowed_str(value).map_err(crate::kv::Error::into_value)
             }
 
-            fn visit_char(&mut self, value: char) -> Result<(), value_bag::Error> {
-                self.0.visit_char(value).map_err(Error::into_value)
+            fn visit_char(&mut self, value: char) -> Result<(), Error> {
+                self.0.visit_char(value).map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
             fn visit_error(
                 &mut self,
                 err: &(dyn std::error::Error + 'static),
-            ) -> Result<(), value_bag::Error> {
-                self.0.visit_error(err).map_err(Error::into_value)
+            ) -> Result<(), Error> {
+                self.0.visit_error(err).map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
             fn visit_borrowed_error(
                 &mut self,
                 err: &'v (dyn std::error::Error + 'static),
-            ) -> Result<(), value_bag::Error> {
-                self.0.visit_borrowed_error(err).map_err(Error::into_value)
+            ) -> Result<(), Error> {
+                self.0.visit_borrowed_error(err).map_err(crate::kv::Error::into_value)
             }
         }
 
         inner
             .visit(&mut InnerVisitor(visitor))
-            .map_err(Error::from_value)
+            .map_err(crate::kv::Error::from_value)
     }
 }
 
@@ -682,13 +684,200 @@ pub(in crate::kv) mod inner {
 pub(in crate::kv) mod inner {
     use super::*;
 
+    #[derive(Clone)]
     pub enum Inner<'v> {
-
+        Str(&'v str),
     }
 
+    impl<'v> From<()> for Inner<'v> {
+        fn from(v: ()) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<bool> for Inner<'v> {
+        fn from(v: bool) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<char> for Inner<'v> {
+        fn from(v: char) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<f32> for Inner<'v> {
+        fn from(v: f32) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<f64> for Inner<'v> {
+        fn from(v: f64) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<i8> for Inner<'v> {
+        fn from(v: i8) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<i16> for Inner<'v> {
+        fn from(v: i16) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<i32> for Inner<'v> {
+        fn from(v: i32) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<i64> for Inner<'v> {
+        fn from(v: i64) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<isize> for Inner<'v> {
+        fn from(v: isize) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<u8> for Inner<'v> {
+        fn from(v: u8) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<u16> for Inner<'v> {
+        fn from(v: u16) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<u32> for Inner<'v> {
+        fn from(v: u32) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<u64> for Inner<'v> {
+        fn from(v: u64) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<usize> for Inner<'v> {
+        fn from(v: usize) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<&'v i128> for Inner<'v> {
+        fn from(v: &'v i128) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<&'v u128> for Inner<'v> {
+        fn from(v: &'v u128) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> From<&'v str> for Inner<'v> {
+        fn from(v: &'v str) -> Self {
+            todo!()
+        }
+    }
+
+    impl<'v> fmt::Debug for Inner<'v> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            todo!()
+        }
+    }
+
+    impl<'v> fmt::Display for Inner<'v> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            todo!()
+        }
+    }
+
+    impl<'v> Inner<'v> {
+        pub fn from_debug<T: fmt::Debug>(value: &'v T) -> Self {
+            todo!()
+        }
+
+        pub fn from_display<T: fmt::Display>(value: &'v T) -> Self {
+            todo!()
+        }
+
+        pub fn from_dyn_debug(value: &'v dyn fmt::Debug) -> Self {
+            todo!()
+        }
+
+        pub fn from_dyn_display(value: &'v dyn fmt::Display) -> Self {
+            todo!()
+        }
+
+        pub fn to_bool(&self) -> Option<bool> {
+            todo!()
+        }
+
+        pub fn to_char(&self) -> Option<char> {
+            todo!()
+        }
+
+        pub fn to_f64(&self) -> Option<f64> {
+            todo!()
+        }
+
+        pub fn to_i64(&self) -> Option<i64> {
+            todo!()
+        }
+
+        pub fn to_u64(&self) -> Option<u64> {
+            todo!()
+        }
+
+        pub fn to_u128(&self) -> Option<u128> {
+            todo!()
+        }
+
+        pub fn to_i128(&self) -> Option<i128> {
+            todo!()
+        }
+
+        pub fn to_borrowed_str(&self) -> Option<&'v str> {
+            todo!()
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
     pub enum Token {}
 
-    pub fn visit(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), Error> {
+    #[derive(Debug)]
+    pub struct Error {}
+
+    impl Error {
+        pub fn msg(msg: &'static str) -> Self {
+            todo!()
+        }
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            todo!()
+        }
+    }
+
+    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
         todo!()
     }
 }

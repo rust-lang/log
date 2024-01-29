@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::kv::value;
+
 /// An error encountered while working with structured data.
 #[derive(Debug)]
 pub struct Error {
@@ -11,7 +13,7 @@ enum Inner {
     #[cfg(feature = "std")]
     Boxed(std_support::BoxedError),
     Msg(&'static str),
-    Value(value_bag::Error),
+    Value(value::inner::Error),
     Fmt,
 }
 
@@ -23,21 +25,21 @@ impl Error {
         }
     }
 
-    // Not public so we don't leak the `value_bag` API
-    pub(super) fn from_value(err: value_bag::Error) -> Self {
+    // Not public so we don't leak the `value::inner` API
+    pub(super) fn from_value(err: value::inner::Error) -> Self {
         Error {
             inner: Inner::Value(err),
         }
     }
 
-    // Not public so we don't leak the `value_bag` API
-    pub(super) fn into_value(self) -> value_bag::Error {
+    // Not public so we don't leak the `value::inner` API
+    pub(super) fn into_value(self) -> value::inner::Error {
         match self.inner {
             Inner::Value(err) => err,
             #[cfg(feature = "kv_unstable_std")]
-            _ => value_bag::Error::boxed(self),
+            _ => value::inner::Error::boxed(self),
             #[cfg(not(feature = "kv_unstable_std"))]
-            _ => value_bag::Error::msg("error inspecting a value"),
+            _ => value::inner::Error::msg("error inspecting a value"),
         }
     }
 }
