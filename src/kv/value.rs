@@ -857,10 +857,24 @@ pub(in crate::kv) mod inner {
         pub fn to_borrowed_str(&self) -> Option<&'v str> {
             todo!()
         }
+
+        #[cfg(test)]
+        pub fn to_test_token(&self) -> Token {
+            todo!()
+        }
     }
 
-    #[derive(Debug, PartialEq, Eq)]
-    pub enum Token {}
+    #[derive(Debug, PartialEq)]
+    pub enum Token<'v> {
+        None,
+        Bool(bool),
+        Char(char),
+        Str(&'v str),
+        F64(f64),
+        I64(i64),
+        U64(u64),
+
+    }
 
     #[derive(Debug)]
     pub struct Error {}
