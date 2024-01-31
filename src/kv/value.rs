@@ -333,7 +333,9 @@ macro_rules! impl_value_to_primitive {
     }
 }
 
-impl_to_value_primitive![usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,];
+impl_to_value_primitive![
+    usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,
+];
 
 #[rustfmt::skip]
 impl_to_value_nonzero_primitive![
@@ -584,6 +586,13 @@ where
 
 #[cfg(feature = "value-bag")]
 pub(in crate::kv) mod inner {
+    /**
+    An implementation of `Value` based on a library called `value_bag`.
+
+    `value_bag` was written specifically for use in `log`'s value, but was split out when it outgrew
+    the codebase here. It's a general-purpose type-erasure library that handles mapping between
+    more fully-featured serialization frameworks.
+    */
     use super::*;
 
     pub use value_bag::ValueBag as Inner;
@@ -698,6 +707,19 @@ pub(in crate::kv) mod inner {
 
 #[cfg(not(feature = "value-bag"))]
 pub(in crate::kv) mod inner {
+    /**
+    This is a dependency-free implementation of `Value` when there's no serialization frameworks involved.
+    In these simple cases a more fully featured solution like `value_bag` isn't needed, so we avoid pulling it in.
+
+    There are a few things here that need to remain consistent with the `value_bag`-based implementation:
+
+    1. Conversions should always produce the same results. If a conversion here returns `Some`, then
+       the same `value_bag`-based conversion must also. Of particular note here are floats to ints; they're
+       based on the standard library's `TryInto` conversions, which need to be convert to `i32` or `u32`,
+       and then to `f64`.
+    2. Visitors should always be called in the same way. If a particular type of value calls `visit_i64`,
+       then the same `value_bag`-based visitor must also.
+    */
     use super::*;
 
     #[derive(Clone)]
@@ -900,19 +922,19 @@ pub(in crate::kv) mod inner {
                 Inner::I64(v) => {
                     let v: i32 = (*v).try_into().ok()?;
                     v.try_into().ok()
-                },
+                }
                 Inner::U64(v) => {
                     let v: u32 = (*v).try_into().ok()?;
                     v.try_into().ok()
-                },
+                }
                 Inner::I128(v) => {
                     let v: i32 = (*v).try_into().ok()?;
                     v.try_into().ok()
-                },
+                }
                 Inner::U128(v) => {
                     let v: u32 = (*v).try_into().ok()?;
                     v.try_into().ok()
-                },
+                }
                 _ => None,
             }
         }
@@ -974,10 +996,10 @@ pub(in crate::kv) mod inner {
                 Inner::I64(v) => Token::I64(*v),
                 Inner::U64(v) => Token::U64(*v),
                 Inner::F64(v) => Token::F64(*v),
-                Inner::I128(v) => unimplemented!(),
-                Inner::U128(v) => unimplemented!(),
-                Inner::Debug(v) => unimplemented!(),
-                Inner::Display(v) => unimplemented!(),
+                Inner::I128(_) => unimplemented!(),
+                Inner::U128(_) => unimplemented!(),
+                Inner::Debug(_) => unimplemented!(),
+                Inner::Display(_) => unimplemented!(),
             }
         }
     }
@@ -994,7 +1016,10 @@ pub(in crate::kv) mod inner {
         U64(u64),
     }
 
-    pub fn visit<'v>(inner: &Inner<'v>, mut visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
+    pub fn visit<'v>(
+        inner: &Inner<'v>,
+        mut visitor: impl Visitor<'v>,
+    ) -> Result<(), crate::kv::Error> {
         match inner {
             Inner::None => visitor.visit_null(),
             Inner::Bool(v) => visitor.visit_bool(*v),
@@ -1118,6 +1143,16 @@ pub(crate) mod tests {
             assert!(v.to_i64().is_none());
             assert!(v.to_f64().is_none());
         }
+    }
+
+    #[test]
+    fn test_to_float() {
+        // Only integers from i32::MIN..=u32::MAX can be converted into floats
+        assert!(Value::from(i32::MIN).to_f64().is_some());
+        assert!(Value::from(u32::MAX).to_f64().is_some());
+
+        assert!(Value::from((i32::MIN as i64) - 1).to_f64().is_none());
+        assert!(Value::from((u32::MAX as u64) + 1).to_f64().is_none());
     }
 
     #[test]
