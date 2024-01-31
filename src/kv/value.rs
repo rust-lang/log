@@ -716,7 +716,7 @@ pub(in crate::kv) mod inner {
     }
 
     impl<'v> From<()> for Inner<'v> {
-        fn from(v: ()) -> Self {
+        fn from(_: ()) -> Self {
             Inner::None
         }
     }
@@ -992,21 +992,6 @@ pub(in crate::kv) mod inner {
         F64(f64),
         I64(i64),
         U64(u64),
-    }
-
-    #[derive(Debug)]
-    pub struct Error {}
-
-    impl Error {
-        pub fn msg(msg: &'static str) -> Self {
-            todo!()
-        }
-    }
-
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            todo!()
-        }
     }
 
     pub fn visit<'v>(inner: &Inner<'v>, mut visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
