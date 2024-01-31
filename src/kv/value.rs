@@ -611,6 +611,10 @@ pub(in crate::kv) mod inner {
                     .map_err(crate::kv::Error::into_value)
             }
 
+            fn visit_empty(&mut self) -> Result<(), Error> {
+                self.0.visit_null().map_err(crate::kv::Error::into_value)
+            }
+
             fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
                 self.0
                     .visit_u64(value)
@@ -1005,8 +1009,20 @@ pub(in crate::kv) mod inner {
         }
     }
 
-    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
-        todo!()
+    pub fn visit<'v>(inner: &Inner<'v>, mut visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
+        match inner {
+            Inner::None => visitor.visit_null(),
+            Inner::Bool(v) => visitor.visit_bool(*v),
+            Inner::Str(v) => visitor.visit_borrowed_str(*v),
+            Inner::Char(v) => visitor.visit_char(*v),
+            Inner::I64(v) => visitor.visit_i64(*v),
+            Inner::U64(v) => visitor.visit_u64(*v),
+            Inner::F64(v) => visitor.visit_f64(*v),
+            Inner::I128(v) => visitor.visit_i128(*v),
+            Inner::U128(v) => visitor.visit_u128(*v),
+            Inner::Debug(v) => visitor.visit_any(Value::from_dyn_debug(*v)),
+            Inner::Display(v) => visitor.visit_any(Value::from_dyn_display(*v)),
+        }
     }
 }
 
