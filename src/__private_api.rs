@@ -5,31 +5,28 @@ use crate::{Level, Metadata, Record};
 use std::fmt::Arguments;
 pub use std::{file, format_args, line, module_path, stringify};
 
-#[cfg(feature = "kv_unstable")]
-pub type Value<'a> = dyn crate::kv::value::ToValue + 'a;
-
 #[cfg(not(feature = "kv_unstable"))]
-pub type Value<'a> = str;
+pub type Value<'a> = &'a str;
 
 mod sealed {
     /// Types for the `kv` argument.
     pub trait KVs<'a> {
-        fn into_kvs(self) -> Option<&'a [(&'a str, &'a super::Value<'a>)]>;
+        fn into_kvs(self) -> Option<&'a [(&'a str, super::Value<'a>)]>;
     }
 }
 
 // Types for the `kv` argument.
 
-impl<'a> KVs<'a> for &'a [(&'a str, &'a Value<'a>)] {
+impl<'a> KVs<'a> for &'a [(&'a str, Value<'a>)] {
     #[inline]
-    fn into_kvs(self) -> Option<&'a [(&'a str, &'a Value<'a>)]> {
+    fn into_kvs(self) -> Option<&'a [(&'a str, Value<'a>)]> {
         Some(self)
     }
 }
 
 impl<'a> KVs<'a> for () {
     #[inline]
-    fn into_kvs(self) -> Option<&'a [(&'a str, &'a Value<'a>)]> {
+    fn into_kvs(self) -> Option<&'a [(&'a str, Value<'a>)]> {
         None
     }
 }
@@ -41,7 +38,7 @@ fn log_impl(
     level: Level,
     &(target, module_path, file): &(&str, &'static str, &'static str),
     line: u32,
-    kvs: Option<&[(&str, &Value)]>,
+    kvs: Option<&[(&str, Value)]>,
 ) {
     #[cfg(not(feature = "kv_unstable"))]
     if kvs.is_some() {
@@ -87,3 +84,42 @@ pub fn log<'a, K>(
 pub fn enabled(level: Level, target: &str) -> bool {
     crate::logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
+
+#[cfg(feature = "kv_unstable")]
+mod kv_support {
+    use super::*;
+
+    use crate::kv;
+
+    pub type Value<'a> = kv::Value<'a>;
+
+    pub fn capture_to_value<'a, V: kv::value::ToValue + ?Sized>(v: &'a &'a V) -> Value<'a> {
+        v.to_value()
+    }
+
+    pub fn capture_debug<'a, V: core::fmt::Debug + ?Sized>(v: &'a &'a V) -> Value<'a> {
+        Value::from_debug(v)
+    }
+
+    pub fn capture_display<'a, V: core::fmt::Display + ?Sized>(v: &'a &'a V) -> Value<'a> {
+        Value::from_display(v)
+    }
+
+    #[cfg(feature = "kv_unstable_std")]
+    pub fn capture_error<'a>(v: &'a (dyn std::error::Error + 'static)) -> Value<'a> {
+        Value::from_dyn_error(v)
+    }
+
+    #[cfg(feature = "kv_unstable_sval")]
+    pub fn capture_sval<'a, V: sval::Value + ?Sized>(v: &'a &'a V) -> Value<'a> {
+        Value::from_sval(v)
+    }
+
+    #[cfg(feature = "kv_unstable_serde")]
+    pub fn capture_serde<'a, V: serde::Serialize + ?Sized>(v: &'a &'a V) -> Value<'a> {
+        Value::from_serde(v)
+    }
+}
+
+#[cfg(feature = "kv_unstable")]
+pub use self::kv_support::*;

@@ -1,5 +1,5 @@
 //! Structured values.
-//! 
+//!
 //! This module defines the [`Value`] type and supporting APIs for
 //! capturing and serializing them.
 
@@ -90,9 +90,9 @@ impl<'v> ToValue for Value<'v> {
 /// For more complex types one of the following traits can be used:
 ///  * [`sval::Value`], requires the `kv_unstable_sval` feature.
 ///  * [`serde::Serialize`], requires the `kv_unstable_serde` feature.
-/// 
+///
 /// You don't need a [`Visit`] to serialize values.
-/// 
+///
 /// A value can always be serialized using any supported framework, regardless
 /// of how it was captured. If, for example, a value was captured using its
 /// `Display` implementation, it will serialize as a string. If it was captured
@@ -622,39 +622,57 @@ pub(in crate::kv) mod inner {
             }
 
             fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
-                self.0.visit_u64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_u64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_i64(&mut self, value: i64) -> Result<(), Error> {
-                self.0.visit_i64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_i64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
-                self.0.visit_u128(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_u128(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
-                self.0.visit_i128(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_i128(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_f64(&mut self, value: f64) -> Result<(), Error> {
-                self.0.visit_f64(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_f64(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_bool(&mut self, value: bool) -> Result<(), Error> {
-                self.0.visit_bool(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_bool(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_str(&mut self, value: &str) -> Result<(), Error> {
-                self.0.visit_str(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_str(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_borrowed_str(&mut self, value: &'v str) -> Result<(), Error> {
-                self.0.visit_borrowed_str(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_borrowed_str(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             fn visit_char(&mut self, value: char) -> Result<(), Error> {
-                self.0.visit_char(value).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_char(value)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
@@ -662,7 +680,9 @@ pub(in crate::kv) mod inner {
                 &mut self,
                 err: &(dyn std::error::Error + 'static),
             ) -> Result<(), Error> {
-                self.0.visit_error(err).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_error(err)
+                    .map_err(crate::kv::Error::into_value)
             }
 
             #[cfg(feature = "kv_unstable_std")]
@@ -670,7 +690,9 @@ pub(in crate::kv) mod inner {
                 &mut self,
                 err: &'v (dyn std::error::Error + 'static),
             ) -> Result<(), Error> {
-                self.0.visit_borrowed_error(err).map_err(crate::kv::Error::into_value)
+                self.0
+                    .visit_borrowed_error(err)
+                    .map_err(crate::kv::Error::into_value)
             }
         }
 
@@ -873,7 +895,6 @@ pub(in crate::kv) mod inner {
         F64(f64),
         I64(i64),
         U64(u64),
-
     }
 
     #[derive(Debug)]

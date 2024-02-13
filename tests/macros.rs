@@ -250,6 +250,53 @@ fn kv_common_value_types() {
     );
 }
 
+#[test]
+#[cfg(feature = "kv_unstable")]
+fn kv_debug() {
+    all_log_macros!(
+        a:? = 42,
+        b:debug = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_unstable")]
+fn kv_display() {
+    all_log_macros!(
+        a:% = 42,
+        b:display = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_unstable_std")]
+fn kv_error() {
+    all_log_macros!(
+        a:error = std::io::Error::new(std::io::ErrorKind::Other, "an error");
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_unstable_sval")]
+fn kv_sval() {
+    all_log_macros!(
+        a:sval = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_unstable_serde")]
+fn kv_serde() {
+    all_log_macros!(
+        a:serde = 42;
+        "hello world"
+    );
+}
+
 /// Some and None (from Option) are used in the macros.
 #[derive(Debug)]
 enum Type {

@@ -99,10 +99,10 @@
 //! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
 //! # #[cfg(feature = "kv_unstable_serde")]
 //! # fn main() {
-//! use log::{info, warn, as_serde, as_error};
+//! use log::{info, warn};
 //!
 //! pub fn shave_the_yak(yak: &mut Yak) {
-//!     info!(target: "yak_events", yak = as_serde!(yak); "Commencing yak shaving");
+//!     info!(target: "yak_events", yak:serde = yak; "Commencing yak shaving");
 //!
 //!     loop {
 //!         match find_a_razor() {
@@ -112,7 +112,7 @@
 //!                 break;
 //!             }
 //!             Err(err) => {
-//!                 warn!(err = as_error!(err); "Unable to locate a razor, retrying");
+//!                 warn!(err:error = err; "Unable to locate a razor, retrying");
 //!             }
 //!         }
 //!     }
@@ -121,7 +121,7 @@
 //! # #[cfg(not(feature = "kv_unstable_serde"))]
 //! # fn main() {}
 //! ```
-//! 
+//!
 //! See the [`kv`] module documentation for more details.
 //!
 //! # Available logging implementations

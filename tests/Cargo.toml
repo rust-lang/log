@@ -7,6 +7,10 @@ build = "src/build.rs"
 
 [features]
 std = ["log/std"]
+kv_unstable = ["log/kv_unstable"]
+kv_unstable_std = ["log/kv_unstable_std"]
+kv_unstable_sval = ["log/kv_unstable_sval"]
+kv_unstable_serde = ["log/kv_unstable_serde"]
 
 [dependencies.log]
 path = ".."

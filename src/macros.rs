@@ -30,7 +30,7 @@
 #[macro_export]
 macro_rules! log {
     // log!(target: "my_target", Level::Info, key1 = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
+    (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<&_>(
@@ -38,7 +38,7 @@ macro_rules! log {
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
                 $crate::__private_api::line!(),
-                &[$(($crate::__log_key!($key), &$value)),+]
+                &[$(($crate::__log_key!($key), $crate::__log_value!(($value)$(:$capture)*))),+]
             );
         }
     });
@@ -228,6 +228,7 @@ macro_rules! log_enabled {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "kv_unstable")]
 macro_rules! __log_key {
     // key1 = 42
     ($($args:ident)*) => {
@@ -236,5 +237,119 @@ macro_rules! __log_key {
     // "key1" = 42
     ($($args:expr)*) => {
         $($args)*
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_unstable"))]
+macro_rules! __log_key {
+    ($($args:tt)*) => {
+        compile_error!("key value support requires the `kv_unstable` feature of `log`")
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_unstable")]
+macro_rules! __log_value {
+    // Default
+    (($args:expr)) => {
+        $crate::__log_value!(($args):value)
+    };
+    // ToValue
+    (($args:expr):value) => {
+        $crate::__private_api::capture_to_value(&&$args)
+    };
+    // Debug
+    (($args:expr):?) => {
+        $crate::__private_api::capture_debug(&&$args)
+    };
+    (($args:expr):debug) => {
+        $crate::__private_api::capture_debug(&&$args)
+    };
+    // Display
+    (($args:expr):%) => {
+        $crate::__private_api::capture_display(&&$args)
+    };
+    (($args:expr):display) => {
+        $crate::__private_api::capture_display(&&$args)
+    };
+    //Error
+    (($args:expr):error) => {
+        $crate::__log_value_error!($args)
+    };
+    // sval::Value
+    (($args:expr):sval) => {
+        $crate::__log_value_sval!($args)
+    };
+    // serde::Serialize
+    (($args:expr):serde) => {
+        $crate::__log_value_serde!($args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_unstable"))]
+macro_rules! __log_value {
+    ($($args:tt)*) => {
+        compile_error!("key value support requires the `kv_unstable` feature of `log`")
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_unstable_std"))]
+macro_rules! __log_value_error {
+    ($args:expr) => {
+        compile_error!("capturing values as `std::error::Error` requites the `kv_unstable_std` feature of `log`")
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_unstable_sval")]
+macro_rules! __log_value_sval {
+    ($args:expr) => {
+        $crate::__private_api::capture_sval(&&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_unstable_sval"))]
+macro_rules! __log_value_sval {
+    ($args:expr) => {
+        compile_error!(
+            "capturing values as `sval::Value` requites the `kv_unstable_sval` feature of `log`"
+        )
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_unstable_serde")]
+macro_rules! __log_value_serde {
+    ($args:expr) => {
+        $crate::__private_api::capture_serde(&&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_unstable_serde"))]
+macro_rules! __log_value_serde {
+    ($args:expr) => {
+        compile_error!("capturing values as `serde::Serialize` requites the `kv_unstable_serde` feature of `log`")
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_unstable_std")]
+macro_rules! __log_value_error {
+    ($args:expr) => {
+        $crate::__private_api::capture_error(&$args)
     };
 }
