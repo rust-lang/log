@@ -27,11 +27,31 @@
 //!
 //! ## Adding key-values to log records
 //!
-//! Key-values appear after the message format in the `log!` macros:
+//! Key-values appear before the message format in the `log!` macros:
 //!
 //! ```
-//! ..
+//! # use log::info;
+//! info!(a = 1; "Something of interest");
 //! ```
+//! 
+//! Values are capturing using the [`ToValue`] trait by default. To capture a value
+//! using a different trait implementation, use a modifier after its key. Here's how
+//! the same example can capture `a` using its `Debug` implementation instead:
+//! 
+//! ```
+//! # use log::info;
+//! info!(a:? = 1; "Something of interest");
+//! ```
+//! 
+//! The following capturing modifiers are supported:
+//! 
+//! - `:?`: `Debug`.
+//! - `:debug`: `Debug`.
+//! - `:%`: `Display`.
+//! - `:display`: `Display`.
+//! - `:error`: `std::error::Error` (requires the `kv_unstable_error` feature).
+//! - `:sval`: `sval::Value` (requires the `kv_unstable_sval` feature).
+//! - `:serde`: `serde::Serialize` (requires the `kv_unstable_serde` feature).
 //!
 //! ## Working with key-values on log records
 //!
@@ -44,7 +64,8 @@
 //! use log::kv::{Source, Key, Value};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
 //!
-//! // info!("Something of interest"; a = 1);
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a: Value = record.key_values().get(Key::from("a")).unwrap();
 //! # Ok(())
 //! # }
@@ -71,7 +92,8 @@
 //!
 //! let mut visitor = Collect(BTreeMap::new());
 //!
-//! // info!("Something of interest"; a = 1, b = 2, c = 3);
+//! // info!(a = 1, b = 2, c = 3; "Something of interest");
+//!
 //! record.key_values().visit(&mut visitor)?;
 //!
 //! let collected = visitor.0;
@@ -94,7 +116,8 @@
 //! use log::kv::{Source, Key};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
 //!
-//! // info!("Something of interest"; a = 1);
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
 //!
 //! assert_eq!(1, a.to_i64().unwrap());
@@ -144,7 +167,8 @@
 //!     }
 //! }
 //!
-//! // info!("Something of interest"; a = 1);
+//! // info!(a = 1; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
 //!
 //! let mut visitor = IsNumeric(false);
@@ -170,7 +194,8 @@
 //! # let source = [("a", log::kv::Value::from_serde(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
 //!
-//! // info!("Something of interest"; a = data);
+//! // info!(a = data; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
 //!
 //! assert_eq!("{\"a\":1,\"b\":true,\"c\":\"Some data\"}", serde_json::to_string(&a)?);
@@ -195,7 +220,8 @@
 //! # let source = [("a", log::kv::Value::from_debug(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
 //!
-//! // info!("Something of interest"; a = data);
+//! // info!(a = data; "Something of interest");
+//!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
 //!
 //! assert_eq!("Data { a: 1, b: true, c: \"Some data\" }", format!("{a:?}"));

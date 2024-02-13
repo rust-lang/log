@@ -45,7 +45,6 @@ impl<'v> ToValue for Value<'v> {
 /// ## Using the `Value::from_*` methods
 ///
 /// `Value` offers a few constructor methods that capture values of different kinds.
-/// These methods don't require `T: 'static`, but can't support downcasting.
 ///
 /// ```
 /// use log::kv::Value;
@@ -79,25 +78,43 @@ impl<'v> ToValue for Value<'v> {
 /// assert_eq!(Some(42), value.to_i64());
 /// ```
 ///
+/// # Data model
+///
+/// Values can hold one of a number of types:
+///
+/// - **Null:** The absence of any other meaningful value. Note that
+///   `Some(Value::null())` is not the same as `None`. The former is
+///   `null` while the latter is `undefined`. This is important to be
+///   able to tell the difference between a key-value that was logged,
+///   but its value was empty (`Some(Value::null())`) and a key-value
+///   that was never logged at all (`None`).
+/// - **Strings:** `str`, `char`.
+/// - **Booleans:** `bool`.
+/// - **Integers:** `u8`-`u128`, `i8`-`i128`, `NonZero*`.
+/// - **Floating point numbers:** `f32`-`f64`.
+/// - **Errors:** `dyn (Error + 'static)`.
+/// - **`serde`:** Any type in `serde`'s data model.
+/// - **`sval`:** Any type in `sval`'s data model.
+///
 /// # Serialization
 ///
-/// `Value` provides a number of ways to be serialized.
+/// Values provide a number of ways to be serialized.
 ///
 /// For basic types the [`Value::visit`] method can be used to extract the
 /// underlying typed value. However this is limited in the amount of types
-/// supported (see the [`Visit`] trait methods).
+/// supported (see the [`Visitor`] trait methods).
 ///
 /// For more complex types one of the following traits can be used:
-///  * [`sval::Value`], requires the `kv_unstable_sval` feature.
-///  * [`serde::Serialize`], requires the `kv_unstable_serde` feature.
+///  * `sval::Value`, requires the `kv_unstable_sval` feature.
+///  * `serde::Serialize`, requires the `kv_unstable_serde` feature.
 ///
-/// You don't need a [`Visit`] to serialize values.
+/// You don't need a visitor to serialize values through `serde` or `sval`.
 ///
 /// A value can always be serialized using any supported framework, regardless
 /// of how it was captured. If, for example, a value was captured using its
-/// `Display` implementation, it will serialize as a string. If it was captured
-/// as a struct using its `serde::Serialize`, it will also serialize as a struct
-/// through `sval`, or be formatted using a `Debug`-compatible representation.
+/// `Display` implementation, it will serialize through `serde` as a string. If it was
+/// captured as a struct using `serde`, it will also serialize as a struct
+/// through `sval`, or can be formatted using a `Debug`-compatible representation.
 pub struct Value<'v> {
     inner: inner::Inner<'v>,
 }
@@ -175,6 +192,13 @@ impl<'v> Value<'v> {
         }
     }
 
+    /// Get a `null` value.
+    pub fn null() -> Self {
+        Value {
+            inner: inner::Inner::empty(),
+        }
+    }
+
     /// Get a value from an internal primitive.
     fn from_inner<T>(value: T) -> Self
     where
@@ -236,59 +260,9 @@ impl ToValue for str {
     }
 }
 
-impl ToValue for u128 {
-    fn to_value(&self) -> Value {
-        Value::from(self)
-    }
-}
-
-impl ToValue for i128 {
-    fn to_value(&self) -> Value {
-        Value::from(self)
-    }
-}
-
-impl ToValue for std::num::NonZeroU128 {
-    fn to_value(&self) -> Value {
-        Value::from(self)
-    }
-}
-
-impl ToValue for std::num::NonZeroI128 {
-    fn to_value(&self) -> Value {
-        Value::from(self)
-    }
-}
-
 impl<'v> From<&'v str> for Value<'v> {
     fn from(value: &'v str) -> Self {
         Value::from_inner(value)
-    }
-}
-
-impl<'v> From<&'v u128> for Value<'v> {
-    fn from(value: &'v u128) -> Self {
-        Value::from_inner(value)
-    }
-}
-
-impl<'v> From<&'v i128> for Value<'v> {
-    fn from(value: &'v i128) -> Self {
-        Value::from_inner(value)
-    }
-}
-
-impl<'v> From<&'v std::num::NonZeroU128> for Value<'v> {
-    fn from(v: &'v std::num::NonZeroU128) -> Value<'v> {
-        // SAFETY: `NonZeroU128` and `u128` have the same ABI
-        Value::from_inner(unsafe { &*(v as *const std::num::NonZeroU128 as *const u128) })
-    }
-}
-
-impl<'v> From<&'v std::num::NonZeroI128> for Value<'v> {
-    fn from(v: &'v std::num::NonZeroI128) -> Value<'v> {
-        // SAFETY: `NonZeroI128` and `i128` have the same ABI
-        Value::from_inner(unsafe { &*(v as *const std::num::NonZeroI128 as *const i128) })
     }
 }
 
@@ -359,12 +333,14 @@ macro_rules! impl_value_to_primitive {
     }
 }
 
-impl_to_value_primitive![usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64, char, bool,];
+impl_to_value_primitive![
+    usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64, char, bool,
+];
 
 #[rustfmt::skip]
 impl_to_value_nonzero_primitive![
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64,
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
+    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
 ];
 
 impl_value_to_primitive![
@@ -458,19 +434,31 @@ mod std_support {
     }
 }
 
-/// A visitor for a `Value`.
+/// A visitor for a [`Value`].
 ///
-/// Also see [`Value`'s documentation on seralization].
+/// Also see [`Value`'s documentation on seralization]. Visitors are a simple alternative
+/// to a more fully-featured serialization framework like `serde` or `sval`. A visitor
+/// can differentiate primitive types through methods like [`Visitor::visit_bool`] and
+/// [`Visitor::visit_str`], but more complex types like maps and sequences
+/// will fallthrough to [`Visitor::visit_any`].
+///
+/// If you're trying to serialize a value to a format like JSON, you can use either `serde`
+/// or `sval` directly with the value. You don't need a visitor.
 ///
 /// [`Value`'s documentation on seralization]: Value#serialization
 pub trait Visitor<'v> {
     /// Visit a `Value`.
     ///
-    /// This is the only required method on `Visit` and acts as a fallback for any
+    /// This is the only required method on `Visitor` and acts as a fallback for any
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
     /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
     fn visit_any(&mut self, value: Value) -> Result<(), Error>;
+
+    /// Visit an empty value.
+    fn visit_null(&mut self) -> Result<(), Error> {
+        self.visit_any(Value::null())
+    }
 
     /// Visit an unsigned integer.
     fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
@@ -484,12 +472,12 @@ pub trait Visitor<'v> {
 
     /// Visit a big unsigned integer.
     fn visit_u128(&mut self, value: u128) -> Result<(), Error> {
-        self.visit_any((&value).into())
+        self.visit_any((value).into())
     }
 
     /// Visit a big signed integer.
     fn visit_i128(&mut self, value: i128) -> Result<(), Error> {
-        self.visit_any((&value).into())
+        self.visit_any((value).into())
     }
 
     /// Visit a floating point.
@@ -540,6 +528,10 @@ where
 {
     fn visit_any(&mut self, value: Value) -> Result<(), Error> {
         (**self).visit_any(value)
+    }
+
+    fn visit_null(&mut self) -> Result<(), Error> {
+        (**self).visit_null()
     }
 
     fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
@@ -594,6 +586,13 @@ where
 
 #[cfg(feature = "value-bag")]
 pub(in crate::kv) mod inner {
+    /**
+    An implementation of `Value` based on a library called `value_bag`.
+
+    `value_bag` was written specifically for use in `log`'s value, but was split out when it outgrew
+    the codebase here. It's a general-purpose type-erasure library that handles mapping between
+    more fully-featured serialization frameworks.
+    */
     use super::*;
 
     pub use value_bag::ValueBag as Inner;
@@ -619,6 +618,10 @@ pub(in crate::kv) mod inner {
                 self.0
                     .visit_any(Value { inner: value })
                     .map_err(crate::kv::Error::into_value)
+            }
+
+            fn visit_empty(&mut self) -> Result<(), Error> {
+                self.0.visit_null().map_err(crate::kv::Error::into_value)
             }
 
             fn visit_u64(&mut self, value: u64) -> Result<(), Error> {
@@ -704,188 +707,304 @@ pub(in crate::kv) mod inner {
 
 #[cfg(not(feature = "value-bag"))]
 pub(in crate::kv) mod inner {
+    /**
+    This is a dependency-free implementation of `Value` when there's no serialization frameworks involved.
+    In these simple cases a more fully featured solution like `value_bag` isn't needed, so we avoid pulling it in.
+
+    There are a few things here that need to remain consistent with the `value_bag`-based implementation:
+
+    1. Conversions should always produce the same results. If a conversion here returns `Some`, then
+       the same `value_bag`-based conversion must also. Of particular note here are floats to ints; they're
+       based on the standard library's `TryInto` conversions, which need to be convert to `i32` or `u32`,
+       and then to `f64`.
+    2. Visitors should always be called in the same way. If a particular type of value calls `visit_i64`,
+       then the same `value_bag`-based visitor must also.
+    */
     use super::*;
 
     #[derive(Clone)]
     pub enum Inner<'v> {
+        None,
+        Bool(bool),
         Str(&'v str),
+        Char(char),
+        I64(i64),
+        U64(u64),
+        F64(f64),
+        I128(i128),
+        U128(u128),
+        Debug(&'v dyn fmt::Debug),
+        Display(&'v dyn fmt::Display),
     }
 
     impl<'v> From<()> for Inner<'v> {
-        fn from(v: ()) -> Self {
-            todo!()
+        fn from(_: ()) -> Self {
+            Inner::None
         }
     }
 
     impl<'v> From<bool> for Inner<'v> {
         fn from(v: bool) -> Self {
-            todo!()
+            Inner::Bool(v)
         }
     }
 
     impl<'v> From<char> for Inner<'v> {
         fn from(v: char) -> Self {
-            todo!()
+            Inner::Char(v)
         }
     }
 
     impl<'v> From<f32> for Inner<'v> {
         fn from(v: f32) -> Self {
-            todo!()
+            Inner::F64(v as f64)
         }
     }
 
     impl<'v> From<f64> for Inner<'v> {
         fn from(v: f64) -> Self {
-            todo!()
+            Inner::F64(v)
         }
     }
 
     impl<'v> From<i8> for Inner<'v> {
         fn from(v: i8) -> Self {
-            todo!()
+            Inner::I64(v as i64)
         }
     }
 
     impl<'v> From<i16> for Inner<'v> {
         fn from(v: i16) -> Self {
-            todo!()
+            Inner::I64(v as i64)
         }
     }
 
     impl<'v> From<i32> for Inner<'v> {
         fn from(v: i32) -> Self {
-            todo!()
+            Inner::I64(v as i64)
         }
     }
 
     impl<'v> From<i64> for Inner<'v> {
         fn from(v: i64) -> Self {
-            todo!()
+            Inner::I64(v as i64)
         }
     }
 
     impl<'v> From<isize> for Inner<'v> {
         fn from(v: isize) -> Self {
-            todo!()
+            Inner::I64(v as i64)
         }
     }
 
     impl<'v> From<u8> for Inner<'v> {
         fn from(v: u8) -> Self {
-            todo!()
+            Inner::U64(v as u64)
         }
     }
 
     impl<'v> From<u16> for Inner<'v> {
         fn from(v: u16) -> Self {
-            todo!()
+            Inner::U64(v as u64)
         }
     }
 
     impl<'v> From<u32> for Inner<'v> {
         fn from(v: u32) -> Self {
-            todo!()
+            Inner::U64(v as u64)
         }
     }
 
     impl<'v> From<u64> for Inner<'v> {
         fn from(v: u64) -> Self {
-            todo!()
+            Inner::U64(v as u64)
         }
     }
 
     impl<'v> From<usize> for Inner<'v> {
         fn from(v: usize) -> Self {
-            todo!()
+            Inner::U64(v as u64)
         }
     }
 
-    impl<'v> From<&'v i128> for Inner<'v> {
-        fn from(v: &'v i128) -> Self {
-            todo!()
+    impl<'v> From<i128> for Inner<'v> {
+        fn from(v: i128) -> Self {
+            Inner::I128(v)
         }
     }
 
-    impl<'v> From<&'v u128> for Inner<'v> {
-        fn from(v: &'v u128) -> Self {
-            todo!()
+    impl<'v> From<u128> for Inner<'v> {
+        fn from(v: u128) -> Self {
+            Inner::U128(v)
         }
     }
 
     impl<'v> From<&'v str> for Inner<'v> {
         fn from(v: &'v str) -> Self {
-            todo!()
+            Inner::Str(v)
         }
     }
 
     impl<'v> fmt::Debug for Inner<'v> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            todo!()
+            match self {
+                Inner::None => fmt::Debug::fmt(&None::<()>, f),
+                Inner::Bool(v) => fmt::Debug::fmt(v, f),
+                Inner::Str(v) => fmt::Debug::fmt(v, f),
+                Inner::Char(v) => fmt::Debug::fmt(v, f),
+                Inner::I64(v) => fmt::Debug::fmt(v, f),
+                Inner::U64(v) => fmt::Debug::fmt(v, f),
+                Inner::F64(v) => fmt::Debug::fmt(v, f),
+                Inner::I128(v) => fmt::Debug::fmt(v, f),
+                Inner::U128(v) => fmt::Debug::fmt(v, f),
+                Inner::Debug(v) => fmt::Debug::fmt(v, f),
+                Inner::Display(v) => fmt::Display::fmt(v, f),
+            }
         }
     }
 
     impl<'v> fmt::Display for Inner<'v> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            todo!()
+            match self {
+                Inner::None => fmt::Debug::fmt(&None::<()>, f),
+                Inner::Bool(v) => fmt::Display::fmt(v, f),
+                Inner::Str(v) => fmt::Display::fmt(v, f),
+                Inner::Char(v) => fmt::Display::fmt(v, f),
+                Inner::I64(v) => fmt::Display::fmt(v, f),
+                Inner::U64(v) => fmt::Display::fmt(v, f),
+                Inner::F64(v) => fmt::Display::fmt(v, f),
+                Inner::I128(v) => fmt::Display::fmt(v, f),
+                Inner::U128(v) => fmt::Display::fmt(v, f),
+                Inner::Debug(v) => fmt::Debug::fmt(v, f),
+                Inner::Display(v) => fmt::Display::fmt(v, f),
+            }
         }
     }
 
     impl<'v> Inner<'v> {
         pub fn from_debug<T: fmt::Debug>(value: &'v T) -> Self {
-            todo!()
+            Inner::Debug(value)
         }
 
         pub fn from_display<T: fmt::Display>(value: &'v T) -> Self {
-            todo!()
+            Inner::Display(value)
         }
 
         pub fn from_dyn_debug(value: &'v dyn fmt::Debug) -> Self {
-            todo!()
+            Inner::Debug(value)
         }
 
         pub fn from_dyn_display(value: &'v dyn fmt::Display) -> Self {
-            todo!()
+            Inner::Display(value)
+        }
+
+        pub fn empty() -> Self {
+            Inner::None
         }
 
         pub fn to_bool(&self) -> Option<bool> {
-            todo!()
+            match self {
+                Inner::Bool(v) => Some(*v),
+                _ => None,
+            }
         }
 
         pub fn to_char(&self) -> Option<char> {
-            todo!()
+            match self {
+                Inner::Char(v) => Some(*v),
+                _ => None,
+            }
         }
 
         pub fn to_f64(&self) -> Option<f64> {
-            todo!()
+            match self {
+                Inner::F64(v) => Some(*v),
+                Inner::I64(v) => {
+                    let v: i32 = (*v).try_into().ok()?;
+                    v.try_into().ok()
+                }
+                Inner::U64(v) => {
+                    let v: u32 = (*v).try_into().ok()?;
+                    v.try_into().ok()
+                }
+                Inner::I128(v) => {
+                    let v: i32 = (*v).try_into().ok()?;
+                    v.try_into().ok()
+                }
+                Inner::U128(v) => {
+                    let v: u32 = (*v).try_into().ok()?;
+                    v.try_into().ok()
+                }
+                _ => None,
+            }
         }
 
         pub fn to_i64(&self) -> Option<i64> {
-            todo!()
+            match self {
+                Inner::I64(v) => Some(*v),
+                Inner::U64(v) => (*v).try_into().ok(),
+                Inner::I128(v) => (*v).try_into().ok(),
+                Inner::U128(v) => (*v).try_into().ok(),
+                _ => None,
+            }
         }
 
         pub fn to_u64(&self) -> Option<u64> {
-            todo!()
+            match self {
+                Inner::U64(v) => Some(*v),
+                Inner::I64(v) => (*v).try_into().ok(),
+                Inner::I128(v) => (*v).try_into().ok(),
+                Inner::U128(v) => (*v).try_into().ok(),
+                _ => None,
+            }
         }
 
         pub fn to_u128(&self) -> Option<u128> {
-            todo!()
+            match self {
+                Inner::U128(v) => Some(*v),
+                Inner::I64(v) => (*v).try_into().ok(),
+                Inner::U64(v) => (*v).try_into().ok(),
+                Inner::I128(v) => (*v).try_into().ok(),
+                _ => None,
+            }
         }
 
         pub fn to_i128(&self) -> Option<i128> {
-            todo!()
+            match self {
+                Inner::I128(v) => Some(*v),
+                Inner::I64(v) => (*v).try_into().ok(),
+                Inner::U64(v) => (*v).try_into().ok(),
+                Inner::U128(v) => (*v).try_into().ok(),
+                _ => None,
+            }
         }
 
         pub fn to_borrowed_str(&self) -> Option<&'v str> {
-            todo!()
+            match self {
+                Inner::Str(v) => Some(v),
+                _ => None,
+            }
         }
 
         #[cfg(test)]
         pub fn to_test_token(&self) -> Token {
-            todo!()
+            match self {
+                Inner::None => Token::None,
+                Inner::Bool(v) => Token::Bool(*v),
+                Inner::Str(v) => Token::Str(*v),
+                Inner::Char(v) => Token::Char(*v),
+                Inner::I64(v) => Token::I64(*v),
+                Inner::U64(v) => Token::U64(*v),
+                Inner::F64(v) => Token::F64(*v),
+                Inner::I128(_) => unimplemented!(),
+                Inner::U128(_) => unimplemented!(),
+                Inner::Debug(_) => unimplemented!(),
+                Inner::Display(_) => unimplemented!(),
+            }
         }
     }
 
+    #[cfg(test)]
     #[derive(Debug, PartialEq)]
     pub enum Token<'v> {
         None,
@@ -897,23 +1016,23 @@ pub(in crate::kv) mod inner {
         U64(u64),
     }
 
-    #[derive(Debug)]
-    pub struct Error {}
-
-    impl Error {
-        pub fn msg(msg: &'static str) -> Self {
-            todo!()
+    pub fn visit<'v>(
+        inner: &Inner<'v>,
+        mut visitor: impl Visitor<'v>,
+    ) -> Result<(), crate::kv::Error> {
+        match inner {
+            Inner::None => visitor.visit_null(),
+            Inner::Bool(v) => visitor.visit_bool(*v),
+            Inner::Str(v) => visitor.visit_borrowed_str(*v),
+            Inner::Char(v) => visitor.visit_char(*v),
+            Inner::I64(v) => visitor.visit_i64(*v),
+            Inner::U64(v) => visitor.visit_u64(*v),
+            Inner::F64(v) => visitor.visit_f64(*v),
+            Inner::I128(v) => visitor.visit_i128(*v),
+            Inner::U128(v) => visitor.visit_u128(*v),
+            Inner::Debug(v) => visitor.visit_any(Value::from_dyn_debug(*v)),
+            Inner::Display(v) => visitor.visit_any(Value::from_dyn_display(*v)),
         }
-    }
-
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            todo!()
-        }
-    }
-
-    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
-        todo!()
     }
 }
 
@@ -1024,6 +1143,16 @@ pub(crate) mod tests {
             assert!(v.to_i64().is_none());
             assert!(v.to_f64().is_none());
         }
+    }
+
+    #[test]
+    fn test_to_float() {
+        // Only integers from i32::MIN..=u32::MAX can be converted into floats
+        assert!(Value::from(i32::MIN).to_f64().is_some());
+        assert!(Value::from(u32::MAX).to_f64().is_some());
+
+        assert!(Value::from((i32::MIN as i64) - 1).to_f64().is_none());
+        assert!(Value::from((u32::MAX as u64) + 1).to_f64().is_none());
     }
 
     #[test]
