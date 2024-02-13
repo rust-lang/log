@@ -71,18 +71,18 @@
 //! # }
 //! ```
 //!
-//! All key-values can also be enumerated using a [`source::Visitor`]:
+//! All key-values can also be enumerated using a [`VisitSource`]:
 //!
 //! ```
 //! # fn main() -> Result<(), log::kv::Error> {
 //! # let record = log::Record::builder().key_values(&[("a", 1), ("b", 2), ("c", 3)]).build();
 //! use std::collections::BTreeMap;
 //!
-//! use log::kv::{self, Source, Key, Value, source::Visitor};
+//! use log::kv::{self, Source, Key, Value, VisitSource};
 //!
 //! struct Collect<'kvs>(BTreeMap<Key<'kvs>, Value<'kvs>>);
 //!
-//! impl<'kvs> Visitor<'kvs> for Collect<'kvs> {
+//! impl<'kvs> VisitSource<'kvs> for Collect<'kvs> {
 //!     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
 //!         self.0.insert(key, value);
 //!
@@ -125,17 +125,17 @@
 //! # }
 //! ```
 //!
-//! Values also have their own [`value::Visitor`] type. Visitors are a lightweight
+//! Values also have their own [`VisitValue`] type. Value visitors are a lightweight
 //! API for working with primitives types:
 //!
 //! ```
 //! # fn main() -> Result<(), log::kv::Error> {
-//! use log::kv::{self, Source, Key, value::Visitor};
+//! use log::kv::{self, Source, Key, VisitValue};
 //! # let record = log::Record::builder().key_values(&[("a", 1)]).build();
 //!
 //! struct IsNumeric(bool);
 //!
-//! impl<'kvs> Visitor<'kvs> for IsNumeric {
+//! impl<'kvs> VisitValue<'kvs> for IsNumeric {
 //!     fn visit_any(&mut self, _value: kv::Value) -> Result<(), kv::Error> {
 //!         self.0 = false;
 //!         Ok(())
@@ -230,12 +230,9 @@
 mod error;
 mod key;
 pub mod source;
-
 pub mod value;
 
 pub use self::error::Error;
 pub use self::key::{Key, ToKey};
-pub use self::source::{Source, Visitor};
-
-#[doc(inline)]
-pub use self::value::{ToValue, Value};
+pub use self::source::{Source, VisitSource};
+pub use self::value::{ToValue, Value, VisitValue};

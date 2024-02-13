@@ -102,7 +102,7 @@ impl<'v> ToValue for Value<'v> {
 ///
 /// For basic types the [`Value::visit`] method can be used to extract the
 /// underlying typed value. However this is limited in the amount of types
-/// supported (see the [`Visitor`] trait methods).
+/// supported (see the [`VisitValue`] trait methods).
 ///
 /// For more complex types one of the following traits can be used:
 ///  * `sval::Value`, requires the `kv_unstable_sval` feature.
@@ -213,7 +213,7 @@ impl<'v> Value<'v> {
     ///
     /// When the `kv_unstable_serde` or `kv_unstable_sval` features are enabled, you can also
     /// serialize a value using its `Serialize` or `Value` implementation.
-    pub fn visit(&self, visitor: impl Visitor<'v>) -> Result<(), Error> {
+    pub fn visit(&self, visitor: impl VisitValue<'v>) -> Result<(), Error> {
         inner::visit(&self.inner, visitor)
     }
 }
@@ -436,20 +436,20 @@ mod std_support {
 
 /// A visitor for a [`Value`].
 ///
-/// Also see [`Value`'s documentation on seralization]. Visitors are a simple alternative
-/// to a more fully-featured serialization framework like `serde` or `sval`. A visitor
-/// can differentiate primitive types through methods like [`Visitor::visit_bool`] and
-/// [`Visitor::visit_str`], but more complex types like maps and sequences
-/// will fallthrough to [`Visitor::visit_any`].
+/// Also see [`Value`'s documentation on seralization]. Value visitors are a simple alternative
+/// to a more fully-featured serialization framework like `serde` or `sval`. A value visitor
+/// can differentiate primitive types through methods like [`VisitValue::visit_bool`] and
+/// [`VisitValue::visit_str`], but more complex types like maps and sequences
+/// will fallthrough to [`VisitValue::visit_any`].
 ///
 /// If you're trying to serialize a value to a format like JSON, you can use either `serde`
 /// or `sval` directly with the value. You don't need a visitor.
 ///
 /// [`Value`'s documentation on seralization]: Value#serialization
-pub trait Visitor<'v> {
+pub trait VisitValue<'v> {
     /// Visit a `Value`.
     ///
-    /// This is the only required method on `Visitor` and acts as a fallback for any
+    /// This is the only required method on `VisitValue` and acts as a fallback for any
     /// more specific methods that aren't overridden.
     /// The `Value` may be formatted using its `fmt::Debug` or `fmt::Display` implementation,
     /// or serialized using its `sval::Value` or `serde::Serialize` implementation.
@@ -522,9 +522,9 @@ pub trait Visitor<'v> {
     }
 }
 
-impl<'a, 'v, T: ?Sized> Visitor<'v> for &'a mut T
+impl<'a, 'v, T: ?Sized> VisitValue<'v> for &'a mut T
 where
-    T: Visitor<'v>,
+    T: VisitValue<'v>,
 {
     fn visit_any(&mut self, value: Value) -> Result<(), Error> {
         (**self).visit_any(value)
@@ -607,12 +607,12 @@ pub(in crate::kv) mod inner {
         inner.to_test_token()
     }
 
-    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl Visitor<'v>) -> Result<(), crate::kv::Error> {
-        struct InnerVisitor<V>(V);
+    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl VisitValue<'v>) -> Result<(), crate::kv::Error> {
+        struct InnerVisitValue<V>(V);
 
-        impl<'v, V> value_bag::visit::Visit<'v> for InnerVisitor<V>
+        impl<'v, V> value_bag::visit::Visit<'v> for InnerVisitValue<V>
         where
-            V: Visitor<'v>,
+            V: VisitValue<'v>,
         {
             fn visit_any(&mut self, value: value_bag::ValueBag) -> Result<(), Error> {
                 self.0
@@ -700,7 +700,7 @@ pub(in crate::kv) mod inner {
         }
 
         inner
-            .visit(&mut InnerVisitor(visitor))
+            .visit(&mut InnerVisitValue(visitor))
             .map_err(crate::kv::Error::from_value)
     }
 }
@@ -717,7 +717,7 @@ pub(in crate::kv) mod inner {
        the same `value_bag`-based conversion must also. Of particular note here are floats to ints; they're
        based on the standard library's `TryInto` conversions, which need to be convert to `i32` or `u32`,
        and then to `f64`.
-    2. Visitors should always be called in the same way. If a particular type of value calls `visit_i64`,
+    2. VisitValues should always be called in the same way. If a particular type of value calls `visit_i64`,
        then the same `value_bag`-based visitor must also.
     */
     use super::*;
@@ -1018,7 +1018,7 @@ pub(in crate::kv) mod inner {
 
     pub fn visit<'v>(
         inner: &Inner<'v>,
-        mut visitor: impl Visitor<'v>,
+        mut visitor: impl VisitValue<'v>,
     ) -> Result<(), crate::kv::Error> {
         match inner {
             Inner::None => visitor.visit_null(),
@@ -1216,7 +1216,7 @@ pub(crate) mod tests {
     fn test_visit_integer() {
         struct Extract(Option<u64>);
 
-        impl<'v> Visitor<'v> for Extract {
+        impl<'v> VisitValue<'v> for Extract {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
                 unimplemented!("unexpected value: {value:?}")
             }
@@ -1238,7 +1238,7 @@ pub(crate) mod tests {
     fn test_visit_borrowed_str() {
         struct Extract<'v>(Option<&'v str>);
 
-        impl<'v> Visitor<'v> for Extract<'v> {
+        impl<'v> VisitValue<'v> for Extract<'v> {
             fn visit_any(&mut self, value: Value) -> Result<(), Error> {
                 unimplemented!("unexpected value: {value:?}")
             }

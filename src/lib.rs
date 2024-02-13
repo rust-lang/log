@@ -1760,13 +1760,13 @@ mod tests {
     #[cfg(feature = "kv_unstable")]
     fn test_record_key_values_builder() {
         use super::Record;
-        use crate::kv::{self, Visitor};
+        use crate::kv::{self, VisitSource};
 
-        struct TestVisitor {
+        struct TestVisitSource {
             seen_pairs: usize,
         }
 
-        impl<'kvs> Visitor<'kvs> for TestVisitor {
+        impl<'kvs> VisitSource<'kvs> for TestVisitSource {
             fn visit_pair(
                 &mut self,
                 _: kv::Key<'kvs>,
@@ -1780,7 +1780,7 @@ mod tests {
         let kvs: &[(&str, i32)] = &[("a", 1), ("b", 2)];
         let record_test = Record::builder().key_values(&kvs).build();
 
-        let mut visitor = TestVisitor { seen_pairs: 0 };
+        let mut visitor = TestVisitSource { seen_pairs: 0 };
 
         record_test.key_values().visit(&mut visitor).unwrap();
 
