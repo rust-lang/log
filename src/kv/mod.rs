@@ -45,13 +45,13 @@
 //! 
 //! The following capturing modifiers are supported:
 //! 
-//! - `:?`: `Debug`.
-//! - `:debug`: `Debug`.
-//! - `:%`: `Display`.
-//! - `:display`: `Display`.
-//! - `:error`: `std::error::Error` (requires the `kv_unstable_error` feature).
-//! - `:sval`: `sval::Value` (requires the `kv_unstable_sval` feature).
-//! - `:serde`: `serde::Serialize` (requires the `kv_unstable_serde` feature).
+//! - `:?` will capture the value using `Debug`.
+//! - `:debug` will capture the value using `Debug`.
+//! - `:%` will capture the value using `Display`.
+//! - `:display` will capture the value using `Display`.
+//! - `:error` will capture the value using `std::error::Error` (requires the `kv_unstable_error` feature).
+//! - `:sval` will capture the value using `sval::Value` (requires the `kv_unstable_sval` feature).
+//! - `:serde` will capture the value using `serde::Serialize` (requires the `kv_unstable_serde` feature).
 //!
 //! ## Working with key-values on log records
 //!
