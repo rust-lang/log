@@ -15,9 +15,8 @@
 //! # Structured logging in `log`
 //!
 //! Structured logging enhances traditional text-based log records with user-defined
-//! attributes. Structured logs can be analyzed using a variety of tranditional
-//! data processing techniques, without needing to find and parse attributes from
-//! unstructured text first.
+//! attributes. Structured logs can be analyzed using a variety of data processing 
+//! techniques, without needing to find and parse attributes from unstructured text first.
 //!
 //! In `log`, user-defined attributes are part of a [`Source`] on the log record.
 //! Each attribute is a key-value; a pair of [`Key`] and [`Value`]. Keys are strings
@@ -49,13 +48,13 @@
 //! - `:debug` will capture the value using `Debug`.
 //! - `:%` will capture the value using `Display`.
 //! - `:display` will capture the value using `Display`.
-//! - `:error` will capture the value using `std::error::Error` (requires the `kv_unstable_error` feature).
+//! - `:error` will capture the value using `std::error::Error` (requires the `kv_unstable_std` feature).
 //! - `:sval` will capture the value using `sval::Value` (requires the `kv_unstable_sval` feature).
 //! - `:serde` will capture the value using `serde::Serialize` (requires the `kv_unstable_serde` feature).
 //!
 //! ## Working with key-values on log records
 //!
-//! Use the [`LogRecord::key_values`] method to access key-values.
+//! Use the [`Record::key_values`](../struct.Record.html#method.key_values) method to access key-values.
 //!
 //! Individual values can be pulled from the source by their key:
 //!
@@ -75,7 +74,6 @@
 //!
 //! ```
 //! # fn main() -> Result<(), log::kv::Error> {
-//! # let record = log::Record::builder().key_values(&[("a", 1), ("b", 2), ("c", 3)]).build();
 //! use std::collections::BTreeMap;
 //!
 //! use log::kv::{self, Source, Key, Value, VisitSource};
@@ -92,6 +90,7 @@
 //!
 //! let mut visitor = Collect(BTreeMap::new());
 //!
+//! # let record = log::Record::builder().key_values(&[("a", 1), ("b", 2), ("c", 3)]).build();
 //! // info!(a = 1, b = 2, c = 3; "Something of interest");
 //!
 //! record.key_values().visit(&mut visitor)?;
@@ -189,11 +188,16 @@
 //! # #[cfg(feature = "serde")]
 //! # {
 //! # use log::kv::Key;
-//! # #[derive(serde::Serialize)] struct Data { a: i32, b: bool, c: &'static str }
+//! #[derive(serde::Serialize)]
+//! struct Data {
+//!     a: i32, b: bool,
+//!     c: &'static str,
+//! }
+//!
 //! let data = Data { a: 1, b: true, c: "Some data" };
+//!
 //! # let source = [("a", log::kv::Value::from_serde(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
-//!
 //! // info!(a = data; "Something of interest");
 //!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
@@ -208,18 +212,24 @@
 //! If you're in a no-std environment, you can use `sval`. In other cases, you can use `serde`.
 //! Log producers and log consumers don't need to agree on the serialization framework.
 //! A value can be captured using its `serde::Serialize` implementation and still be serialized
-//! through `sval` without losing any structure.
+//! through `sval` without losing any structure or data.
 //!
 //! Values can also always be formatted using the standard `Debug` and `Display`
 //! traits:
 //!
 //! ```
 //! # use log::kv::Key;
-//! # #[derive(Debug)] struct Data { a: i32, b: bool, c: &'static str }
+//! # #[derive(Debug)]
+//! struct Data {
+//!     a: i32,
+//!     b: bool,
+//!     c: &'static str,
+//! }
+//!
 //! let data = Data { a: 1, b: true, c: "Some data" };
+//!
 //! # let source = [("a", log::kv::Value::from_debug(&data))];
 //! # let record = log::Record::builder().key_values(&source).build();
-//!
 //! // info!(a = data; "Something of interest");
 //!
 //! let a = record.key_values().get(Key::from("a")).unwrap();
@@ -229,8 +239,8 @@
 
 mod error;
 mod key;
-pub mod source;
-pub mod value;
+mod source;
+mod value;
 
 pub use self::error::Error;
 pub use self::key::{Key, ToKey};

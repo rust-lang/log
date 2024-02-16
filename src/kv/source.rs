@@ -81,8 +81,7 @@ pub trait Source {
     /// A source that knows the number of key-values upfront may provide a more
     /// efficient implementation.
     ///
-    /// A subsequent call to `visit` should yield the same number of key-values
-    /// to the visitor, unless that visitor fails part way through.
+    /// A subsequent call to `visit` should yield the same number of key-values.
     fn count(&self) -> usize {
         count_default(self)
     }

@@ -93,7 +93,11 @@ mod kv_support {
 
     pub type Value<'a> = kv::Value<'a>;
 
-    pub fn capture_to_value<'a, V: kv::value::ToValue + ?Sized>(v: &'a &'a V) -> Value<'a> {
+    // NOTE: Many functions here accept a double reference &&V
+    // This is so V itself can be ?Sized, while still letting us
+    // erase it to some dyn Trait (because &T is sized)
+
+    pub fn capture_to_value<'a, V: kv::ToValue + ?Sized>(v: &'a &'a V) -> Value<'a> {
         v.to_value()
     }
 
