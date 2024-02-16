@@ -15,7 +15,7 @@
 //! # Structured logging in `log`
 //!
 //! Structured logging enhances traditional text-based log records with user-defined
-//! attributes. Structured logs can be analyzed using a variety of data processing 
+//! attributes. Structured logs can be analyzed using a variety of data processing
 //! techniques, without needing to find and parse attributes from unstructured text first.
 //!
 //! In `log`, user-defined attributes are part of a [`Source`] on the log record.
@@ -32,18 +32,18 @@
 //! # use log::info;
 //! info!(a = 1; "Something of interest");
 //! ```
-//! 
+//!
 //! Values are capturing using the [`ToValue`] trait by default. To capture a value
 //! using a different trait implementation, use a modifier after its key. Here's how
 //! the same example can capture `a` using its `Debug` implementation instead:
-//! 
+//!
 //! ```
 //! # use log::info;
 //! info!(a:? = 1; "Something of interest");
 //! ```
-//! 
+//!
 //! The following capturing modifiers are supported:
-//! 
+//!
 //! - `:?` will capture the value using `Debug`.
 //! - `:debug` will capture the value using `Debug`.
 //! - `:%` will capture the value using `Display`.

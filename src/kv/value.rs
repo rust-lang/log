@@ -607,7 +607,10 @@ pub(in crate::kv) mod inner {
         inner.to_test_token()
     }
 
-    pub fn visit<'v>(inner: &Inner<'v>, visitor: impl VisitValue<'v>) -> Result<(), crate::kv::Error> {
+    pub fn visit<'v>(
+        inner: &Inner<'v>,
+        visitor: impl VisitValue<'v>,
+    ) -> Result<(), crate::kv::Error> {
         struct InnerVisitValue<V>(V);
 
         impl<'v, V> value_bag::visit::Visit<'v> for InnerVisitValue<V>
