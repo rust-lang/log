@@ -602,11 +602,6 @@ pub(in crate::kv) mod inner {
     #[cfg(test)]
     pub use value_bag::test::TestToken as Token;
 
-    #[cfg(test)]
-    pub fn to_test_token<'v>(inner: &Inner<'v>) -> Token {
-        inner.to_test_token()
-    }
-
     pub fn visit<'v>(
         inner: &Inner<'v>,
         visitor: impl VisitValue<'v>,

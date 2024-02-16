@@ -87,8 +87,6 @@ pub fn enabled(level: Level, target: &str) -> bool {
 
 #[cfg(feature = "kv_unstable")]
 mod kv_support {
-    use super::*;
-
     use crate::kv;
 
     pub type Value<'a> = kv::Value<'a>;

@@ -21,7 +21,7 @@ use std::fmt;
 ///
 /// ```
 /// # fn main() -> Result<(), log::kv::Error> {
-/// use log::kv::{self, Source, Key, Value, source::VisitSource};
+/// use log::kv::{self, Source, Key, Value, VisitSource};
 ///
 /// // A `VisitSource` that prints all key-values
 /// // VisitSources are fed the key-value pairs of each key-values

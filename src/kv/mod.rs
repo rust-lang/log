@@ -66,6 +66,7 @@
 //! // info!(a = 1; "Something of interest");
 //!
 //! let a: Value = record.key_values().get(Key::from("a")).unwrap();
+//! assert_eq!(1, a.to_i64().unwrap());
 //! # Ok(())
 //! # }
 //! ```
