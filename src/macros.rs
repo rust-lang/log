@@ -29,7 +29,7 @@
 /// ```
 #[macro_export]
 macro_rules! log {
-    // log!(target: "my_target", Level::Info, key1 = 42, key2 = true; "a {} event", "log");
+    // log!(target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
     (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? = $value:expr),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
@@ -225,6 +225,9 @@ macro_rules! log_enabled {
         $crate::log_enabled!(target: $crate::__private_api::module_path!(), $lvl)
     };
 }
+
+// These macros use a pattern of #[cfg]s to produce nicer error
+// messages when log features aren't available
 
 #[doc(hidden)]
 #[macro_export]
