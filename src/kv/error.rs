@@ -37,9 +37,9 @@ impl Error {
     pub(super) fn into_value(self) -> crate::kv::value::inner::Error {
         match self.inner {
             Inner::Value(err) => err,
-            #[cfg(feature = "kv_unstable_std")]
+            #[cfg(feature = "kv_std")]
             _ => crate::kv::value::inner::Error::boxed(self),
-            #[cfg(not(feature = "kv_unstable_std"))]
+            #[cfg(not(feature = "kv_std"))]
             _ => crate::kv::value::inner::Error::msg("error inspecting a value"),
         }
     }

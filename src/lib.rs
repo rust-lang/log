@@ -88,7 +88,7 @@
 //!
 //! ## Structured logging
 //!
-//! If you enable the `kv_unstable` feature you can associate structured values
+//! If you enable the `kv` feature you can associate structured values
 //! with your log records. If we take the example from before, we can include
 //! some additional context besides what's in the formatted message:
 //!
@@ -97,7 +97,7 @@
 //! # #[derive(Debug, Serialize)] pub struct Yak(String);
 //! # impl Yak { fn shave(&mut self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
-//! # #[cfg(feature = "kv_unstable_serde")]
+//! # #[cfg(feature = "kv_serde")]
 //! # fn main() {
 //! use log::{info, warn};
 //!
@@ -118,7 +118,7 @@
 //!     }
 //! }
 //! # }
-//! # #[cfg(not(feature = "kv_unstable_serde"))]
+//! # #[cfg(not(feature = "kv_serde"))]
 //! # fn main() {}
 //! ```
 //!
@@ -355,7 +355,7 @@ use std::{cmp, fmt, mem};
 mod macros;
 mod serde;
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 pub mod kv;
 
 #[cfg(target_has_atomic = "ptr")]
@@ -723,7 +723,7 @@ pub struct Record<'a> {
     module_path: Option<MaybeStaticStr<'a>>,
     file: Option<MaybeStaticStr<'a>>,
     line: Option<u32>,
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     key_values: KeyValues<'a>,
 }
 
@@ -731,11 +731,11 @@ pub struct Record<'a> {
 // `#[derive(Debug)]` on `Record`. It also
 // provides a useful `Debug` implementation for
 // the underlying `Source`.
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 #[derive(Clone)]
 struct KeyValues<'a>(&'a dyn kv::Source);
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 impl<'a> fmt::Debug for KeyValues<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut visitor = f.debug_map();
@@ -812,14 +812,14 @@ impl<'a> Record<'a> {
     }
 
     /// The structured key-value pairs associated with the message.
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn key_values(&self) -> &dyn kv::Source {
         self.key_values.0
     }
 
     /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder {
         RecordBuilder {
@@ -904,7 +904,7 @@ impl<'a> RecordBuilder<'a> {
                 module_path: None,
                 file: None,
                 line: None,
-                #[cfg(feature = "kv_unstable")]
+                #[cfg(feature = "kv")]
                 key_values: KeyValues(&None::<(kv::Key, kv::Value)>),
             },
         }
@@ -974,7 +974,7 @@ impl<'a> RecordBuilder<'a> {
     }
 
     /// Set [`key_values`](struct.Record.html#method.key_values)
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn key_values(&mut self, kvs: &'a dyn kv::Source) -> &mut RecordBuilder<'a> {
         self.record.key_values = KeyValues(kvs);
@@ -1757,7 +1757,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     fn test_record_key_values_builder() {
         use super::Record;
         use crate::kv::{self, VisitSource};
@@ -1788,7 +1788,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     fn test_record_key_values_get_coerce() {
         use super::Record;
 

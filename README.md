@@ -100,7 +100,7 @@ The executable itself may use the `log` crate to log as well.
 
 ## Structured logging
 
-If you enable the `kv_unstable` feature, you can associate structured data with your log records:
+If you enable the `kv` feature, you can associate structured data with your log records:
 
 ```rust
 use log::{info, trace, warn};

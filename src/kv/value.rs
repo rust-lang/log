@@ -105,8 +105,8 @@ impl<'v> ToValue for Value<'v> {
 /// supported (see the [`VisitValue`] trait methods).
 ///
 /// For more complex types one of the following traits can be used:
-///  * `sval::Value`, requires the `kv_unstable_sval` feature.
-///  * `serde::Serialize`, requires the `kv_unstable_serde` feature.
+///  * `sval::Value`, requires the `kv_sval` feature.
+///  * `serde::Serialize`, requires the `kv_serde` feature.
 ///
 /// You don't need a visitor to serialize values through `serde` or `sval`.
 ///
@@ -149,7 +149,7 @@ impl<'v> Value<'v> {
     }
 
     /// Get a value from a type implementing `serde::Serialize`.
-    #[cfg(feature = "kv_unstable_serde")]
+    #[cfg(feature = "kv_serde")]
     pub fn from_serde<T>(value: &'v T) -> Self
     where
         T: serde::Serialize,
@@ -160,7 +160,7 @@ impl<'v> Value<'v> {
     }
 
     /// Get a value from a type implementing `sval::Value`.
-    #[cfg(feature = "kv_unstable_sval")]
+    #[cfg(feature = "kv_sval")]
     pub fn from_sval<T>(value: &'v T) -> Self
     where
         T: sval::Value,
@@ -185,7 +185,7 @@ impl<'v> Value<'v> {
     }
 
     /// Get a value from a dynamic error.
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     pub fn from_dyn_error(err: &'v (dyn std::error::Error + 'static)) -> Self {
         Value {
             inner: inner::Inner::from_dyn_error(err),
@@ -211,7 +211,7 @@ impl<'v> Value<'v> {
 
     /// Inspect this value using a simple visitor.
     ///
-    /// When the `kv_unstable_serde` or `kv_unstable_sval` features are enabled, you can also
+    /// When the `kv_serde` or `kv_sval` features are enabled, you can also
     /// serialize a value using its `Serialize` or `Value` implementation.
     pub fn visit(&self, visitor: impl VisitValue<'v>) -> Result<(), Error> {
         inner::visit(&self.inner, visitor)
@@ -230,7 +230,7 @@ impl<'v> fmt::Display for Value<'v> {
     }
 }
 
-#[cfg(feature = "kv_unstable_serde")]
+#[cfg(feature = "kv_serde")]
 impl<'v> serde::Serialize for Value<'v> {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
@@ -240,14 +240,14 @@ impl<'v> serde::Serialize for Value<'v> {
     }
 }
 
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 impl<'v> sval::Value for Value<'v> {
     fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(&'sval self, stream: &mut S) -> sval::Result {
         sval::Value::stream(&self.inner, stream)
     }
 }
 
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 impl<'v> sval_ref::ValueRef<'v> for Value<'v> {
     fn stream_ref<S: sval::Stream<'v> + ?Sized>(&self, stream: &mut S) -> sval::Result {
         sval_ref::ValueRef::stream_ref(&self.inner, stream)
@@ -362,7 +362,7 @@ impl_value_to_primitive![
 
 impl<'v> Value<'v> {
     /// Try convert this value into an error.
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     pub fn to_borrowed_error(&self) -> Option<&(dyn std::error::Error + 'static)> {
         self.inner.to_borrowed_error()
     }
@@ -373,7 +373,7 @@ impl<'v> Value<'v> {
     }
 }
 
-#[cfg(feature = "kv_unstable_std")]
+#[cfg(feature = "kv_std")]
 mod std_support {
     use std::borrow::Cow;
     use std::rc::Rc;
@@ -507,13 +507,13 @@ pub trait VisitValue<'v> {
     }
 
     /// Visit an error.
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     fn visit_error(&mut self, err: &(dyn std::error::Error + 'static)) -> Result<(), Error> {
         self.visit_any(Value::from_dyn_error(err))
     }
 
     /// Visit an error.
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     fn visit_borrowed_error(
         &mut self,
         err: &'v (dyn std::error::Error + 'static),
@@ -570,12 +570,12 @@ where
         (**self).visit_char(value)
     }
 
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     fn visit_error(&mut self, err: &(dyn std::error::Error + 'static)) -> Result<(), Error> {
         (**self).visit_error(err)
     }
 
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     fn visit_borrowed_error(
         &mut self,
         err: &'v (dyn std::error::Error + 'static),
@@ -676,7 +676,7 @@ pub(in crate::kv) mod inner {
                     .map_err(crate::kv::Error::into_value)
             }
 
-            #[cfg(feature = "kv_unstable_std")]
+            #[cfg(feature = "kv_std")]
             fn visit_error(
                 &mut self,
                 err: &(dyn std::error::Error + 'static),
@@ -686,7 +686,7 @@ pub(in crate::kv) mod inner {
                     .map_err(crate::kv::Error::into_value)
             }
 
-            #[cfg(feature = "kv_unstable_std")]
+            #[cfg(feature = "kv_std")]
             fn visit_borrowed_error(
                 &mut self,
                 err: &'v (dyn std::error::Error + 'static),
@@ -1158,7 +1158,7 @@ pub(crate) mod tests {
         for v in str() {
             assert!(v.to_borrowed_str().is_some());
 
-            #[cfg(feature = "kv_unstable_std")]
+            #[cfg(feature = "kv_std")]
             assert!(v.to_cow_str().is_some());
         }
 
@@ -1167,13 +1167,13 @@ pub(crate) mod tests {
 
         assert!(v.to_borrowed_str().is_some());
 
-        #[cfg(feature = "kv_unstable_std")]
+        #[cfg(feature = "kv_std")]
         assert!(v.to_cow_str().is_some());
 
         for v in unsigned().chain(signed()).chain(float()).chain(bool()) {
             assert!(v.to_borrowed_str().is_none());
 
-            #[cfg(feature = "kv_unstable_std")]
+            #[cfg(feature = "kv_std")]
             assert!(v.to_cow_str().is_none());
         }
     }

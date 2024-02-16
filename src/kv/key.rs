@@ -93,7 +93,7 @@ mod std_support {
     }
 }
 
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 mod sval_support {
     use super::*;
 
@@ -116,7 +116,7 @@ mod sval_support {
     }
 }
 
-#[cfg(feature = "kv_unstable_serde")]
+#[cfg(feature = "kv_serde")]
 mod serde_support {
     use super::*;
 

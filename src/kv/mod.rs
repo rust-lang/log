@@ -1,15 +1,11 @@
-//! **UNSTABLE:** Structured logging.
+//! Structured logging.
 //!
-//! This module is unstable and breaking changes may be made
-//! at any time. See [the tracking issue](https://github.com/rust-lang-nursery/log/issues/328)
-//! for more details.
-//!
-//! Add the `kv_unstable` feature to your `Cargo.toml` to enable
+//! Add the `kv` feature to your `Cargo.toml` to enable
 //! this module:
 //!
 //! ```toml
 //! [dependencies.log]
-//! features = ["kv_unstable"]
+//! features = ["kv"]
 //! ```
 //!
 //! # Structured logging in `log`
@@ -48,9 +44,9 @@
 //! - `:debug` will capture the value using `Debug`.
 //! - `:%` will capture the value using `Display`.
 //! - `:display` will capture the value using `Display`.
-//! - `:error` will capture the value using `std::error::Error` (requires the `kv_unstable_std` feature).
-//! - `:sval` will capture the value using `sval::Value` (requires the `kv_unstable_sval` feature).
-//! - `:serde` will capture the value using `serde::Serialize` (requires the `kv_unstable_serde` feature).
+//! - `:error` will capture the value using `std::error::Error` (requires the `kv_std` feature).
+//! - `:sval` will capture the value using `sval::Value` (requires the `kv_sval` feature).
+//! - `:serde` will capture the value using `serde::Serialize` (requires the `kv_serde` feature).
 //!
 //! ## Working with key-values on log records
 //!

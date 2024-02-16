@@ -231,7 +231,7 @@ macro_rules! log_enabled {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 macro_rules! __log_key {
     // key1 = 42
     ($($args:ident)*) => {
@@ -245,16 +245,16 @@ macro_rules! __log_key {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_unstable"))]
+#[cfg(not(feature = "kv"))]
 macro_rules! __log_key {
     ($($args:tt)*) => {
-        compile_error!("key value support requires the `kv_unstable` feature of `log`")
+        compile_error!("key value support requires the `kv` feature of `log`")
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 macro_rules! __log_value {
     // Default
     (($args:expr)) => {
@@ -294,25 +294,27 @@ macro_rules! __log_value {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_unstable"))]
+#[cfg(not(feature = "kv"))]
 macro_rules! __log_value {
     ($($args:tt)*) => {
-        compile_error!("key value support requires the `kv_unstable` feature of `log`")
+        compile_error!("key value support requires the `kv` feature of `log`")
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_unstable_std"))]
+#[cfg(not(feature = "kv_std"))]
 macro_rules! __log_value_error {
     ($args:expr) => {
-        compile_error!("capturing values as `std::error::Error` requites the `kv_unstable_std` feature of `log`")
-    }
+        compile_error!(
+            "capturing values as `std::error::Error` requites the `kv_std` feature of `log`"
+        )
+    };
 }
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 macro_rules! __log_value_sval {
     ($args:expr) => {
         $crate::__private_api::capture_sval(&&$args)
@@ -321,18 +323,16 @@ macro_rules! __log_value_sval {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_unstable_sval"))]
+#[cfg(not(feature = "kv_sval"))]
 macro_rules! __log_value_sval {
     ($args:expr) => {
-        compile_error!(
-            "capturing values as `sval::Value` requites the `kv_unstable_sval` feature of `log`"
-        )
+        compile_error!("capturing values as `sval::Value` requites the `kv_sval` feature of `log`")
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(feature = "kv_unstable_serde")]
+#[cfg(feature = "kv_serde")]
 macro_rules! __log_value_serde {
     ($args:expr) => {
         $crate::__private_api::capture_serde(&&$args)
@@ -341,16 +341,18 @@ macro_rules! __log_value_serde {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_unstable_serde"))]
+#[cfg(not(feature = "kv_serde"))]
 macro_rules! __log_value_serde {
     ($args:expr) => {
-        compile_error!("capturing values as `serde::Serialize` requites the `kv_unstable_serde` feature of `log`")
-    }
+        compile_error!(
+            "capturing values as `serde::Serialize` requites the `kv_serde` feature of `log`"
+        )
+    };
 }
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(feature = "kv_unstable_std")]
+#[cfg(feature = "kv_std")]
 macro_rules! __log_value_error {
     ($args:expr) => {
         $crate::__private_api::capture_error(&$args)

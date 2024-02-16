@@ -5,7 +5,7 @@ use crate::{Level, Metadata, Record};
 use std::fmt::Arguments;
 pub use std::{file, format_args, line, module_path, stringify};
 
-#[cfg(not(feature = "kv_unstable"))]
+#[cfg(not(feature = "kv"))]
 pub type Value<'a> = &'a str;
 
 mod sealed {
@@ -40,11 +40,9 @@ fn log_impl(
     line: u32,
     kvs: Option<&[(&str, Value)]>,
 ) {
-    #[cfg(not(feature = "kv_unstable"))]
+    #[cfg(not(feature = "kv"))]
     if kvs.is_some() {
-        panic!(
-            "key-value support is experimental and must be enabled using the `kv_unstable` feature"
-        )
+        panic!("key-value support is experimental and must be enabled using the `kv` feature")
     }
 
     let mut builder = Record::builder();
@@ -57,7 +55,7 @@ fn log_impl(
         .file_static(Some(file))
         .line(Some(line));
 
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     builder.key_values(&kvs);
 
     crate::logger().log(&builder.build());
@@ -85,7 +83,7 @@ pub fn enabled(level: Level, target: &str) -> bool {
     crate::logger().enabled(&Metadata::builder().level(level).target(target).build())
 }
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 mod kv_support {
     use crate::kv;
 
@@ -107,21 +105,21 @@ mod kv_support {
         Value::from_display(v)
     }
 
-    #[cfg(feature = "kv_unstable_std")]
+    #[cfg(feature = "kv_std")]
     pub fn capture_error<'a>(v: &'a (dyn std::error::Error + 'static)) -> Value<'a> {
         Value::from_dyn_error(v)
     }
 
-    #[cfg(feature = "kv_unstable_sval")]
+    #[cfg(feature = "kv_sval")]
     pub fn capture_sval<'a, V: sval::Value + ?Sized>(v: &'a &'a V) -> Value<'a> {
         Value::from_sval(v)
     }
 
-    #[cfg(feature = "kv_unstable_serde")]
+    #[cfg(feature = "kv_serde")]
     pub fn capture_serde<'a, V: serde::Serialize + ?Sized>(v: &'a &'a V) -> Value<'a> {
         Value::from_serde(v)
     }
 }
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 pub use self::kv_support::*;
