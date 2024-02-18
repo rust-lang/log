@@ -312,17 +312,6 @@ macro_rules! __log_value {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(feature = "kv_std"))]
-macro_rules! __log_value_error {
-    ($args:expr) => {
-        compile_error!(
-            "capturing values as `std::error::Error` requites the `kv_std` feature of `log`"
-        )
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
 #[cfg(feature = "kv_sval")]
 macro_rules! __log_value_sval {
     ($args:expr) => {
@@ -365,5 +354,16 @@ macro_rules! __log_value_serde {
 macro_rules! __log_value_error {
     ($args:expr) => {
         $crate::__private_api::capture_error(&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_std"))]
+macro_rules! __log_value_error {
+    ($args:expr) => {
+        compile_error!(
+            "capturing values as `std::error::Error` requites the `kv_std` feature of `log`"
+        )
     };
 }
