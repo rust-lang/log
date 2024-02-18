@@ -29,6 +29,15 @@
 //! info!(a = 1; "Something of interest");
 //! ```
 //!
+//! Key-values support the same shorthand identifer syntax as `format_args`:
+//!
+//! ```
+//! # use log::info;
+//! let a = 1;
+//!
+//! info!(a; "Something of interest");
+//! ```
+//!
 //! Values are capturing using the [`ToValue`] trait by default. To capture a value
 //! using a different trait implementation, use a modifier after its key. Here's how
 //! the same example can capture `a` using its `Debug` implementation instead:
@@ -44,7 +53,7 @@
 //! - `:debug` will capture the value using `Debug`.
 //! - `:%` will capture the value using `Display`.
 //! - `:display` will capture the value using `Display`.
-//! - `:error` will capture the value using `std::error::Error` (requires the `kv_std` feature).
+//! - `:err` will capture the value using `std::error::Error` (requires the `kv_std` feature).
 //! - `:sval` will capture the value using `sval::Value` (requires the `kv_sval` feature).
 //! - `:serde` will capture the value using `serde::Serialize` (requires the `kv_serde` feature).
 //!

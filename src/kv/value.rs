@@ -1142,7 +1142,7 @@ macro_rules! as_display {
 
 /// Get a value from an error.
 #[cfg(feature = "kv_unstable_std")]
-#[deprecated(note = "use the `key:error = value` macro syntax instead")]
+#[deprecated(note = "use the `key:err = value` macro syntax instead")]
 #[macro_export]
 macro_rules! as_error {
     ($capture:expr) => {

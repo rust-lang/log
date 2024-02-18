@@ -112,7 +112,7 @@
 //!                 break;
 //!             }
 //!             Err(err) => {
-//!                 warn!(err:error = err; "Unable to locate a razor, retrying");
+//!                 warn!(err:err; "Unable to locate a razor, retrying");
 //!             }
 //!         }
 //!     }

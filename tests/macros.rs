@@ -167,6 +167,15 @@ fn kv_named_args() {
 
 #[test]
 #[cfg(feature = "kv")]
+fn kv_ident() {
+    let cat_1 = "chashu";
+    let cat_2 = "nori";
+
+    all_log_macros!(cat_1, cat_2:%, cat_count = 2; "hello {world}", world = "world");
+}
+
+#[test]
+#[cfg(feature = "kv")]
 fn kv_expr_context() {
     match "chashu" {
         cat_1 => {
@@ -274,7 +283,7 @@ fn kv_display() {
 #[cfg(feature = "kv_std")]
 fn kv_error() {
     all_log_macros!(
-        a:error = std::io::Error::new(std::io::ErrorKind::Other, "an error");
+        a:err = std::io::Error::new(std::io::ErrorKind::Other, "an error");
         "hello world"
     );
 }

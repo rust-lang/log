@@ -30,7 +30,7 @@
 #[macro_export]
 macro_rules! log {
     // log!(target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? = $value:expr),+; $($arg:tt)+) => ({
+    (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? $(= $value:expr)?),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<&_>(
@@ -38,7 +38,7 @@ macro_rules! log {
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
                 $crate::__private_api::line!(),
-                &[$(($crate::__log_key!($key), $crate::__log_value!(($value)$(:$capture)*))),+]
+                &[$(($crate::__log_key!($key), $crate::__log_value!($key $(:$capture)* = $($value)*))),+]
             );
         }
     });
@@ -256,9 +256,18 @@ macro_rules! __log_key {
 #[macro_export]
 #[cfg(feature = "kv")]
 macro_rules! __log_value {
-    // Default
-    (($args:expr)) => {
+    // Entrypoint
+    ($key:tt = $args:expr) => {
         $crate::__log_value!(($args):value)
+    };
+    ($key:tt :$capture:tt = $args:expr) => {
+        $crate::__log_value!(($args):$capture)
+    };
+    ($key:ident =) => {
+        $crate::__log_value!(($key):value)
+    };
+    ($key:ident :$capture:tt =) => {
+        $crate::__log_value!(($key):$capture)
     };
     // ToValue
     (($args:expr):value) => {

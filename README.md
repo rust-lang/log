@@ -116,7 +116,7 @@ pub fn shave_the_yak(yak: &mut Yak) {
                 break;
             }
             Err(err) => {
-                warn!(err:error = err; "Unable to locate a razor, retrying");
+                warn!(err:err; "Unable to locate a razor, retrying");
             }
         }
     }
