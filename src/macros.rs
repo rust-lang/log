@@ -288,7 +288,7 @@ macro_rules! __log_value {
         $crate::__private_api::capture_display(&&$args)
     };
     //Error
-    (($args:expr):error) => {
+    (($args:expr):err) => {
         $crate::__log_value_error!($args)
     };
     // sval::Value
