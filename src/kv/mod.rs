@@ -236,10 +236,21 @@
 
 mod error;
 mod key;
+
+#[cfg(not(feature = "kv_unstable"))]
 mod source;
+#[cfg(not(feature = "kv_unstable"))]
 mod value;
 
 pub use self::error::Error;
 pub use self::key::{Key, ToKey};
 pub use self::source::{Source, VisitSource};
 pub use self::value::{ToValue, Value, VisitValue};
+
+#[cfg(feature = "kv_unstable")]
+pub mod source;
+#[cfg(feature = "kv_unstable")]
+pub mod value;
+
+#[cfg(feature = "kv_unstable")]
+pub use self::source::Visitor;

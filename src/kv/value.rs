@@ -298,6 +298,12 @@ macro_rules! impl_to_value_primitive {
                     Value::from_inner(value)
                 }
             }
+
+            impl<'v> From<&'v $into_ty> for Value<'v> {
+                fn from(value: &'v $into_ty) -> Self {
+                    Value::from_inner(*value)
+                }
+            }
         )*
     };
 }
@@ -313,6 +319,12 @@ macro_rules! impl_to_value_nonzero_primitive {
 
             impl<'v> From<std::num::$into_ty> for Value<'v> {
                 fn from(value: std::num::$into_ty) -> Self {
+                    Value::from(value.get())
+                }
+            }
+
+            impl<'v> From<&'v std::num::$into_ty> for Value<'v> {
+                fn from(value: &'v std::num::$into_ty) -> Self {
                     Value::from(value.get())
                 }
             }
@@ -1032,6 +1044,130 @@ pub(in crate::kv) mod inner {
             Inner::Display(v) => visitor.visit_any(Value::from_dyn_display(*v)),
         }
     }
+}
+
+impl<'v> Value<'v> {
+    /// Get a value from a type implementing `std::fmt::Debug`.
+    #[cfg(feature = "kv_unstable")]
+    #[deprecated(note = "use `from_debug` instead")]
+    pub fn capture_debug<T>(value: &'v T) -> Self
+    where
+        T: fmt::Debug + 'static,
+    {
+        Value::from_debug(value)
+    }
+
+    /// Get a value from a type implementing `std::fmt::Display`.
+    #[cfg(feature = "kv_unstable")]
+    #[deprecated(note = "use `from_display` instead")]
+    pub fn capture_display<T>(value: &'v T) -> Self
+    where
+        T: fmt::Display + 'static,
+    {
+        Value::from_display(value)
+    }
+
+    /// Get a value from an error.
+    #[cfg(feature = "kv_unstable_std")]
+    #[deprecated(note = "use `from_dyn_error` instead")]
+    pub fn capture_error<T>(err: &'v T) -> Self
+    where
+        T: std::error::Error + 'static,
+    {
+        Value::from_dyn_error(err)
+    }
+
+    /// Get a value from a type implementing `serde::Serialize`.
+    #[cfg(feature = "kv_unstable_serde")]
+    #[deprecated(note = "use `from_serde` instead")]
+    pub fn capture_serde<T>(value: &'v T) -> Self
+    where
+        T: serde::Serialize + 'static,
+    {
+        Value::from_serde(value)
+    }
+
+    /// Get a value from a type implementing `sval::Value`.
+    #[cfg(feature = "kv_unstable_sval")]
+    #[deprecated(note = "use `from_sval` instead")]
+    pub fn capture_sval<T>(value: &'v T) -> Self
+    where
+        T: sval::Value + 'static,
+    {
+        Value::from_sval(value)
+    }
+
+    /// Check whether this value can be downcast to `T`.
+    #[cfg(feature = "kv_unstable")]
+    #[deprecated(
+        note = "downcasting has been removed; log an issue at https://github.com/rust-lang/log/issues if this is something you rely on"
+    )]
+    pub fn is<T: 'static>(&self) -> bool {
+        false
+    }
+
+    /// Try downcast this value to `T`.
+    #[cfg(feature = "kv_unstable")]
+    #[deprecated(
+        note = "downcasting has been removed; log an issue at https://github.com/rust-lang/log/issues if this is something you rely on"
+    )]
+    pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
+        None
+    }
+}
+
+// NOTE: Deprecated; but aliases can't carry this attribute
+#[cfg(feature = "kv_unstable")]
+pub use VisitValue as Visitor;
+
+/// Get a value from a type implementing `std::fmt::Debug`.
+#[cfg(feature = "kv_unstable")]
+#[deprecated(note = "use the `key:? = value` macro syntax instead")]
+#[macro_export]
+macro_rules! as_debug {
+    ($capture:expr) => {
+        $crate::kv::Value::from_debug(&$capture)
+    };
+}
+
+/// Get a value from a type implementing `std::fmt::Display`.
+#[cfg(feature = "kv_unstable")]
+#[deprecated(note = "use the `key:% = value` macro syntax instead")]
+#[macro_export]
+macro_rules! as_display {
+    ($capture:expr) => {
+        $crate::kv::Value::from_display(&$capture)
+    };
+}
+
+/// Get a value from an error.
+#[cfg(feature = "kv_unstable_std")]
+#[deprecated(note = "use the `key:error = value` macro syntax instead")]
+#[macro_export]
+macro_rules! as_error {
+    ($capture:expr) => {
+        $crate::kv::Value::from_dyn_error(&$capture)
+    };
+}
+
+#[cfg(feature = "kv_unstable_serde")]
+#[deprecated(note = "use the `key:serde = value` macro syntax instead")]
+/// Get a value from a type implementing `serde::Serialize`.
+#[macro_export]
+macro_rules! as_serde {
+    ($capture:expr) => {
+        $crate::kv::Value::from_serde(&$capture)
+    };
+}
+
+/// Get a value from a type implementing `sval::Value`.
+#[cfg(feature = "kv_unstable_sval")]
+#[deprecated(note = "use the `key:sval = value` macro syntax instead")]
+#[macro_export]
+macro_rules! as_sval {
+    ($capture:expr) => {
+        $crate::kv::Value::from_sval(&$capture)
+    };
 }
 
 #[cfg(test)]

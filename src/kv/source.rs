@@ -458,6 +458,10 @@ mod std_support {
     }
 }
 
+// NOTE: Deprecated; but aliases can't carry this attribute
+#[cfg(feature = "kv_unstable")]
+pub use VisitSource as Visitor;
+
 #[cfg(test)]
 mod tests {
     use crate::kv::value;
