@@ -53,10 +53,10 @@ kv_serde = ["kv_std", "value-bag/serde", "serde"]
 
 # Deprecated: use `kv_*` instead
 # These `*_unstable` features will be removed in a future release
-kv_unstable = ["kv"]
-kv_unstable_sval = ["kv_sval"]
-kv_unstable_std = ["kv_std"]
-kv_unstable_serde = ["kv_serde"]
+kv_unstable = ["kv", "value-bag"]
+kv_unstable_sval = ["kv_sval", "kv_unstable"]
+kv_unstable_std = ["kv_std", "kv_unstable"]
+kv_unstable_serde = ["kv_serde", "kv_unstable_std"]
 
 [dependencies]
 serde = { version = "1.0", optional = true, default-features = false }
