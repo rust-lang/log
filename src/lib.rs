@@ -102,17 +102,17 @@
 //! use log::{info, warn};
 //!
 //! pub fn shave_the_yak(yak: &mut Yak) {
-//!     info!(target: "yak_events", yak:serde = yak; "Commencing yak shaving");
+//!     info!(target: "yak_events", yak:serde; "Commencing yak shaving");
 //!
 //!     loop {
 //!         match find_a_razor() {
 //!             Ok(razor) => {
-//!                 info!(razor = razor; "Razor located");
+//!                 info!(razor; "Razor located");
 //!                 yak.shave(razor);
 //!                 break;
 //!             }
-//!             Err(err) => {
-//!                 warn!(err:err; "Unable to locate a razor, retrying");
+//!             Err(e) => {
+//!                 warn!(e:err; "Unable to locate a razor, retrying");
 //!             }
 //!         }
 //!     }
