@@ -1118,7 +1118,7 @@ impl<'v> Value<'v> {
 
 // NOTE: Deprecated; but aliases can't carry this attribute
 #[cfg(feature = "kv_unstable")]
-pub use VisitValue as Visitor;
+pub use VisitValue as Visit;
 
 /// Get a value from a type implementing `std::fmt::Debug`.
 #[cfg(feature = "kv_unstable")]
