@@ -1,4 +1,4 @@
-#![cfg(feature = "kv_unstable")]
+#![cfg(feature = "kv")]
 #![feature(test)]
 
 use log::kv::Value;

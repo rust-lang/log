@@ -30,7 +30,7 @@ impl ToKey for str {
     }
 }
 
-/// A key in a structured key-value pair.
+/// A key in a key-value.
 // These impls must only be based on the as_str() representation of the key
 // If a new field (such as an optional index) is added to the key they must not affect comparison
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -93,7 +93,7 @@ mod std_support {
     }
 }
 
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 mod sval_support {
     use super::*;
 
@@ -116,7 +116,7 @@ mod sval_support {
     }
 }
 
-#[cfg(feature = "kv_unstable_serde")]
+#[cfg(feature = "kv_serde")]
 mod serde_support {
     use super::*;
 

@@ -88,7 +88,7 @@
 //!
 //! ## Structured logging
 //!
-//! If you enable the `kv_unstable` feature you can associate structured values
+//! If you enable the `kv` feature you can associate structured values
 //! with your log records. If we take the example from before, we can include
 //! some additional context besides what's in the formatted message:
 //!
@@ -97,30 +97,32 @@
 //! # #[derive(Debug, Serialize)] pub struct Yak(String);
 //! # impl Yak { fn shave(&mut self, _: u32) {} }
 //! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
-//! # #[cfg(feature = "kv_unstable_serde")]
+//! # #[cfg(feature = "kv_serde")]
 //! # fn main() {
-//! use log::{info, warn, as_serde, as_error};
+//! use log::{info, warn};
 //!
 //! pub fn shave_the_yak(yak: &mut Yak) {
-//!     info!(target: "yak_events", yak = as_serde!(yak); "Commencing yak shaving");
+//!     info!(target: "yak_events", yak:serde; "Commencing yak shaving");
 //!
 //!     loop {
 //!         match find_a_razor() {
 //!             Ok(razor) => {
-//!                 info!(razor = razor; "Razor located");
+//!                 info!(razor; "Razor located");
 //!                 yak.shave(razor);
 //!                 break;
 //!             }
-//!             Err(err) => {
-//!                 warn!(err = as_error!(err); "Unable to locate a razor, retrying");
+//!             Err(e) => {
+//!                 warn!(e:err; "Unable to locate a razor, retrying");
 //!             }
 //!         }
 //!     }
 //! }
 //! # }
-//! # #[cfg(not(feature = "kv_unstable_serde"))]
+//! # #[cfg(not(feature = "kv_serde"))]
 //! # fn main() {}
 //! ```
+//!
+//! See the [`kv`] module documentation for more details.
 //!
 //! # Available logging implementations
 //!
@@ -353,7 +355,7 @@ use std::{cmp, fmt, mem};
 mod macros;
 mod serde;
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 pub mod kv;
 
 #[cfg(target_has_atomic = "ptr")]
@@ -721,7 +723,7 @@ pub struct Record<'a> {
     module_path: Option<MaybeStaticStr<'a>>,
     file: Option<MaybeStaticStr<'a>>,
     line: Option<u32>,
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     key_values: KeyValues<'a>,
 }
 
@@ -729,11 +731,11 @@ pub struct Record<'a> {
 // `#[derive(Debug)]` on `Record`. It also
 // provides a useful `Debug` implementation for
 // the underlying `Source`.
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 #[derive(Clone)]
 struct KeyValues<'a>(&'a dyn kv::Source);
 
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 impl<'a> fmt::Debug for KeyValues<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut visitor = f.debug_map();
@@ -810,14 +812,14 @@ impl<'a> Record<'a> {
     }
 
     /// The structured key-value pairs associated with the message.
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn key_values(&self) -> &dyn kv::Source {
         self.key_values.0
     }
 
     /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder {
         RecordBuilder {
@@ -902,7 +904,7 @@ impl<'a> RecordBuilder<'a> {
                 module_path: None,
                 file: None,
                 line: None,
-                #[cfg(feature = "kv_unstable")]
+                #[cfg(feature = "kv")]
                 key_values: KeyValues(&None::<(kv::Key, kv::Value)>),
             },
         }
@@ -972,7 +974,7 @@ impl<'a> RecordBuilder<'a> {
     }
 
     /// Set [`key_values`](struct.Record.html#method.key_values)
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     #[inline]
     pub fn key_values(&mut self, kvs: &'a dyn kv::Source) -> &mut RecordBuilder<'a> {
         self.record.key_values = KeyValues(kvs);
@@ -1755,16 +1757,16 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     fn test_record_key_values_builder() {
         use super::Record;
-        use crate::kv::{self, Visitor};
+        use crate::kv::{self, VisitSource};
 
-        struct TestVisitor {
+        struct TestVisitSource {
             seen_pairs: usize,
         }
 
-        impl<'kvs> Visitor<'kvs> for TestVisitor {
+        impl<'kvs> VisitSource<'kvs> for TestVisitSource {
             fn visit_pair(
                 &mut self,
                 _: kv::Key<'kvs>,
@@ -1778,7 +1780,7 @@ mod tests {
         let kvs: &[(&str, i32)] = &[("a", 1), ("b", 2)];
         let record_test = Record::builder().key_values(&kvs).build();
 
-        let mut visitor = TestVisitor { seen_pairs: 0 };
+        let mut visitor = TestVisitSource { seen_pairs: 0 };
 
         record_test.key_values().visit(&mut visitor).unwrap();
 
@@ -1786,7 +1788,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     fn test_record_key_values_get_coerce() {
         use super::Record;
 

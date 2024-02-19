@@ -1,25 +1,65 @@
-//! Sources for key-value pairs.
+//! Sources for key-values.
+//!
+//! This module defines the [`Source`] type and supporting APIs for
+//! working with collections of key-values.
 
 use crate::kv::{Error, Key, ToKey, ToValue, Value};
 use std::fmt;
 
-/// A source of key-value pairs.
+/// A source of key-values.
 ///
 /// The source may be a single pair, a set of pairs, or a filter over a set of pairs.
-/// Use the [`Visitor`](trait.Visitor.html) trait to inspect the structured data
+/// Use the [`VisitSource`](trait.VisitSource.html) trait to inspect the structured data
 /// in a source.
+///
+/// A source is like an iterator over its key-values, except with a push-based API
+/// instead of a pull-based one.
+///
+/// # Examples
+///
+/// Enumerating the key-values in a source:
+///
+/// ```
+/// # fn main() -> Result<(), log::kv::Error> {
+/// use log::kv::{self, Source, Key, Value, VisitSource};
+///
+/// // A `VisitSource` that prints all key-values
+/// // VisitSources are fed the key-value pairs of each key-values
+/// struct Printer;
+///
+/// impl<'kvs> VisitSource<'kvs> for Printer {
+///     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), kv::Error> {
+///         println!("{key}: {value}");
+///
+///         Ok(())
+///     }
+/// }
+///
+/// // A source with 3 key-values
+/// // Common collection types implement the `Source` trait
+/// let source = &[
+///     ("a", 1),
+///     ("b", 2),
+///     ("c", 3),
+/// ];
+///
+/// // Pass an instance of the `VisitSource` to a `Source` to visit it
+/// source.visit(&mut Printer)?;
+/// # Ok(())
+/// # }
+/// ```
 pub trait Source {
-    /// Visit key-value pairs.
+    /// Visit key-values.
     ///
-    /// A source doesn't have to guarantee any ordering or uniqueness of key-value pairs.
+    /// A source doesn't have to guarantee any ordering or uniqueness of key-values.
     /// If the given visitor returns an error then the source may early-return with it,
-    /// even if there are more key-value pairs.
+    /// even if there are more key-values.
     ///
     /// # Implementation notes
     ///
-    /// A source should yield the same key-value pairs to a subsequent visitor unless
+    /// A source should yield the same key-values to a subsequent visitor unless
     /// that visitor itself fails.
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error>;
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error>;
 
     /// Get the value for a given key.
     ///
@@ -34,15 +74,14 @@ pub trait Source {
         get_default(self, key)
     }
 
-    /// Count the number of key-value pairs that can be visited.
+    /// Count the number of key-values that can be visited.
     ///
     /// # Implementation notes
     ///
-    /// A source that knows the number of key-value pairs upfront may provide a more
+    /// A source that knows the number of key-values upfront may provide a more
     /// efficient implementation.
     ///
-    /// A subsequent call to `visit` should yield the same number of key-value pairs
-    /// to the visitor, unless that visitor fails part way through.
+    /// A subsequent call to `visit` should yield the same number of key-values.
     fn count(&self) -> usize {
         count_default(self)
     }
@@ -55,7 +94,7 @@ fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value
         found: Option<Value<'v>>,
     }
 
-    impl<'k, 'kvs> Visitor<'kvs> for Get<'k, 'kvs> {
+    impl<'k, 'kvs> VisitSource<'kvs> for Get<'k, 'kvs> {
         fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
             if self.key == key {
                 self.found = Some(value);
@@ -75,7 +114,7 @@ fn get_default<'v>(source: &'v (impl Source + ?Sized), key: Key) -> Option<Value
 fn count_default(source: impl Source) -> usize {
     struct Count(usize);
 
-    impl<'kvs> Visitor<'kvs> for Count {
+    impl<'kvs> VisitSource<'kvs> for Count {
         fn visit_pair(&mut self, _: Key<'kvs>, _: Value<'kvs>) -> Result<(), Error> {
             self.0 += 1;
 
@@ -92,7 +131,7 @@ impl<'a, T> Source for &'a T
 where
     T: Source + ?Sized,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
         Source::visit(&**self, visitor)
     }
 
@@ -110,7 +149,7 @@ where
     K: ToKey,
     V: ToValue,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
         visitor.visit_pair(self.0.to_key(), self.1.to_value())
     }
 
@@ -131,7 +170,7 @@ impl<S> Source for [S]
 where
     S: Source,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
         for source in self {
             source.visit(visitor)?;
         }
@@ -154,11 +193,28 @@ where
     }
 }
 
+impl<const N: usize, S> Source for [S; N]
+where
+    S: Source,
+{
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
+        Source::visit(self as &[_], visitor)
+    }
+
+    fn get(&self, key: Key) -> Option<Value<'_>> {
+        Source::get(self as &[_], key)
+    }
+
+    fn count(&self) -> usize {
+        Source::count(self as &[_])
+    }
+}
+
 impl<S> Source for Option<S>
 where
     S: Source,
 {
-    fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+    fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
         if let Some(source) = self {
             source.visit(visitor)?;
         }
@@ -176,42 +232,42 @@ where
 }
 
 /// A visitor for the key-value pairs in a [`Source`](trait.Source.html).
-pub trait Visitor<'kvs> {
+pub trait VisitSource<'kvs> {
     /// Visit a key-value pair.
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error>;
 }
 
-impl<'a, 'kvs, T> Visitor<'kvs> for &'a mut T
+impl<'a, 'kvs, T> VisitSource<'kvs> for &'a mut T
 where
-    T: Visitor<'kvs> + ?Sized,
+    T: VisitSource<'kvs> + ?Sized,
 {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         (**self).visit_pair(key, value)
     }
 }
 
-impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugMap<'a, 'b> {
+impl<'a, 'b: 'a, 'kvs> VisitSource<'kvs> for fmt::DebugMap<'a, 'b> {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         self.entry(&key, &value);
         Ok(())
     }
 }
 
-impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugList<'a, 'b> {
+impl<'a, 'b: 'a, 'kvs> VisitSource<'kvs> for fmt::DebugList<'a, 'b> {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         self.entry(&(key, value));
         Ok(())
     }
 }
 
-impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugSet<'a, 'b> {
+impl<'a, 'b: 'a, 'kvs> VisitSource<'kvs> for fmt::DebugSet<'a, 'b> {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         self.entry(&(key, value));
         Ok(())
     }
 }
 
-impl<'a, 'b: 'a, 'kvs> Visitor<'kvs> for fmt::DebugTuple<'a, 'b> {
+impl<'a, 'b: 'a, 'kvs> VisitSource<'kvs> for fmt::DebugTuple<'a, 'b> {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
         self.field(&key);
         self.field(&value);
@@ -232,7 +288,7 @@ mod std_support {
     where
         S: Source + ?Sized,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             Source::visit(&**self, visitor)
         }
 
@@ -249,7 +305,7 @@ mod std_support {
     where
         S: Source + ?Sized,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             Source::visit(&**self, visitor)
         }
 
@@ -266,7 +322,7 @@ mod std_support {
     where
         S: Source + ?Sized,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             Source::visit(&**self, visitor)
         }
 
@@ -283,7 +339,7 @@ mod std_support {
     where
         S: Source,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             Source::visit(&**self, visitor)
         }
 
@@ -296,9 +352,9 @@ mod std_support {
         }
     }
 
-    impl<'kvs, V> Visitor<'kvs> for Box<V>
+    impl<'kvs, V> VisitSource<'kvs> for Box<V>
     where
-        V: Visitor<'kvs> + ?Sized,
+        V: VisitSource<'kvs> + ?Sized,
     {
         fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error> {
             (**self).visit_pair(key, value)
@@ -311,7 +367,7 @@ mod std_support {
         V: ToValue,
         S: BuildHasher,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             for (key, value) in self {
                 visitor.visit_pair(key.to_key(), value.to_value())?;
             }
@@ -332,7 +388,7 @@ mod std_support {
         K: ToKey + Borrow<str> + Ord,
         V: ToValue,
     {
-        fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+        fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
             for (key, value) in self {
                 visitor.visit_pair(key.to_key(), value.to_value())?;
             }
@@ -352,7 +408,7 @@ mod std_support {
     mod tests {
         use std::collections::{BTreeMap, HashMap};
 
-        use crate::kv::value::tests::Token;
+        use crate::kv::value;
 
         use super::*;
 
@@ -366,7 +422,7 @@ mod std_support {
         fn get() {
             let source = vec![("a", 1), ("b", 2), ("a", 1)];
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&source, Key::from_str("a")).unwrap().to_token()
             );
 
@@ -382,7 +438,7 @@ mod std_support {
 
             assert_eq!(2, Source::count(&map));
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&map, Key::from_str("a")).unwrap().to_token()
             );
         }
@@ -395,16 +451,20 @@ mod std_support {
 
             assert_eq!(2, Source::count(&map));
             assert_eq!(
-                Token::I64(1),
+                value::inner::Token::I64(1),
                 Source::get(&map, Key::from_str("a")).unwrap().to_token()
             );
         }
     }
 }
 
+// NOTE: Deprecated; but aliases can't carry this attribute
+#[cfg(feature = "kv_unstable")]
+pub use VisitSource as Visitor;
+
 #[cfg(test)]
 mod tests {
-    use crate::kv::value::tests::Token;
+    use crate::kv::value;
 
     use super::*;
 
@@ -415,7 +475,7 @@ mod tests {
 
     #[test]
     fn visitor_is_object_safe() {
-        fn _check(_: &dyn Visitor) {}
+        fn _check(_: &dyn VisitSource) {}
     }
 
     #[test]
@@ -426,7 +486,7 @@ mod tests {
         }
 
         impl Source for OnePair {
-            fn visit<'kvs>(&'kvs self, visitor: &mut dyn Visitor<'kvs>) -> Result<(), Error> {
+            fn visit<'kvs>(&'kvs self, visitor: &mut dyn VisitSource<'kvs>) -> Result<(), Error> {
                 visitor.visit_pair(self.key.to_key(), self.value.to_value())
             }
         }
@@ -441,11 +501,11 @@ mod tests {
     fn get() {
         let source = &[("a", 1), ("b", 2), ("a", 1)] as &[_];
         assert_eq!(
-            Token::I64(1),
+            value::inner::Token::I64(1),
             Source::get(source, Key::from_str("a")).unwrap().to_token()
         );
         assert_eq!(
-            Token::I64(2),
+            value::inner::Token::I64(2),
             Source::get(source, Key::from_str("b")).unwrap().to_token()
         );
         assert!(Source::get(&source, Key::from_str("c")).is_none());

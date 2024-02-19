@@ -107,7 +107,7 @@ fn expr() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_no_args() {
     for lvl in log::Level::iter() {
         log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
@@ -121,7 +121,7 @@ fn kv_no_args() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_expr_args() {
     for lvl in log::Level::iter() {
         log!(target: "my_target", lvl, cat_math = { let mut x = 0; x += 1; x + 1 }; "hello");
@@ -136,7 +136,7 @@ fn kv_expr_args() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_anonymous_args() {
     for lvl in log::Level::iter() {
         log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {}", "world");
@@ -151,7 +151,7 @@ fn kv_anonymous_args() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_named_args() {
     for lvl in log::Level::iter() {
         log!(target: "my_target", lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello {world}", world = "world");
@@ -166,7 +166,16 @@ fn kv_named_args() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
+fn kv_ident() {
+    let cat_1 = "chashu";
+    let cat_2 = "nori";
+
+    all_log_macros!(cat_1, cat_2:%, cat_count = 2; "hello {world}", world = "world");
+}
+
+#[test]
+#[cfg(feature = "kv")]
 fn kv_expr_context() {
     match "chashu" {
         cat_1 => {
@@ -196,14 +205,14 @@ fn implicit_named_args() {
     all_log_macros!(target: "my_target", "hello {world}");
     all_log_macros!(target: "my_target", "hello {world}",);
 
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     all_log_macros!(target = "my_target"; "hello {world}");
-    #[cfg(feature = "kv_unstable")]
+    #[cfg(feature = "kv")]
     all_log_macros!(target = "my_target"; "hello {world}",);
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_implicit_named_args() {
     let world = "world";
 
@@ -219,7 +228,7 @@ fn kv_implicit_named_args() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_string_keys() {
     for lvl in log::Level::iter() {
         log!(target: "my_target", lvl, "also dogs" = "Fílos", "key/that-can't/be/an/ident" = "hi"; "hello {world}", world = "world");
@@ -229,7 +238,7 @@ fn kv_string_keys() {
 }
 
 #[test]
-#[cfg(feature = "kv_unstable")]
+#[cfg(feature = "kv")]
 fn kv_common_value_types() {
     all_log_macros!(
         u8 = 42u8,
@@ -246,6 +255,53 @@ fn kv_common_value_types() {
         f64 = -4.2f64,
         bool = true,
         str = "string";
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv")]
+fn kv_debug() {
+    all_log_macros!(
+        a:? = 42,
+        b:debug = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv")]
+fn kv_display() {
+    all_log_macros!(
+        a:% = 42,
+        b:display = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_std")]
+fn kv_error() {
+    all_log_macros!(
+        a:err = std::io::Error::new(std::io::ErrorKind::Other, "an error");
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_sval")]
+fn kv_sval() {
+    all_log_macros!(
+        a:sval = 42;
+        "hello world"
+    );
+}
+
+#[test]
+#[cfg(feature = "kv_serde")]
+fn kv_serde() {
+    all_log_macros!(
+        a:serde = 42;
         "hello world"
     );
 }

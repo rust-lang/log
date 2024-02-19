@@ -7,6 +7,10 @@ build = "src/build.rs"
 
 [features]
 std = ["log/std"]
+kv = ["log/kv"]
+kv_std = ["log/kv_std"]
+kv_sval = ["log/kv_sval"]
+kv_serde = ["log/kv_serde"]
 
 [dependencies.log]
 path = ".."
