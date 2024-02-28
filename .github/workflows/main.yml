@@ -81,6 +81,14 @@ jobs:
     - run: cargo clippy --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo clippy --verbose --manifest-path tests/Cargo.toml
 
+  semver:
+    name: Semver check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Check semver in case we must bump the version due to breaking changes
+      uses: obi1kenobi/cargo-semver-checks-action@v2
+
   doc:
     name: Check Documentation
     runs-on: ubuntu-latest
