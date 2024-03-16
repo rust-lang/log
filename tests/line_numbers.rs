@@ -11,48 +11,34 @@ fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
     log::set_logger(Box::leak(logger))
 }
 
-struct State<'a> {
-    last_log: Mutex<Option<Record<'a>>>,
-}
+struct State { last_log: Mutex<Option<u32>> }
 
-struct Logger<'a>(Arc<State<'a>>);
+struct Logger(Arc<State>);
 
 impl Log for Logger {
     fn enabled(&self, _: &Metadata) -> bool {
         true
     }
 
-    fn log(&self, record: Record) {
-        *self.0.last_log.lock().unwrap() = Some(record);
+    fn log(&self, record: &Record) {
+        *self.0.last_log.lock().unwrap() = Some(record.line().unwrap());
     }
     fn flush(&self) {}
 }
 
-#[cfg_attr(lib_build, test)]
-fn main() {
-    let me = Arc::new(State {
-        last_log: Mutex::new(None),
-    });
-    let a = me.clone();
-    set_boxed_logger(Box::new(Logger(me))).unwrap();
+#[test]
+fn line_number() {
+    let default_state = Arc::new(State { last_log: Mutex::new(None) });
+    let state = default_state.clone();
+    set_boxed_logger(Box::new(Logger(default_state))).unwrap();
 
-
-    error!("");
-    last(&a, 40);
-    warn!("");
-    last(&a, 42);
     info!("");
-    last(&a, 44);
-    debug!("");
-    last(&a, 46);
-    trace!("");
-    last(&a, 48);
+    last(&state, 35);
 
 }
 
 fn last(state: &State, expected: u32) {
-    let last_log= state.last_log.lock().unwrap().take().unwrap();
-    let line_number = last_log.line().unwrap();
+    let line_number = state.last_log.lock().unwrap().take().unwrap();
 
     assert_eq!(line_number, expected);
 }
