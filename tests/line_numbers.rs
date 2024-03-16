@@ -16,13 +16,10 @@ struct State { last_log: Mutex<Option<u32>> }
 struct Logger(Arc<State>);
 
 impl Log for Logger {
-    fn enabled(&self, _: &Metadata) -> bool {
-        true
-    }
+    fn enabled(&self, _: &Metadata) -> bool { true }
 
-    fn log(&self, record: &Record) {
-        *self.0.last_log.lock().unwrap() = Some(record.line().unwrap());
-    }
+    fn log(&self, record: &Record) { *self.0.last_log.lock().unwrap() = record.line(); }
+
     fn flush(&self) {}
 }
 
@@ -32,8 +29,12 @@ fn line_number() {
     let state = default_state.clone();
     set_boxed_logger(Box::new(Logger(default_state))).unwrap();
 
+    // let record = RecordBuilder::new().args(format_args!("")).metadata(Metadata::builder().build()).module_path(None).file(None).line(Some(5)).build();
+    // let logger = Logger(a.clone());
+    // logger.log(&record);
+
     info!("");
-    last(&state, 35);
+    last(&state, 36);
 
 }
 
