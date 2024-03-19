@@ -27,7 +27,7 @@ harness = false
 [[test]]
 name = "line_numbers"
 path = "tests/line_numbers.rs"
-harness = true
+harness = false
 
 [[test]]
 name = "macros"

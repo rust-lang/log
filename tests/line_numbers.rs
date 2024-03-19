@@ -31,8 +31,8 @@ impl Log for Logger {
     fn flush(&self) {}
 }
 
-#[test]
-fn line_numbers() {
+#[cfg_attr(lib_build, test)]
+fn main() {
     #[cfg(not(any(
         feature = "max_level_off",
         feature = "max_level_error",
