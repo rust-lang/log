@@ -2,11 +2,11 @@
 
 #![allow(dead_code, unused_imports)]
 
+use log::{info, LevelFilter, Log, Metadata, Record};
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "std")]
 use log::set_boxed_logger;
-use log::{info, LevelFilter, Log, Metadata, Record};
 
 #[cfg(not(feature = "std"))]
 fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
@@ -32,9 +32,7 @@ impl Log for Logger {
 }
 
 #[test]
-fn line_number() {
-    // These tests don't really make sense when static
-    // max level filtering is applied
+fn line_numbers() {
     #[cfg(not(any(
         feature = "max_level_off",
         feature = "max_level_error",
@@ -58,7 +56,7 @@ fn line_number() {
         log::set_max_level(LevelFilter::Trace);
 
         info!("");
-        check_line(&state, 60);
+        check_line(&state, 58);
     }
     fn check_line(state: &State, expected: u32) {
         let line_number = state.last_log.lock().unwrap().take().unwrap();

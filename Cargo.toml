@@ -25,6 +25,11 @@ path = "tests/filters.rs"
 harness = false
 
 [[test]]
+name = "line_numbers"
+path = "tests/line_numbers.rs"
+harness = true
+
+[[test]]
 name = "macros"
 path = "tests/macros.rs"
 harness = true

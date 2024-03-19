@@ -13,7 +13,6 @@ mod filters;
 #[path = "../macros.rs"]
 mod macros;
 
-
 #[cfg(test)]
 #[path = "../line_numbers.rs"]
 mod line_numbers;
