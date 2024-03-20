@@ -41,6 +41,8 @@
 //! [`trace!`]: ./macro.trace.html
 //! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
 //!
+//! Avoid writing expressions with side-effects in log statements. They may not be evaluated.
+//!
 //! ## In libraries
 //!
 //! Libraries should link only to the `log` crate, and use the provided
@@ -1149,6 +1151,11 @@ pub trait Log: Sync + Send {
     fn log(&self, record: &Record);
 
     /// Flushes any buffered records.
+    ///
+    /// # For implementors
+    ///
+    /// This method isn't called automatically by the `log!` macros.
+    /// It can be called manually on shut-down to ensure any in-flight records are flushed.
     fn flush(&self);
 }
 
