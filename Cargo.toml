@@ -20,14 +20,9 @@ edition = "2021"
 features = ["std", "serde", "kv_std", "kv_sval", "kv_serde"]
 
 [[test]]
-name = "filters"
-path = "tests/filters.rs"
-harness = false
-
-[[test]]
-name = "line_numbers"
-path = "tests/line_numbers.rs"
-harness = false
+name = "integration"
+path = "tests/integration.rs"
+harness = true
 
 [[test]]
 name = "macros"
@@ -64,6 +59,7 @@ kv_unstable_std = ["kv_std", "kv_unstable"]
 kv_unstable_serde = ["kv_serde", "kv_unstable_std"]
 
 [dependencies]
+lazy_static = "1.4.0"
 serde = { version = "1.0", optional = true, default-features = false }
 sval = { version = "2.1", optional = true, default-features = false }
 sval_ref = { version = "2.1", optional = true, default-features = false }
