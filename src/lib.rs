@@ -135,6 +135,7 @@
 //!
 //! * Simple minimal loggers:
 //!     * [env_logger]
+//!     * [colog]
 //!     * [simple_logger]
 //!     * [simplelog]
 //!     * [pretty_env_logger]
@@ -310,6 +311,7 @@
 //! [`try_set_logger_raw`]: fn.try_set_logger_raw.html
 //! [`shutdown_logger_raw`]: fn.shutdown_logger_raw.html
 //! [env_logger]: https://docs.rs/env_logger/*/env_logger/
+//! [colog]: https://docs.rs/colog/*/colog/
 //! [simple_logger]: https://github.com/borntyping/rust-simple_logger
 //! [simplelog]: https://github.com/drakulix/simplelog.rs
 //! [pretty_env_logger]: https://docs.rs/pretty_env_logger/*/pretty_env_logger/
