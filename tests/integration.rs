@@ -29,8 +29,7 @@ impl Log for Logger {
     }
     fn flush(&self) {}
 }
-// #[cfg_attr(lib_build, test)]
-#[test]
+#[cfg_attr(lib_build, test)]
 fn main() {
     // These tests don't really make sense when static
     // max level filtering is applied

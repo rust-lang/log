@@ -12,4 +12,3 @@ mod integration;
 #[cfg(test)]
 #[path = "../macros.rs"]
 mod macros;
-
