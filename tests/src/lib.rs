@@ -6,8 +6,8 @@
 #![allow(dead_code)]
 
 #[cfg(test)]
-#[path = "../filters.rs"]
-mod filters;
+#[path = "../integration.rs"]
+mod integration;
 
 #[cfg(test)]
 #[path = "../macros.rs"]

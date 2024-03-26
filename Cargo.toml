@@ -20,8 +20,8 @@ edition = "2021"
 features = ["std", "serde", "kv_std", "kv_sval", "kv_serde"]
 
 [[test]]
-name = "filters"
-path = "tests/filters.rs"
+name = "integration"
+path = "tests/integration.rs"
 harness = false
 
 [[test]]
