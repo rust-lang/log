@@ -1384,9 +1384,7 @@ where
         }
         INITIALIZING => {
             while STATE.load(Ordering::SeqCst) == INITIALIZING {
-                // TODO: replace with `hint::spin_loop` once MSRV is 1.49.0.
-                #[allow(deprecated)]
-                std::sync::atomic::spin_loop_hint();
+                std::hint::spin_loop();
             }
             Err(SetLoggerError(()))
         }
