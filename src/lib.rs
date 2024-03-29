@@ -1249,7 +1249,7 @@ pub fn set_max_level(level: LevelFilter) {
 /// This can be upheld by (for example) making sure that **there are no other
 /// threads**, and (on embedded) that **interrupts are disabled**.
 ///
-/// Is is safe to use all other logging functions while this function runs
+/// It is safe to use all other logging functions while this function runs
 /// (including all logging macros).
 ///
 /// [`set_max_level`]: fn.set_max_level.html
