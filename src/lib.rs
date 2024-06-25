@@ -341,10 +341,6 @@
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations, unconditional_recursion)]
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
-// When compiled for the rustc compiler itself we want to make sure that this is
-// an unstable crate
-#![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
-#![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
 #[cfg(any(
     all(feature = "max_level_off", feature = "max_level_error"),
