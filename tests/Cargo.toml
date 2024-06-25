@@ -5,6 +5,9 @@ edition = "2021"
 publish = false
 build = "src/build.rs"
 
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(lib_build)'] }
+
 [features]
 std = ["log/std"]
 kv = ["log/kv"]
