@@ -337,7 +337,7 @@ fn log_record(w: impl Write, r: &Record) -> io::Result<()> {
     // Write each key-value pair on a new line
     record
         .key_values()
-        .for_each(|k, v| writeln!("{}: {}", k, v))?;
+        .for_each(|k, v| writeln!("{k}: {v}"))?;
 
     Ok(())
 }
@@ -1203,7 +1203,7 @@ Some useful adapters exist as provided methods on the `Source` trait. They're si
 
 - `by_ref` to get a reference to a `Source` within a method chain.
 - `chain` to concatenate one source with another. This is useful for composing implementations of `Log` together for contextual logging.
-- `get` to try find the value associated with a key. This is useful for well-defined key-value pairs that a framework built over `log` might want to provide, like timestamps or message templates.
+- `get` to try finding the value associated with a key. This is useful for well-defined key-value pairs that a framework built over `log` might want to provide, like timestamps or message templates.
 - `for_each` to execute some closure over all key-value pairs. This is a convenient way to do something with each key-value pair without having to create and implement a `Visitor`. One potential downside of `for_each` is the `Result` return value, which seems surprising when the closure itself can't fail. The `Source::for_each` call might itself fail if the underlying `visit` call fails when iterating over its key-value pairs. This shouldn't be common though, so when paired with `try_for_each`, it might be reasonable to make `for_each` return a `()` and rely on `try_for_each` for surfacing any fallibility.
 - `try_for_each` is like `for_each`, but takes a fallible closure.
 - `as_map` to get a serializable map. This is a convenient way to serialize key-value pairs without having to create and implement a `Visitor`.

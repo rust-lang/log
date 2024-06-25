@@ -1,6 +1,9 @@
 name: CI
 on: [push, pull_request]
 
+permissions:
+  contents: read #  to fetch code (actions/checkout)
+
 jobs:
   test:
     name: Test
@@ -23,13 +26,13 @@ jobs:
             rust: stable
           - build: win32
             os: windows-latest
-            rust: stable-i686
+            rust: stable-i686-pc-windows-msvc
           - build: win64
             os: windows-latest
-            rust: stable-x86_64
+            rust: stable-x86_64-pc-windows-msvc
           - build: mingw
             os: windows-latest
-            rust: stable-x86_64-gnu
+            rust: stable-x86_64-pc-windows-gnu
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
@@ -38,13 +41,13 @@ jobs:
         rustup default ${{ matrix.rust }}
     - run: cargo test --verbose
     - run: cargo test --verbose --no-default-features
-    - run: cargo test --verbose --all-features
+    - run: cargo test --verbose --features std,serde,sval,sval_ref,value-bag,kv,kv_std,kv_sval,kv_serde
     - run: cargo test --verbose --features serde
     - run: cargo test --verbose --features std
-    - run: cargo test --verbose --features kv_unstable
-    - run: cargo test --verbose --features kv_unstable_sval
-    - run: cargo test --verbose --features kv_unstable_serde
-    - run: cargo test --verbose --features "kv_unstable kv_unstable_std kv_unstable_sval kv_unstable_serde"
+    - run: cargo test --verbose --features kv
+    - run: cargo test --verbose --features kv_sval
+    - run: cargo test --verbose --features kv_serde
+    - run: cargo test --verbose --features "kv kv_std kv_sval kv_serde"
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
 
@@ -58,7 +61,11 @@ jobs:
         rustup update stable --no-self-update
         rustup default stable
         rustup component add rustfmt
+      # log repo does not use Cargo workspaces, so `cargo fmt` will not check all the code
+      # perhaps this should be changed in the future
     - run: cargo fmt -- --check
+    - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
+    - run: cargo fmt --manifest-path tests/Cargo.toml -- --check
 
   clippy:
     name: Clippy
@@ -71,6 +78,8 @@ jobs:
         rustup default stable
         rustup component add clippy
     - run: cargo clippy --verbose
+    - run: cargo clippy --verbose --manifest-path test_max_level_features/Cargo.toml
+    - run: cargo clippy --verbose --manifest-path tests/Cargo.toml
 
   doc:
     name: Check Documentation
@@ -83,7 +92,7 @@ jobs:
         rustup default stable
         rustup component add rust-docs
     - name: Run rustdoc
-      run: RUSTDOCFLAGS="-D warnings" cargo doc --verbose --all-features
+      run: RUSTDOCFLAGS="-D warnings" cargo doc --verbose --features std,serde,sval,sval_ref,value-bag,kv,kv_std,kv_sval,kv_serde
 
   features:
     name: Feature check
@@ -94,12 +103,12 @@ jobs:
         run: |
           rustup update nightly --no-self-update
           rustup default nightly
-      - run: cargo build --verbose -Z avoid-dev-deps --features kv_unstable
-      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable std"
-      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_sval"
-      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_serde"
-      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_std"
-      - run: cargo build --verbose -Z avoid-dev-deps --features "kv_unstable kv_unstable_sval kv_unstable_serde"
+      - run: cargo build --verbose -Z avoid-dev-deps --features kv
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv std"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_sval"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_serde"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_std"
+      - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_sval kv_serde"
 
   minimalv:
     name: Minimal versions
@@ -110,12 +119,12 @@ jobs:
         run: |
           rustup update nightly --no-self-update
           rustup default nightly
-      - run: cargo build --verbose -Z minimal-versions --features kv_unstable
-      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable std"
-      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_sval"
-      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_serde"
-      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_std"
-      - run: cargo build --verbose -Z minimal-versions --features "kv_unstable kv_unstable_sval kv_unstable_serde"
+      - run: cargo build --verbose -Z minimal-versions --features kv
+      - run: cargo build --verbose -Z minimal-versions --features "kv std"
+      - run: cargo build --verbose -Z minimal-versions --features "kv kv_sval"
+      - run: cargo build --verbose -Z minimal-versions --features "kv kv_serde"
+      - run: cargo build --verbose -Z minimal-versions --features "kv kv_std"
+      - run: cargo build --verbose -Z minimal-versions --features "kv kv_sval kv_serde"
 
   msrv:
     name: MSRV
@@ -124,12 +133,11 @@ jobs:
       - uses: actions/checkout@master
       - name: Install Rust
         run: |
-          rustup update 1.31.0 --no-self-update
-          rustup default 1.31.0
-      - run: cargo build --verbose
-      - run: cargo build --verbose --features serde
-      - run: cargo build --verbose --features std
-      - run: cargo test --verbose --manifest-path tests/Cargo.toml
+          rustup update 1.60.0 --no-self-update
+          rustup default 1.60.0
+      - run: |
+          cargo test --verbose --manifest-path tests/Cargo.toml
+          cargo test --verbose --manifest-path tests/Cargo.toml --features kv
 
   embedded:
     name: Embedded

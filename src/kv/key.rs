@@ -30,7 +30,7 @@ impl ToKey for str {
     }
 }
 
-/// A key in a structured key-value pair.
+/// A key in a key-value.
 // These impls must only be based on the as_str() representation of the key
 // If a new field (such as an optional index) is added to the key they must not affect comparison
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -93,28 +93,34 @@ mod std_support {
     }
 }
 
-#[cfg(feature = "kv_unstable_sval")]
+#[cfg(feature = "kv_sval")]
 mod sval_support {
     use super::*;
 
-    extern crate sval;
-
-    use self::sval::value::{self, Value};
+    use sval::Value;
+    use sval_ref::ValueRef;
 
     impl<'a> Value for Key<'a> {
-        fn stream(&self, stream: &mut value::Stream) -> value::Result {
+        fn stream<'sval, S: sval::Stream<'sval> + ?Sized>(
+            &'sval self,
+            stream: &mut S,
+        ) -> sval::Result {
+            self.key.stream(stream)
+        }
+    }
+
+    impl<'a> ValueRef<'a> for Key<'a> {
+        fn stream_ref<S: sval::Stream<'a> + ?Sized>(&self, stream: &mut S) -> sval::Result {
             self.key.stream(stream)
         }
     }
 }
 
-#[cfg(feature = "kv_unstable_serde")]
+#[cfg(feature = "kv_serde")]
 mod serde_support {
     use super::*;
 
-    extern crate serde;
-
-    use self::serde::{Serialize, Serializer};
+    use serde::{Serialize, Serializer};
 
     impl<'a> Serialize for Key<'a> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

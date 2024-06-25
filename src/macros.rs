@@ -15,7 +15,7 @@
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::{log, Level};
 ///
 /// # fn main() {
@@ -27,91 +27,93 @@
 ///     data.0, data.1, private_data);
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! log {
-    // log!(target: "my_target", Level::Info; key1 = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:tt = $value:expr),+; $($arg:tt)+) => ({
+    // log!(target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
+    (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? $(= $value:expr)?),+; $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api_log(
-                __log_format_args!($($arg)+),
+            $crate::__private_api::log::<&_>(
+                $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                $crate::__private_api::Option::Some(&[$((__log_key!($key), &$value)),+])
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                $crate::__private_api::line!(),
+                &[$(($crate::__log_key!($key), $crate::__log_value!($key $(:$capture)* = $($value)*))),+]
             );
         }
     });
 
-    // log!(target: "my_target", Level::Info; "a {} event", "log");
+    // log!(target: "my_target", Level::Info, "a {} event", "log");
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api_log(
-                __log_format_args!($($arg)+),
+            $crate::__private_api::log(
+                $crate::__private_api::format_args!($($arg)+),
                 lvl,
-                &($target, __log_module_path!(), __log_file!(), __log_line!()),
-                $crate::__private_api::Option::None,
+                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                $crate::__private_api::line!(),
+                (),
             );
         }
     });
 
     // log!(Level::Info, "a log event")
-    ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+));
+    ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: $crate::__private_api::module_path!(), $lvl, $($arg)+));
 }
 
 /// Logs a message at the error level.
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::error;
 ///
 /// # fn main() {
 /// let (err_info, port) = ("No connection", 22);
 ///
-/// error!("Error: {} on port {}", err_info, port);
-/// error!(target: "app_events", "App Error: {}, Port: {}", err_info, 22);
+/// error!("Error: {err_info} on port {port}");
+/// error!(target: "app_events", "App Error: {err_info}, Port: {port}");
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! error {
     // error!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // error!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Error, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Error, $($arg)+));
 
     // error!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Error, $($arg)+))
+    ($($arg:tt)+) => ($crate::log!($crate::Level::Error, $($arg)+))
 }
 
 /// Logs a message at the warn level.
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::warn;
 ///
 /// # fn main() {
 /// let warn_description = "Invalid Input";
 ///
-/// warn!("Warning! {}!", warn_description);
-/// warn!(target: "input_events", "App received warning: {}", warn_description);
+/// warn!("Warning! {warn_description}!");
+/// warn!(target: "input_events", "App received warning: {warn_description}");
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! warn {
     // warn!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // warn!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Warn, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Warn, $($arg)+));
 
     // warn!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Warn, $($arg)+))
+    ($($arg:tt)+) => ($crate::log!($crate::Level::Warn, $($arg)+))
 }
 
 /// Logs a message at the info level.
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::info;
 ///
 /// # fn main() {
@@ -119,25 +121,25 @@ macro_rules! warn {
 /// let conn_info = Connection { port: 40, speed: 3.20 };
 ///
 /// info!("Connected to port {} at {} Mb/s", conn_info.port, conn_info.speed);
-/// info!(target: "connection_events", "Successfull connection, port: {}, speed: {}",
+/// info!(target: "connection_events", "Successful connection, port: {}, speed: {}",
 ///       conn_info.port, conn_info.speed);
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! info {
     // info!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // info!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Info, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Info, $($arg)+));
 
     // info!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Info, $($arg)+))
+    ($($arg:tt)+) => ($crate::log!($crate::Level::Info, $($arg)+))
 }
 
 /// Logs a message at the debug level.
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::debug;
 ///
 /// # fn main() {
@@ -148,21 +150,21 @@ macro_rules! info {
 /// debug!(target: "app_events", "New position: x: {}, y: {}", pos.x, pos.y);
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! debug {
     // debug!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // debug!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Debug, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Debug, $($arg)+));
 
     // debug!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Debug, $($arg)+))
+    ($($arg:tt)+) => ($crate::log!($crate::Level::Debug, $($arg)+))
 }
 
 /// Logs a message at the trace level.
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::trace;
 ///
 /// # fn main() {
@@ -175,14 +177,14 @@ macro_rules! debug {
 ///        if pos.y >= 0.0 { "positive" } else { "negative" });
 /// # }
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! trace {
     // trace!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // trace!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => (log!(target: $target, $crate::Level::Trace, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Trace, $($arg)+));
 
     // trace!("a {} event", "log")
-    ($($arg:tt)+) => (log!($crate::Level::Trace, $($arg)+))
+    ($($arg:tt)+) => ($crate::log!($crate::Level::Trace, $($arg)+))
 }
 
 /// Determines if a message logged at the specified level in that module will
@@ -193,7 +195,7 @@ macro_rules! trace {
 ///
 /// # Examples
 ///
-/// ```edition2018
+/// ```
 /// use log::Level::Debug;
 /// use log::{debug, log_enabled};
 ///
@@ -211,70 +213,157 @@ macro_rules! trace {
 /// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
 /// # fn main() {}
 /// ```
-#[macro_export(local_inner_macros)]
+#[macro_export]
 macro_rules! log_enabled {
     (target: $target:expr, $lvl:expr) => {{
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL
             && lvl <= $crate::max_level()
-            && $crate::__private_api_enabled(lvl, $target)
+            && $crate::__private_api::enabled(lvl, $target)
     }};
     ($lvl:expr) => {
-        log_enabled!(target: __log_module_path!(), $lvl)
+        $crate::log_enabled!(target: $crate::__private_api::module_path!(), $lvl)
     };
 }
 
-// The log macro above cannot invoke format_args directly because it uses
-// local_inner_macros. A format_args invocation there would resolve to
-// $crate::format_args which does not exist. Instead invoke format_args here
-// outside of local_inner_macros so that it resolves (probably) to
-// core::format_args or std::format_args. Same for the several macros that
-// follow.
-//
-// This is a workaround until we drop support for pre-1.30 compilers. At that
-// point we can remove use of local_inner_macros, use $crate:: when invoking
-// local macros, and invoke format_args directly.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __log_format_args {
-    ($($args:tt)*) => {
-        format_args!($($args)*)
-    };
-}
+// These macros use a pattern of #[cfg]s to produce nicer error
+// messages when log features aren't available
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __log_module_path {
-    () => {
-        module_path!()
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __log_file {
-    () => {
-        file!()
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __log_line {
-    () => {
-        line!()
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
+#[cfg(feature = "kv")]
 macro_rules! __log_key {
     // key1 = 42
     ($($args:ident)*) => {
-        stringify!($($args)*)
+        $crate::__private_api::stringify!($($args)*)
     };
     // "key1" = 42
     ($($args:expr)*) => {
         $($args)*
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv"))]
+macro_rules! __log_key {
+    ($($args:tt)*) => {
+        compile_error!("key value support requires the `kv` feature of `log`")
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv")]
+macro_rules! __log_value {
+    // Entrypoint
+    ($key:tt = $args:expr) => {
+        $crate::__log_value!(($args):value)
+    };
+    ($key:tt :$capture:tt = $args:expr) => {
+        $crate::__log_value!(($args):$capture)
+    };
+    ($key:ident =) => {
+        $crate::__log_value!(($key):value)
+    };
+    ($key:ident :$capture:tt =) => {
+        $crate::__log_value!(($key):$capture)
+    };
+    // ToValue
+    (($args:expr):value) => {
+        $crate::__private_api::capture_to_value(&&$args)
+    };
+    // Debug
+    (($args:expr):?) => {
+        $crate::__private_api::capture_debug(&&$args)
+    };
+    (($args:expr):debug) => {
+        $crate::__private_api::capture_debug(&&$args)
+    };
+    // Display
+    (($args:expr):%) => {
+        $crate::__private_api::capture_display(&&$args)
+    };
+    (($args:expr):display) => {
+        $crate::__private_api::capture_display(&&$args)
+    };
+    //Error
+    (($args:expr):err) => {
+        $crate::__log_value_error!($args)
+    };
+    // sval::Value
+    (($args:expr):sval) => {
+        $crate::__log_value_sval!($args)
+    };
+    // serde::Serialize
+    (($args:expr):serde) => {
+        $crate::__log_value_serde!($args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv"))]
+macro_rules! __log_value {
+    ($($args:tt)*) => {
+        compile_error!("key value support requires the `kv` feature of `log`")
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_sval")]
+macro_rules! __log_value_sval {
+    ($args:expr) => {
+        $crate::__private_api::capture_sval(&&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_sval"))]
+macro_rules! __log_value_sval {
+    ($args:expr) => {
+        compile_error!("capturing values as `sval::Value` requites the `kv_sval` feature of `log`")
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_serde")]
+macro_rules! __log_value_serde {
+    ($args:expr) => {
+        $crate::__private_api::capture_serde(&&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_serde"))]
+macro_rules! __log_value_serde {
+    ($args:expr) => {
+        compile_error!(
+            "capturing values as `serde::Serialize` requites the `kv_serde` feature of `log`"
+        )
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "kv_std")]
+macro_rules! __log_value_error {
+    ($args:expr) => {
+        $crate::__private_api::capture_error(&$args)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "kv_std"))]
+macro_rules! __log_value_error {
+    ($args:expr) => {
+        compile_error!(
+            "capturing values as `std::error::Error` requites the `kv_std` feature of `log`"
+        )
     };
 }
