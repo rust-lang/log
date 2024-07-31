@@ -1633,7 +1633,7 @@ Structured logging is a paradigm that's supported by logging frameworks in many 
 
 ## Rust
 
-The `slog` library is a structured logging framework for Rust. Its API predates a stable `serde` crate so it defines its own traits that are similar to `serde::Serialize`. A log record consists of a rendered message and bag of structured key-value pairs. `slog` goes further than this RFC proposes by requiring callers of its `log!` macros to state whether key-values are owned or borrowed by the record, and whether the data is safe to share across threads.
+The `slog` library is a structured logging framework for Rust. Its API predates a stable `serde` crate, so it defines its own traits that are similar to `serde::Serialize`. A log record consists of a rendered message and bag of structured key-value pairs. `slog` goes further than this RFC proposes by requiring callers of its `log!` macros to state whether key-values are owned or borrowed by the record, and whether the data is safe to share across threads.
 
 This RFC proposes an API that's inspired by `slog`, but doesn't directly support distinguishing between owned or borrowed key-value pairs. Everything is borrowed. That means the only way to send a `Record` to another thread is to serialize it into a different type.
 
