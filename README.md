@@ -73,6 +73,7 @@ There are many available implementations to choose from, here are some options:
     * [`structured-logger`](https://docs.rs/structured-logger/latest/structured_logger/)
 * Complex configurable frameworks:
     * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
+    * [`logforth`](https://docs.rs/logforth/*/logforth/)
     * [`fern`](https://docs.rs/fern/*/fern/)
 * Adaptors for other facilities:
     * [`syslog`](https://docs.rs/syslog/*/syslog/)
