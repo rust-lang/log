@@ -64,7 +64,7 @@
 
 ## [0.4.18] - 2023-05-28
 
-* fix markdown links (again) by @hellow554 in https://github.com/rust-lang/log/pull/513
+* fix Markdown links (again) by @hellow554 in https://github.com/rust-lang/log/pull/513
 * add cargo doc to workflow by @hellow554 in https://github.com/rust-lang/log/pull/515
 * Apply Clippy lints by @hellow554 in https://github.com/rust-lang/log/pull/516
 * Replace ad-hoc eq_ignore_ascii_case with slice::eq_ignore_ascii_case by @glandium in https://github.com/rust-lang/log/pull/519
@@ -99,7 +99,7 @@
 * Improvements to test coverage.
 * Improvements to documentation.
 * Add key-value support to the `log!` macros.
-* Tighten `kv_unstable` internal dependencies so they don't bump past their current alpha.
+* Tighten `kv_unstable` internal dependencies, so they don't bump past their current alpha.
 * Add a simple visit API to `kv_unstable`.
 * Support `NonZero*` integers as values in structured logging
 * Support static strings as keys in structured logging
@@ -149,7 +149,7 @@ as either a map of `{key: value, ..}` or as a list of `[(key, value), ..]`.
 
 ### Fixed
 
-* Fixed the `log!` macros so they work in expression context (this regressed in `0.4.9`, which has been yanked).
+* Fixed the `log!` macros, so they work in expression context (this regressed in `0.4.9`, which has been yanked).
 
 ## [0.4.9] - 2019-12-12 (yanked)
 
@@ -260,7 +260,7 @@ version using log 0.4.x to avoid losing module and file information.
 * The `logger` free function returns a reference to the logger implementation. This, along with the
     ability to construct `Record`s, makes it possible to bridge from another logging framework to
     this one without digging into the private internals of the crate. The standard `error!` `warn!`,
-    etc, macros now exclusively use the public API of the crate rather than "secret" internal APIs.
+    etc., macros now exclusively use the public API of the crate rather than "secret" internal APIs.
 * `Log::flush` has been added to allow crates to tell the logging implementation to ensure that all
     "in flight" log events have been persisted. This can be used, for example, just before an
     application exits to ensure that asynchronous log sinks finish their work.
