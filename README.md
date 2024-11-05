@@ -75,6 +75,7 @@ There are many available implementations to choose from, here are some options:
     * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
     * [`logforth`](https://docs.rs/logforth/*/logforth/)
     * [`fern`](https://docs.rs/fern/*/fern/)
+    * [`spdlog-rs`](https://docs.rs/spdlog-rs/*/spdlog/)
 * Adaptors for other facilities:
     * [`syslog`](https://docs.rs/syslog/*/syslog/)
     * [`systemd-journal-logger`](https://docs.rs/systemd-journal-logger/*/systemd_journal_logger/)
