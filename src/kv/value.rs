@@ -380,7 +380,7 @@ impl<'v> Value<'v> {
     }
 
     /// Try to convert this value into a borrowed string.
-    pub fn to_borrowed_str(&self) -> Option<&str> {
+    pub fn to_borrowed_str(&self) -> Option<&'v str> {
         self.inner.to_borrowed_str()
     }
 }
