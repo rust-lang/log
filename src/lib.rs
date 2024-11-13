@@ -145,6 +145,7 @@
 //!     * [structured-logger]
 //! * Complex configurable frameworks:
 //!     * [log4rs]
+//!     * [logforth]
 //!     * [fern]
 //! * Adaptors for other facilities:
 //!     * [syslog]
@@ -321,6 +322,7 @@
 //! [syslog]: https://docs.rs/syslog/*/syslog/
 //! [slog-stdlog]: https://docs.rs/slog-stdlog/*/slog_stdlog/
 //! [log4rs]: https://docs.rs/log4rs/*/log4rs/
+//! [logforth]: https://docs.rs/logforth/*/logforth/
 //! [fern]: https://docs.rs/fern/*/fern/
 //! [systemd-journal-logger]: https://docs.rs/systemd-journal-logger/*/systemd_journal_logger/
 //! [android_log]: https://docs.rs/android_log/*/android_log/
