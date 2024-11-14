@@ -635,6 +635,21 @@ impl FromStr for LevelFilter {
     }
 }
 
+impl From<LevelFilter> for Option<Level> {
+    fn from(level: LevelFilter) -> Option<Level> {
+        level.to_level()
+    }
+}
+
+impl From<Option<Level>> for LevelFilter {
+    fn from(level: Option<Level>) -> LevelFilter {
+        match level {
+            Some(level) => level.to_level_filter(),
+            None => LevelFilter::Off,
+        }
+    }
+}
+
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(self.as_str())
