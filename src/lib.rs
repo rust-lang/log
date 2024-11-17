@@ -143,6 +143,7 @@
 //!     * [flexi_logger]
 //!     * [call_logger]
 //!     * [structured-logger]
+//!     * [clang_log]
 //! * Complex configurable frameworks:
 //!     * [log4rs]
 //!     * [fern]
@@ -332,6 +333,7 @@
 //! [logcontrol-log]: https://docs.rs/logcontrol-log/*/logcontrol_log/
 //! [log_err]: https://docs.rs/log_err/*/log_err/
 //! [log-reload]: https://docs.rs/log-reload/*/log_reload/
+//! [clang_log]: https://docs.rs/clang_log/latest/clang_log
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
