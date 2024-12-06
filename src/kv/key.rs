@@ -57,7 +57,7 @@ impl<'k> fmt::Display for Key<'k> {
 }
 
 impl<'k> AsRef<str> for Key<'k> {
-    fn as_ref(&self) -> &'k str {
+    fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
