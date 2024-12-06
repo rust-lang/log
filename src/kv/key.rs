@@ -45,7 +45,7 @@ impl<'k> Key<'k> {
     }
 
     /// Get a borrowed string from this key.
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'k str {
         self.key
     }
 }
@@ -57,7 +57,7 @@ impl<'k> fmt::Display for Key<'k> {
 }
 
 impl<'k> AsRef<str> for Key<'k> {
-    fn as_ref(&self) -> &str {
+    fn as_ref(&self) -> &'k str {
         self.as_str()
     }
 }
