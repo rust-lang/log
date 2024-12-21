@@ -72,6 +72,7 @@ There are many available implementations to choose from, here are some options:
     * [`std-logger`](https://docs.rs/std-logger/*/std_logger/)
     * [`structured-logger`](https://docs.rs/structured-logger/latest/structured_logger/)
     * [`clang_log`](https://docs.rs/clang_log/latest/clang_log)
+    * [`ftail`](https://docs.rs/ftail/latest/ftail/)
 * Complex configurable frameworks:
     * [`log4rs`](https://docs.rs/log4rs/*/log4rs/)
     * [`logforth`](https://docs.rs/logforth/*/logforth/)

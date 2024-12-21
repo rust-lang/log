@@ -144,6 +144,7 @@
 //!     * [call_logger]
 //!     * [structured-logger]
 //!     * [clang_log]
+//!     * [ftail]
 //! * Complex configurable frameworks:
 //!     * [log4rs]
 //!     * [logforth]
@@ -336,6 +337,7 @@
 //! [log_err]: https://docs.rs/log_err/*/log_err/
 //! [log-reload]: https://docs.rs/log-reload/*/log_reload/
 //! [clang_log]: https://docs.rs/clang_log/latest/clang_log
+//! [ftail]: https://docs.rs/ftail/latest/ftail
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
