@@ -385,7 +385,7 @@ impl<'v> Value<'v> {
     }
 }
 
-#[cfg(feature = "kv_std")]
+#[cfg(feature = "std")]
 mod std_support {
     use std::borrow::Cow;
     use std::rc::Rc;
@@ -432,17 +432,26 @@ mod std_support {
         }
     }
 
-    impl<'v> Value<'v> {
-        /// Try to convert this value into a string.
-        pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
-            self.inner.to_str()
-        }
-    }
-
     impl<'v> From<&'v String> for Value<'v> {
         fn from(v: &'v String) -> Self {
             Value::from(&**v)
         }
+    }
+}
+
+#[cfg(all(feature = "std", feature = "value-bag"))]
+impl<'v> Value<'v> {
+    /// Try to convert this value into a string.
+    pub fn to_cow_str(&self) -> Option<std::borrow::Cow<'v, str>> {
+        self.inner.to_str()
+    }
+}
+
+#[cfg(all(feature = "std", not(feature = "value-bag")))]
+impl<'v> Value<'v> {
+    /// Try to convert this value into a string.
+    pub fn to_cow_str(&self) -> Option<std::borrow::Cow<'v, str>> {
+        self.inner.to_borrowed_str().map(std::borrow::Cow::Borrowed)
     }
 }
 
