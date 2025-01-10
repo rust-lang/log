@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
-## [0.4.23] - 2025-01-10
+## [0.4.24] - 2025-01-11
+
+## What's Changed
+* Fix up kv feature activation by @KodrAus in https://github.com/rust-lang/log/pull/659
+
+
+**Full Changelog**: https://github.com/rust-lang/log/compare/0.4.23...0.4.24
+
+## [0.4.23] - 2025-01-10 (yanked)
 
 ## What's Changed
 * Fix some typos by @Kleinmarb in https://github.com/rust-lang/log/pull/637
@@ -322,7 +330,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.23...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.24...HEAD
+[0.4.24]: https://github.com/rust-lang/log/compare/0.4.23...0.4.24
 [0.4.23]: https://github.com/rust-lang/log/compare/0.4.22...0.4.23
 [0.4.22]: https://github.com/rust-lang/log/compare/0.4.21...0.4.22
 [0.4.21]: https://github.com/rust-lang/log/compare/0.4.20...0.4.21
