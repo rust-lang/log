@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [0.4.23] - 2025-01-10
+
+## What's Changed
+* Fix some typos by @Kleinmarb in https://github.com/rust-lang/log/pull/637
+* Add logforth to implementation by @tisonkun in https://github.com/rust-lang/log/pull/638
+* Add `spdlog-rs` link to README by @SpriteOvO in https://github.com/rust-lang/log/pull/639
+* Add correct lifetime to kv::Value::to_borrowed_str by @stevenroose in https://github.com/rust-lang/log/pull/643
+* docs: Add logforth as an impl by @tisonkun in https://github.com/rust-lang/log/pull/642
+* Add clang_log implementation by @DDAN-17 in https://github.com/rust-lang/log/pull/646
+* Bind lifetimes of &str returned from Key by the lifetime of 'k rather than the lifetime of the Key struct by @gbbosak in https://github.com/rust-lang/log/pull/648
+* Fix up key lifetimes and add method to try get a borrowed key by @KodrAus in https://github.com/rust-lang/log/pull/653
+* Add Ftail implementation by @tjardoo in https://github.com/rust-lang/log/pull/652
+
+## New Contributors
+* @Kleinmarb made their first contribution in https://github.com/rust-lang/log/pull/637
+* @tisonkun made their first contribution in https://github.com/rust-lang/log/pull/638
+* @SpriteOvO made their first contribution in https://github.com/rust-lang/log/pull/639
+* @stevenroose made their first contribution in https://github.com/rust-lang/log/pull/643
+* @DDAN-17 made their first contribution in https://github.com/rust-lang/log/pull/646
+* @gbbosak made their first contribution in https://github.com/rust-lang/log/pull/648
+* @tjardoo made their first contribution in https://github.com/rust-lang/log/pull/652
+
+**Full Changelog**: https://github.com/rust-lang/log/compare/0.4.22...0.4.23
+
 ## [0.4.22] - 2024-06-27
 
 ## What's Changed
@@ -298,7 +322,9 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.21...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.23...HEAD
+[0.4.23]: https://github.com/rust-lang/log/compare/0.4.22...0.4.23
+[0.4.22]: https://github.com/rust-lang/log/compare/0.4.21...0.4.22
 [0.4.21]: https://github.com/rust-lang/log/compare/0.4.20...0.4.21
 [0.4.20]: https://github.com/rust-lang-nursery/log/compare/0.4.19...0.4.20
 [0.4.19]: https://github.com/rust-lang-nursery/log/compare/0.4.18...0.4.19
