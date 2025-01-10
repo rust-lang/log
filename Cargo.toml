@@ -44,11 +44,11 @@ release_max_level_info  = []
 release_max_level_debug = []
 release_max_level_trace = []
 
-std = []
+std = ["value-bag?/error"]
 
 kv = []
 kv_sval = ["kv", "value-bag/sval", "sval", "sval_ref"]
-kv_std = ["std", "kv", "value-bag/error"]
+kv_std = ["std", "kv"]
 kv_serde = ["kv_std", "value-bag/serde", "serde"]
 
 # Deprecated: use `kv_*` instead
