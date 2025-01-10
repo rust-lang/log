@@ -448,6 +448,14 @@ impl<'v> Value<'v> {
     }
 }
 
+#[cfg(all(feature = "std", not(feature = "value-bag")))]
+impl<'v> Value<'v> {
+    /// Try to convert this value into a string.
+    pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
+        self.inner.to_borrowed_str().map(Cow::Borrowed)
+    }
+}
+
 /// A visitor for a [`Value`].
 ///
 /// Also see [`Value`'s documentation on seralization]. Value visitors are a simple alternative
