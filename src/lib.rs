@@ -389,7 +389,6 @@ compile_error!("multiple release_max_level_* features set");
 
 #[cfg(all(not(feature = "std"), not(test)))]
 extern crate core as std;
-extern crate alloc;
 
 use std::cfg;
 #[cfg(feature = "std")]

@@ -3,7 +3,6 @@
 //! This module defines the [`Value`] type and supporting APIs for
 //! capturing and serializing them.
 
-use alloc::borrow::Cow;
 use std::fmt;
 
 pub use crate::kv::Error;
@@ -443,7 +442,7 @@ mod std_support {
 #[cfg(all(feature = "std", feature = "value-bag"))]
 impl<'v> Value<'v> {
     /// Try to convert this value into a string.
-    pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
+    pub fn to_cow_str(&self) -> Option<std::borrow::Cow<'v, str>> {
         self.inner.to_str()
     }
 }
@@ -451,8 +450,8 @@ impl<'v> Value<'v> {
 #[cfg(all(feature = "std", not(feature = "value-bag")))]
 impl<'v> Value<'v> {
     /// Try to convert this value into a string.
-    pub fn to_cow_str(&self) -> Option<Cow<'v, str>> {
-        self.inner.to_borrowed_str().map(Cow::Borrowed)
+    pub fn to_cow_str(&self) -> Option<std::borrow::Cow<'v, str>> {
+        self.inner.to_borrowed_str().map(std::borrow::Cow::Borrowed)
     }
 }
 
