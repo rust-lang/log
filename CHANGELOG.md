@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.4.25] - 2025-01-14
+
+## What's Changed
+* Revert loosening of kv cargo features by @KodrAus in https://github.com/rust-lang/log/pull/662
+
+
+**Full Changelog**: https://github.com/rust-lang/log/compare/0.4.24...0.4.25
+
 ## [0.4.24] - 2025-01-11
 
 ## What's Changed
@@ -330,7 +338,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.24...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.25...HEAD
+[0.4.25]: https://github.com/rust-lang/log/compare/0.4.24...0.4.25
 [0.4.24]: https://github.com/rust-lang/log/compare/0.4.23...0.4.24
 [0.4.23]: https://github.com/rust-lang/log/compare/0.4.22...0.4.23
 [0.4.22]: https://github.com/rust-lang/log/compare/0.4.21...0.4.22
