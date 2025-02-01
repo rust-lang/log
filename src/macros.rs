@@ -34,7 +34,7 @@ macro_rules! log {
         let logger = &$logger;
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
-            $crate::__private_api::log::<&_>(
+            $crate::__private_api::log(
                 logger,
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
