@@ -29,11 +29,13 @@
 /// ```
 #[macro_export]
 macro_rules! log {
-    // log!(target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? $(= $value:expr)?),+; $($arg:tt)+) => ({
+    // log!(logger: my_logger, target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
+    (logger: $logger:expr, target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? $(= $value:expr)?),+; $($arg:tt)+) => ({
+        let logger = &$logger;
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<&_>(
+                logger,
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::loc()),
@@ -42,11 +44,13 @@ macro_rules! log {
         }
     });
 
-    // log!(target: "my_target", Level::Info, "a {} event", "log");
-    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+    // log!(logger: my_logger, target: "my_target", Level::Info, "a {} event", "log");
+    (logger: $logger:expr, target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+        let logger = &$logger;
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log(
+                logger,
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::loc()),
@@ -55,8 +59,20 @@ macro_rules! log {
         }
     });
 
+    // log!(logger: my_logger, Level::Info, "a log event")
+    (logger: $logger:expr, $lvl:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $crate::__private_api::module_path!(), $lvl, $($arg)+)
+    });
+
+    // log!(target: "my_target", Level::Info, "a log event")
+    (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $crate::logger(), target: $target, $lvl, $($arg)+)
+    });
+
     // log!(Level::Info, "a log event")
-    ($lvl:expr, $($arg:tt)+) => ($crate::log!(target: $crate::__private_api::module_path!(), $lvl, $($arg)+));
+    ($lvl:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $crate::__private_api::module_path!(), $lvl, $($arg)+)
+    });
 }
 
 /// Logs a message at the error level.
@@ -75,9 +91,23 @@ macro_rules! log {
 /// ```
 #[macro_export]
 macro_rules! error {
+    // error!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
+    // error!(logger: my_logger, target: "my_target", "a {} event", "log")
+    (logger: $logger:expr, target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $target, $crate::Level::Error, $($arg)+)
+    });
+
+    // error!(logger: my_logger, key1 = 42, key2 = true; "a {} event", "log")
+    // error!(logger: my_logger, "a {} event", "log")
+    (logger: $logger:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, $crate::Level::Error, $($arg)+)
+    });
+
     // error!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // error!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Error, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $target, $crate::Level::Error, $($arg)+)
+    });
 
     // error!("a {} event", "log")
     ($($arg:tt)+) => ($crate::log!($crate::Level::Error, $($arg)+))
@@ -99,9 +129,23 @@ macro_rules! error {
 /// ```
 #[macro_export]
 macro_rules! warn {
+    // warn!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
+    // warn!(logger: my_logger, target: "my_target", "a {} event", "log")
+    (logger: $logger:expr, target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $target, $crate::Level::Warn, $($arg)+)
+    });
+
+    // warn!(logger: my_logger, key1 = 42, key2 = true; "a {} event", "log")
+    // warn!(logger: my_logger, "a {} event", "log")
+    (logger: $logger:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, $crate::Level::Warn, $($arg)+)
+    });
+
     // warn!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // warn!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Warn, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $target, $crate::Level::Warn, $($arg)+)
+    });
 
     // warn!("a {} event", "log")
     ($($arg:tt)+) => ($crate::log!($crate::Level::Warn, $($arg)+))
@@ -125,9 +169,23 @@ macro_rules! warn {
 /// ```
 #[macro_export]
 macro_rules! info {
+    // info!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
+    // info!(logger: my_logger, target: "my_target", "a {} event", "log")
+    (logger: $logger:expr, target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $target, $crate::Level::Info, $($arg)+)
+    });
+
+    // info!(logger: my_logger, key1 = 42, key2 = true; "a {} event", "log")
+    // info!(logger: my_logger, "a {} event", "log")
+    (logger: $logger:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, $crate::Level::Info, $($arg)+)
+    });
+
     // info!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // info!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Info, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $target, $crate::Level::Info, $($arg)+)
+    });
 
     // info!("a {} event", "log")
     ($($arg:tt)+) => ($crate::log!($crate::Level::Info, $($arg)+))
@@ -150,9 +208,23 @@ macro_rules! info {
 /// ```
 #[macro_export]
 macro_rules! debug {
+    // debug!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
+    // debug!(logger: my_logger, target: "my_target", "a {} event", "log")
+    (logger: $logger:expr, target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $target, $crate::Level::Debug, $($arg)+)
+    });
+
+    // debug!(logger: my_logger, key1 = 42, key2 = true; "a {} event", "log")
+    // debug!(logger: my_logger, "a {} event", "log")
+    (logger: $logger:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, $crate::Level::Debug, $($arg)+)
+    });
+
     // debug!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // debug!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Debug, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $target, $crate::Level::Debug, $($arg)+)
+    });
 
     // debug!("a {} event", "log")
     ($($arg:tt)+) => ($crate::log!($crate::Level::Debug, $($arg)+))
@@ -177,9 +249,23 @@ macro_rules! debug {
 /// ```
 #[macro_export]
 macro_rules! trace {
+    // trace!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
+    // trace!(logger: my_logger, target: "my_target", "a {} event", "log")
+    (logger: $logger:expr, target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, target: $target, $crate::Level::Trace, $($arg)+)
+    });
+
+    // trace!(logger: my_logger, key1 = 42, key2 = true; "a {} event", "log")
+    // trace!(logger: my_logger, "a {} event", "log")
+    (logger: $logger:expr, $($arg:tt)+) => ({
+        $crate::log!(logger: $logger, $crate::Level::Trace, $($arg)+)
+    });
+
     // trace!(target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // trace!(target: "my_target", "a {} event", "log")
-    (target: $target:expr, $($arg:tt)+) => ($crate::log!(target: $target, $crate::Level::Trace, $($arg)+));
+    (target: $target:expr, $($arg:tt)+) => ({
+        $crate::log!(target: $target, $crate::Level::Trace, $($arg)+)
+    });
 
     // trace!("a {} event", "log")
     ($($arg:tt)+) => ($crate::log!($crate::Level::Trace, $($arg)+))
@@ -213,15 +299,25 @@ macro_rules! trace {
 /// ```
 #[macro_export]
 macro_rules! log_enabled {
-    (target: $target:expr, $lvl:expr) => {{
+    (logger: $logger:expr, target: $target:expr, $lvl:expr) => ({
+        let logger = &$logger;
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL
             && lvl <= $crate::max_level()
-            && $crate::__private_api::enabled(lvl, $target)
-    }};
-    ($lvl:expr) => {
+            && $crate::__private_api::enabled(logger, lvl, $target)
+    });
+
+    (logger: $logger:expr, $lvl:expr) => ({
+        $crate::log_enabled!(logger: $logger, target: $crate::__private_api::module_path!(), $lvl)
+    });
+
+    (target: $target:expr, $lvl:expr) => ({
+        $crate::log_enabled!(logger: $crate::logger(), target: $target, $lvl)
+    });
+
+    ($lvl:expr) => ({
         $crate::log_enabled!(target: $crate::__private_api::module_path!(), $lvl)
-    };
+    });
 }
 
 // These macros use a pattern of #[cfg]s to produce nicer error
