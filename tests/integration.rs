@@ -53,31 +53,31 @@ fn main() {
             last_log_location: Mutex::new(None),
         });
         let a = me.clone();
-        set_boxed_logger(Box::new(Logger(me))).unwrap();
+        let logger = Logger(me);
 
-        test_filter(&a, LevelFilter::Off);
-        test_filter(&a, LevelFilter::Error);
-        test_filter(&a, LevelFilter::Warn);
-        test_filter(&a, LevelFilter::Info);
-        test_filter(&a, LevelFilter::Debug);
-        test_filter(&a, LevelFilter::Trace);
+        test_filter(&logger, &a, LevelFilter::Off);
+        test_filter(&logger, &a, LevelFilter::Error);
+        test_filter(&logger, &a, LevelFilter::Warn);
+        test_filter(&logger, &a, LevelFilter::Info);
+        test_filter(&logger, &a, LevelFilter::Debug);
+        test_filter(&logger, &a, LevelFilter::Trace);
 
-        test_line_numbers(&a);
+        test_line_numbers(&logger, &a);
     }
 }
 
-fn test_filter(a: &State, filter: LevelFilter) {
+fn test_filter(logger: &dyn Log, a: &State, filter: LevelFilter) {
     // tests to ensure logs with a level beneath 'max_level' are filtered out
     log::set_max_level(filter);
-    error!("");
+    error!(logger: logger, "");
     last(a, t(Level::Error, filter));
-    warn!("");
+    warn!(logger: logger, "");
     last(a, t(Level::Warn, filter));
-    info!("");
+    info!(logger: logger, "");
     last(a, t(Level::Info, filter));
-    debug!("");
+    debug!(logger: logger, "");
     last(a, t(Level::Debug, filter));
-    trace!("");
+    trace!(logger: logger, "");
     last(a, t(Level::Trace, filter));
 
     fn t(lvl: Level, filter: LevelFilter) -> Option<Level> {
@@ -93,10 +93,10 @@ fn test_filter(a: &State, filter: LevelFilter) {
     }
 }
 
-fn test_line_numbers(state: &State) {
+fn test_line_numbers(logger: &dyn Log, state: &State) {
     log::set_max_level(LevelFilter::Trace);
 
-    info!(""); // ensure check_line function follows log macro
+    info!(logger: logger, ""); // ensure check_line function follows log macro
     check_log_location(&state);
 
     #[track_caller]
