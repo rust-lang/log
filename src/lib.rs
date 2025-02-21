@@ -292,7 +292,7 @@
 //! configured in your `Cargo.toml`.
 //!
 //! * `std` allows use of `std` crate instead of the default `core`. Enables using `std::error` and
-//! `set_boxed_logger` functionality.
+//!   `set_boxed_logger` functionality.
 //! * `serde` enables support for serialization and deserialization of `Level` and `LevelFilter`.
 //!
 //! ```toml
@@ -1035,7 +1035,7 @@ impl<'a> RecordBuilder<'a> {
     }
 }
 
-impl<'a> Default for RecordBuilder<'a> {
+impl Default for RecordBuilder<'_> {
     fn default() -> Self {
         Self::new()
     }
@@ -1164,7 +1164,7 @@ impl<'a> MetadataBuilder<'a> {
     }
 }
 
-impl<'a> Default for MetadataBuilder<'a> {
+impl Default for MetadataBuilder<'_> {
     fn default() -> Self {
         Self::new()
     }
