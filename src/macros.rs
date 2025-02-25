@@ -28,6 +28,7 @@
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! log {
     // log!(logger: my_logger, target: "my_target", Level::Info, key1:? = 42, key2 = true; "a {} event", "log");
     (logger: $logger:expr, target: $target:expr, $lvl:expr, $($key:tt $(:$capture:tt)? $(= $value:expr)?),+; $($arg:tt)+) => ({
@@ -90,6 +91,7 @@ macro_rules! log {
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! error {
     // error!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // error!(logger: my_logger, target: "my_target", "a {} event", "log")
@@ -128,6 +130,7 @@ macro_rules! error {
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! warn {
     // warn!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // warn!(logger: my_logger, target: "my_target", "a {} event", "log")
@@ -168,6 +171,7 @@ macro_rules! warn {
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! info {
     // info!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // info!(logger: my_logger, target: "my_target", "a {} event", "log")
@@ -207,6 +211,7 @@ macro_rules! info {
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! debug {
     // debug!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // debug!(logger: my_logger, target: "my_target", "a {} event", "log")
@@ -248,6 +253,7 @@ macro_rules! debug {
 /// # }
 /// ```
 #[macro_export]
+#[clippy::format_args]
 macro_rules! trace {
     // trace!(logger: my_logger, target: "my_target", key1 = 42, key2 = true; "a {} event", "log")
     // trace!(logger: my_logger, target: "my_target", "a {} event", "log")

@@ -97,7 +97,7 @@ fn test_line_numbers(logger: &dyn Log, state: &State) {
     log::set_max_level(LevelFilter::Trace);
 
     info!(logger: logger, ""); // ensure check_line function follows log macro
-    check_log_location(&state);
+    check_log_location(state);
 
     #[track_caller]
     fn check_log_location(state: &State) {
