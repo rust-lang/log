@@ -35,7 +35,7 @@ impl<'a> KVs<'a> for () {
 // Log implementation.
 
 fn log_impl<L: Log>(
-    logger: &L,
+    logger: L,
     args: Arguments,
     level: Level,
     &(target, module_path, loc): &(&str, &'static str, &'static Location),
@@ -63,7 +63,7 @@ fn log_impl<L: Log>(
 }
 
 pub fn log<'a, K, L>(
-    logger: &L,
+    logger: L,
     args: Arguments,
     level: Level,
     target_module_path_and_loc: &(&str, &'static str, &'static Location),
@@ -81,7 +81,7 @@ pub fn log<'a, K, L>(
     )
 }
 
-pub fn enabled<L: Log>(logger: &L, level: Level, target: &str) -> bool {
+pub fn enabled<L: Log>(logger: L, level: Level, target: &str) -> bool {
     logger.enabled(&Metadata::builder().level(level).target(target).build())
 }
 
