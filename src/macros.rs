@@ -67,7 +67,7 @@ macro_rules! log {
 
     // log!(target: "my_target", Level::Info, "a log event")
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        $crate::log!(logger: $crate::logger(), target: $target, $lvl, $($arg)+)
+        $crate::log!(logger: $crate::GlobalLogger, target: $target, $lvl, $($arg)+)
     });
 
     // log!(Level::Info, "a log event")
@@ -318,7 +318,7 @@ macro_rules! log_enabled {
     });
 
     (target: $target:expr, $lvl:expr) => ({
-        $crate::log_enabled!(logger: $crate::logger(), target: $target, $lvl)
+        $crate::log_enabled!(logger: $crate::GlobalLogger, target: $target, $lvl)
     });
 
     ($lvl:expr) => ({
