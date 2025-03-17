@@ -13,20 +13,56 @@
 /// This macro will generically log with the specified `Level` and `format!`
 /// based argument list.
 ///
-/// # Examples
-///
 /// ```
 /// use log::{log, Level};
 ///
-/// # fn main() {
 /// let data = (42, "Forty-two");
 /// let private_data = "private";
 ///
 /// log!(Level::Error, "Received errors: {}, {}", data.0, data.1);
-/// log!(target: "app_events", Level::Warn, "App warning: {}, {}, {}",
-///     data.0, data.1, private_data);
-/// # }
 /// ```
+///
+/// Optionally, you can specify a `target` argument to attach a specific target
+/// to the log record. By default, the target is the module path of the caller.
+///
+/// ```
+/// use log::{log, Level};
+///
+/// let data = (42, "Forty-two");
+/// let private_data = "private";
+///
+/// log!(
+///     target: "app_events",
+///     Level::Error,
+///     "Received errors: {}, {}",
+///     data.0, data.1
+/// );
+/// ```
+///
+/// And optionally, you can specify a `logger` argument to use a specific logger
+/// instead of the default global logger.
+///
+/// ```
+/// # struct MyLogger {}
+/// # impl Log for MyLogger {
+/// #     fn enabled(&self, _metadata: &log::Metadata) -> bool {
+/// #         false
+/// #     }
+/// #     fn log(&self, _record: &log::Record) {}
+/// #     fn flush(&self) {}
+/// # }
+/// use log::{log, Level, Log};
+///
+/// let data = (42, "Forty-two");
+/// let private_data = "private";
+///
+/// let my_logger = MyLogger {};
+/// log!(
+///     logger: &my_logger,
+///     Level::Error,
+///     "Received errors: {}, {}",
+///     data.0, data.1
+/// );
 #[macro_export]
 #[clippy::format_args]
 macro_rules! log {
@@ -81,14 +117,14 @@ macro_rules! log {
 /// # Examples
 ///
 /// ```
-/// use log::error;
+/// use log::{error, GlobalLogger};
 ///
-/// # fn main() {
 /// let (err_info, port) = ("No connection", 22);
+/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// error!("Error: {err_info} on port {port}");
 /// error!(target: "app_events", "App Error: {err_info}, Port: {port}");
-/// # }
+/// error!(logger: my_logger, "App Error: {err_info}, Port: {port}");
 /// ```
 #[macro_export]
 #[clippy::format_args]
@@ -120,14 +156,14 @@ macro_rules! error {
 /// # Examples
 ///
 /// ```
-/// use log::warn;
+/// use log::{warn, GlobalLogger};
 ///
-/// # fn main() {
 /// let warn_description = "Invalid Input";
+/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// warn!("Warning! {warn_description}!");
 /// warn!(target: "input_events", "App received warning: {warn_description}");
-/// # }
+/// warn!(logger: my_logger, "App received warning: {warn_description}");
 /// ```
 #[macro_export]
 #[clippy::format_args]
@@ -159,16 +195,23 @@ macro_rules! warn {
 /// # Examples
 ///
 /// ```
-/// use log::info;
+/// use log::{info, GlobalLogger};
 ///
-/// # fn main() {
 /// # struct Connection { port: u32, speed: f32 }
 /// let conn_info = Connection { port: 40, speed: 3.20 };
+/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// info!("Connected to port {} at {} Mb/s", conn_info.port, conn_info.speed);
-/// info!(target: "connection_events", "Successful connection, port: {}, speed: {}",
-///       conn_info.port, conn_info.speed);
-/// # }
+/// info!(
+///     target: "connection_events",
+///     "Successful connection, port: {}, speed: {}",
+///     conn_info.port, conn_info.speed
+/// );
+/// info!(
+///     logger: my_logger,
+///     "Successful connection, port: {}, speed: {}",
+///     conn_info.port, conn_info.speed
+/// );
 /// ```
 #[macro_export]
 #[clippy::format_args]
@@ -200,15 +243,15 @@ macro_rules! info {
 /// # Examples
 ///
 /// ```
-/// use log::debug;
+/// use log::{debug, GlobalLogger};
 ///
-/// # fn main() {
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
+/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// debug!("New position: x: {}, y: {}", pos.x, pos.y);
 /// debug!(target: "app_events", "New position: x: {}, y: {}", pos.x, pos.y);
-/// # }
+/// debug!(logger: my_logger, "New position: x: {}, y: {}", pos.x, pos.y);
 /// ```
 #[macro_export]
 #[clippy::format_args]
@@ -240,17 +283,19 @@ macro_rules! debug {
 /// # Examples
 ///
 /// ```
-/// use log::trace;
+/// use log::{trace, GlobalLogger};
 ///
-/// # fn main() {
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
+/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// trace!("Position is: x: {}, y: {}", pos.x, pos.y);
 /// trace!(target: "app_events", "x is {} and y is {}",
 ///        if pos.x >= 0.0 { "positive" } else { "negative" },
 ///        if pos.y >= 0.0 { "positive" } else { "negative" });
-/// # }
+/// trace!(logger: my_logger, "x is {} and y is {}",
+///        if pos.x >= 0.0 { "positive" } else { "negative" },
+///        if pos.y >= 0.0 { "positive" } else { "negative" });
 /// ```
 #[macro_export]
 #[clippy::format_args]
