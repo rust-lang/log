@@ -117,10 +117,10 @@ macro_rules! log {
 /// # Examples
 ///
 /// ```
-/// use log::{error, GlobalLogger};
+/// use log::error;
 ///
+/// # let my_logger = log::GlobalLogger;
 /// let (err_info, port) = ("No connection", 22);
-/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// error!("Error: {err_info} on port {port}");
 /// error!(target: "app_events", "App Error: {err_info}, Port: {port}");
@@ -156,10 +156,10 @@ macro_rules! error {
 /// # Examples
 ///
 /// ```
-/// use log::{warn, GlobalLogger};
+/// use log::warn;
 ///
+/// # let my_logger = log::GlobalLogger;
 /// let warn_description = "Invalid Input";
-/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// warn!("Warning! {warn_description}!");
 /// warn!(target: "input_events", "App received warning: {warn_description}");
@@ -195,11 +195,11 @@ macro_rules! warn {
 /// # Examples
 ///
 /// ```
-/// use log::{info, GlobalLogger};
+/// use log::info;
 ///
+/// # let my_logger = log::GlobalLogger;
 /// # struct Connection { port: u32, speed: f32 }
 /// let conn_info = Connection { port: 40, speed: 3.20 };
-/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// info!("Connected to port {} at {} Mb/s", conn_info.port, conn_info.speed);
 /// info!(
@@ -243,11 +243,11 @@ macro_rules! info {
 /// # Examples
 ///
 /// ```
-/// use log::{debug, GlobalLogger};
+/// use log::debug;
 ///
+/// # let my_logger = log::GlobalLogger;
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
-/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// debug!("New position: x: {}, y: {}", pos.x, pos.y);
 /// debug!(target: "app_events", "New position: x: {}, y: {}", pos.x, pos.y);
@@ -283,11 +283,11 @@ macro_rules! debug {
 /// # Examples
 ///
 /// ```
-/// use log::{trace, GlobalLogger};
+/// use log::trace;
 ///
+/// # let my_logger = log::GlobalLogger;
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
-/// let my_logger = GlobalLogger; // can be any logger implementing the Log trait
 ///
 /// trace!("Position is: x: {}, y: {}", pos.x, pos.y);
 /// trace!(target: "app_events", "x is {} and y is {}",
@@ -331,22 +331,25 @@ macro_rules! trace {
 /// # Examples
 ///
 /// ```
-/// use log::Level::Debug;
-/// use log::{debug, log_enabled};
+/// use log::{debug, log_enabled, Level};
 ///
-/// # fn foo() {
-/// if log_enabled!(Debug) {
+/// # struct Data { x: u32, y: u32 }
+/// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
+/// # let my_logger = log::GlobalLogger;
+/// if log_enabled!(Level::Debug) {
 ///     let data = expensive_call();
 ///     debug!("expensive debug data: {} {}", data.x, data.y);
 /// }
-/// if log_enabled!(target: "Global", Debug) {
+///
+/// if log_enabled!(target: "Global", Level::Debug) {
 ///    let data = expensive_call();
 ///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
 /// }
-/// # }
-/// # struct Data { x: u32, y: u32 }
-/// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
-/// # fn main() {}
+///
+/// if log_enabled!(logger: my_logger, Level::Debug) {
+///    let data = expensive_call();
+///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
+/// }
 /// ```
 #[macro_export]
 macro_rules! log_enabled {
