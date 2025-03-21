@@ -71,7 +71,7 @@ macro_rules! log {
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<&_, _>(
-                $logger,
+                &($logger),
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::loc()),
@@ -85,7 +85,7 @@ macro_rules! log {
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log(
-                $logger,
+                &($logger),
                 $crate::__private_api::format_args!($($arg)+),
                 lvl,
                 &($target, $crate::__private_api::module_path!(), $crate::__private_api::loc()),
@@ -101,7 +101,7 @@ macro_rules! log {
 
     // log!(target: "my_target", Level::Info, "a log event")
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        $crate::log!(logger: $crate::GlobalLogger, target: $target, $lvl, $($arg)+)
+        $crate::log!(logger: $crate::__private_api::GlobalLogger, target: $target, $lvl, $($arg)+)
     });
 
     // log!(Level::Info, "a log event")
@@ -117,7 +117,7 @@ macro_rules! log {
 /// ```
 /// use log::error;
 ///
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// let (err_info, port) = ("No connection", 22);
 ///
 /// error!("Error: {err_info} on port {port}");
@@ -156,7 +156,7 @@ macro_rules! error {
 /// ```
 /// use log::warn;
 ///
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// let warn_description = "Invalid Input";
 ///
 /// warn!("Warning! {warn_description}!");
@@ -195,7 +195,7 @@ macro_rules! warn {
 /// ```
 /// use log::info;
 ///
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// # struct Connection { port: u32, speed: f32 }
 /// let conn_info = Connection { port: 40, speed: 3.20 };
 ///
@@ -243,7 +243,7 @@ macro_rules! info {
 /// ```
 /// use log::debug;
 ///
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
 ///
@@ -283,7 +283,7 @@ macro_rules! debug {
 /// ```
 /// use log::trace;
 ///
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// # struct Position { x: f32, y: f32 }
 /// let pos = Position { x: 3.234, y: -1.223 };
 ///
@@ -333,7 +333,7 @@ macro_rules! trace {
 ///
 /// # struct Data { x: u32, y: u32 }
 /// # fn expensive_call() -> Data { Data { x: 0, y: 0 } }
-/// # let my_logger = log::GlobalLogger;
+/// # let my_logger = log::__private_api::GlobalLogger;
 /// if log_enabled!(Level::Debug) {
 ///     let data = expensive_call();
 ///     debug!("expensive debug data: {} {}", data.x, data.y);
@@ -363,7 +363,7 @@ macro_rules! log_enabled {
     });
 
     (target: $target:expr, $lvl:expr) => ({
-        $crate::log_enabled!(logger: $crate::GlobalLogger, target: $target, $lvl)
+        $crate::log_enabled!(logger: $crate::__private_api::GlobalLogger, target: $target, $lvl)
     });
 
     ($lvl:expr) => ({

@@ -1,7 +1,7 @@
 //! WARNING: this is not part of the crate's public API and is subject to change at any time
 
 use self::sealed::KVs;
-use crate::{Level, Log, Metadata, Record};
+use crate::{logger, Level, Log, Metadata, Record};
 use std::fmt::Arguments;
 use std::panic::Location;
 pub use std::{format_args, module_path, stringify};
@@ -34,6 +34,28 @@ impl<'a> KVs<'a> for () {
 
 // Log implementation.
 
+/// The global logger proxy.
+///
+/// This zero-sized type implements the [`Log`] trait by forwarding calls
+/// to the logger registered with the `set_boxed_logger` or `set_logger`
+/// methods if there is one, or a nop logger as default.
+#[derive(Copy, Clone, Default, Debug)]
+pub struct GlobalLogger;
+
+impl Log for GlobalLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        logger().enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        logger().log(record)
+    }
+
+    fn flush(&self) {
+        logger().flush()
+    }
+}
+
 fn log_impl<L: Log>(
     logger: L,
     args: Arguments,
@@ -63,7 +85,7 @@ fn log_impl<L: Log>(
 }
 
 pub fn log<'a, K, L>(
-    logger: L,
+    logger: &L,
     args: Arguments,
     level: Level,
     target_module_path_and_loc: &(&str, &'static str, &'static Location),

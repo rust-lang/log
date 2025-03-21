@@ -1216,28 +1216,6 @@ impl Log for NopLogger {
     fn flush(&self) {}
 }
 
-/// The global logger proxy.
-///
-/// This zero-sized type implements the [`Log`] trait by forwarding calls
-/// to the logger registered with the `set_boxed_logger` or `set_logger`
-/// methods if there is one, or a nop logger as default.
-#[derive(Copy, Clone, Default, Debug)]
-pub struct GlobalLogger;
-
-impl Log for GlobalLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        logger().enabled(metadata)
-    }
-
-    fn log(&self, record: &Record) {
-        logger().log(record)
-    }
-
-    fn flush(&self) {
-        logger().flush()
-    }
-}
-
 impl<T> Log for &'_ T
 where
     T: ?Sized + Log,
