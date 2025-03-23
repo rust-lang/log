@@ -1,4 +1,4 @@
-use log::{log, log_enabled};
+use log::{log, log_enabled, Log, Metadata, Record};
 
 macro_rules! all_log_macros {
     ($($arg:tt)*) => ({
@@ -8,6 +8,16 @@ macro_rules! all_log_macros {
         ::log::warn!($($arg)*);
         ::log::error!($($arg)*);
     });
+}
+
+struct Logger;
+
+impl Log for Logger {
+    fn enabled(&self, _: &Metadata) -> bool {
+        false
+    }
+    fn log(&self, _: &Record) {}
+    fn flush(&self) {}
 }
 
 #[test]
@@ -28,6 +38,11 @@ fn no_args() {
 
     all_log_macros!(target: "my_target", "hello");
     all_log_macros!(target: "my_target", "hello",);
+
+    all_log_macros!(logger: Logger, "hello");
+    all_log_macros!(logger: Logger, "hello",);
+    all_log_macros!(logger: Logger, target: "my_target", "hello");
+    all_log_macros!(logger: Logger, target: "my_target", "hello",);
 }
 
 #[test]
@@ -115,6 +130,8 @@ fn kv_no_args() {
         log!(lvl, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     }
 
+    all_log_macros!(logger: Logger, cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
+    all_log_macros!(logger: Logger, target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     all_log_macros!(target: "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     all_log_macros!(target = "my_target", cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");
     all_log_macros!(cat_1 = "chashu", cat_2 = "nori", cat_count = 2; "hello");

@@ -1204,7 +1204,7 @@ pub trait Log: Sync + Send {
     fn flush(&self);
 }
 
-// Just used as a dummy initial value for LOGGER
+/// A dummy initial value for LOGGER.
 struct NopLogger;
 
 impl Log for NopLogger {
