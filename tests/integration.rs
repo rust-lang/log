@@ -3,14 +3,6 @@
 use log::{debug, error, info, trace, warn, Level, LevelFilter, Log, Metadata, Record};
 use std::sync::{Arc, Mutex};
 
-#[cfg(feature = "std")]
-use log::set_boxed_logger;
-
-#[cfg(not(feature = "std"))]
-fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
-    log::set_logger(Box::leak(logger))
-}
-
 struct State {
     last_log_level: Mutex<Option<Level>>,
     last_log_location: Mutex<Option<u32>>,

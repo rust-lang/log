@@ -35,11 +35,7 @@ impl<'a> KVs<'a> for () {
 // Log implementation.
 
 /// The global logger proxy.
-///
-/// This zero-sized type implements the [`Log`] trait by forwarding calls
-/// to the logger registered with the `set_boxed_logger` or `set_logger`
-/// methods if there is one, or a nop logger as default.
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Debug)]
 pub struct GlobalLogger;
 
 impl Log for GlobalLogger {
@@ -56,6 +52,7 @@ impl Log for GlobalLogger {
     }
 }
 
+// Split from `log` to reduce generics and code size
 fn log_impl<L: Log>(
     logger: L,
     args: Arguments,
@@ -85,7 +82,7 @@ fn log_impl<L: Log>(
 }
 
 pub fn log<'a, K, L>(
-    logger: &L,
+    logger: L,
     args: Arguments,
     level: Level,
     target_module_path_and_loc: &(&str, &'static str, &'static Location),
