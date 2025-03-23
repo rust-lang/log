@@ -63,6 +63,7 @@
 ///     "Received errors: {}, {}",
 ///     data.0, data.1
 /// );
+/// ```
 ///
 /// The `logger` argument accepts a value that implements the `Log` trait. The value
 /// will be borrowed within the macro.
