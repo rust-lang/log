@@ -405,12 +405,12 @@ macro_rules! log_enabled {
 #[macro_export]
 macro_rules! __log_enabled {
     // log_enabled!(logger: my_logger, target: "my_target", Level::Info)
-    (logger: $logger:expr, target: $target:expr, $lvl:expr) => ({
+    (logger: $logger:expr, target: $target:expr, $lvl:expr) => {{
         let lvl = $lvl;
         lvl <= $crate::STATIC_MAX_LEVEL
             && lvl <= $crate::max_level()
             && $crate::__private_api::enabled($logger, lvl, $target)
-    });
+    }};
 }
 
 // Determine the logger to use, and whether to take it by-value or by reference
@@ -418,13 +418,13 @@ macro_rules! __log_enabled {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __log_logger {
-    (__log_global_logger) => ({
+    (__log_global_logger) => {{
         $crate::__private_api::GlobalLogger
-    });
+    }};
 
-    ($logger:expr) => ({
+    ($logger:expr) => {{
         &($logger)
-    });
+    }};
 }
 
 // These macros use a pattern of #[cfg]s to produce nicer error
