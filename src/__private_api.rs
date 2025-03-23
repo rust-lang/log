@@ -52,57 +52,43 @@ impl Log for GlobalLogger {
     }
 }
 
-// Split from `log` to reduce generics and code size
-fn log_impl<L: Log>(
-    logger: L,
-    args: Arguments,
-    level: Level,
-    &(target, module_path, loc): &(&str, &'static str, &'static Location),
-    kvs: Option<&[(&str, Value)]>,
-) {
-    #[cfg(not(feature = "kv"))]
-    if kvs.is_some() {
-        panic!("key-value support is experimental and must be enabled using the `kv` feature")
+pub trait LogExt: Log {
+    fn do_enabled(&self, level: Level, target: &str) -> bool {
+        self.enabled(&Metadata::builder().level(level).target(target).build())
     }
 
-    let mut builder = Record::builder();
+    fn do_log<'a>(
+        &self,
+        args: Arguments,
+        level: Level,
+        &(target, module_path, loc): &(&str, &'static str, &'static Location),
+        kvs: impl KVs<'a>,
+    ) {
+        let kvs = kvs.into_kvs();
 
-    builder
-        .args(args)
-        .level(level)
-        .target(target)
-        .module_path_static(Some(module_path))
-        .file_static(Some(loc.file()))
-        .line(Some(loc.line()));
+        #[cfg(not(feature = "kv"))]
+        if kvs.is_some() {
+            panic!("key-value support is experimental and must be enabled using the `kv` feature")
+        }
 
-    #[cfg(feature = "kv")]
-    builder.key_values(&kvs);
+        let mut builder = Record::builder();
 
-    logger.log(&builder.build());
+        builder
+            .args(args)
+            .level(level)
+            .target(target)
+            .module_path_static(Some(module_path))
+            .file_static(Some(loc.file()))
+            .line(Some(loc.line()));
+
+        #[cfg(feature = "kv")]
+        builder.key_values(&kvs);
+
+        self.log(&builder.build());
+    }
 }
 
-pub fn log<'a, K, L>(
-    logger: L,
-    args: Arguments,
-    level: Level,
-    target_module_path_and_loc: &(&str, &'static str, &'static Location),
-    kvs: K,
-) where
-    K: KVs<'a>,
-    L: Log,
-{
-    log_impl(
-        logger,
-        args,
-        level,
-        target_module_path_and_loc,
-        kvs.into_kvs(),
-    )
-}
-
-pub fn enabled<L: Log>(logger: L, level: Level, target: &str) -> bool {
-    logger.enabled(&Metadata::builder().level(level).target(target).build())
-}
+impl<T: Log> LogExt for T {}
 
 #[track_caller]
 pub fn loc() -> &'static Location<'static> {
