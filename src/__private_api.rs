@@ -85,7 +85,7 @@ fn log_impl<L: Log>(
 }
 
 pub fn log<'a, K, L>(
-    logger: &L,
+    logger: L,
     args: Arguments,
     level: Level,
     target_module_path_and_loc: &(&str, &'static str, &'static Location),
