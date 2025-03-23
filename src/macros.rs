@@ -58,11 +58,17 @@
 ///
 /// let my_logger = MyLogger {};
 /// log!(
-///     logger: &my_logger,
+///     logger: my_logger,
 ///     Level::Error,
 ///     "Received errors: {}, {}",
 ///     data.0, data.1
 /// );
+///
+/// The `logger` argument accepts a value that implements the `Log` trait. The value
+/// will be borrowed within the macro.
+///
+/// Note that the global level set via Cargo features, or through `set_max_level` will
+/// still apply, even when a custom logger is supplied with the `logger` argument.
 #[macro_export]
 #[clippy::format_args]
 macro_rules! log {
@@ -378,6 +384,8 @@ macro_rules! trace {
 ///    debug!(target: "Global", "expensive debug data: {} {}", data.x, data.y);
 /// }
 /// ```
+///
+/// This macro accepts the same `target` and `logger` arguments as [`macro@log`].
 #[macro_export]
 macro_rules! log_enabled {
     // log_enabled!(logger: my_logger, target: "my_target", Level::Info)
