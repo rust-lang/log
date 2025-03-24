@@ -1,6 +1,10 @@
 name: CI
 on: [push, pull_request]
 
+# Ensure only read permission is granted
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
