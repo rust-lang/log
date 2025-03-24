@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+### Notable Changes
+* MSRV is bumped to 1.61.0 in https://github.com/rust-lang/log/pull/676
+
 ## [0.4.26] - 2025-02-18
 
-## What's Changed
+### What's Changed
 * Derive `Clone` for `kv::Value` by @SpriteOvO in https://github.com/rust-lang/log/pull/668
 * Add `spdlog-rs` link to crate doc by @SpriteOvO in https://github.com/rust-lang/log/pull/669
 
@@ -13,7 +16,7 @@
 
 ## [0.4.25] - 2025-01-14
 
-## What's Changed
+### What's Changed
 * Revert loosening of kv cargo features by @KodrAus in https://github.com/rust-lang/log/pull/662
 
 
@@ -21,7 +24,7 @@
 
 ## [0.4.24] - 2025-01-11
 
-## What's Changed
+### What's Changed
 * Fix up kv feature activation by @KodrAus in https://github.com/rust-lang/log/pull/659
 
 
@@ -29,7 +32,7 @@
 
 ## [0.4.23] - 2025-01-10 (yanked)
 
-## What's Changed
+### What's Changed
 * Fix some typos by @Kleinmarb in https://github.com/rust-lang/log/pull/637
 * Add logforth to implementation by @tisonkun in https://github.com/rust-lang/log/pull/638
 * Add `spdlog-rs` link to README by @SpriteOvO in https://github.com/rust-lang/log/pull/639
@@ -40,7 +43,7 @@
 * Fix up key lifetimes and add method to try get a borrowed key by @KodrAus in https://github.com/rust-lang/log/pull/653
 * Add Ftail implementation by @tjardoo in https://github.com/rust-lang/log/pull/652
 
-## New Contributors
+### New Contributors
 * @Kleinmarb made their first contribution in https://github.com/rust-lang/log/pull/637
 * @tisonkun made their first contribution in https://github.com/rust-lang/log/pull/638
 * @SpriteOvO made their first contribution in https://github.com/rust-lang/log/pull/639
@@ -53,7 +56,7 @@
 
 ## [0.4.22] - 2024-06-27
 
-## What's Changed
+### What's Changed
 * Add some clarifications to the library docs by @KodrAus in https://github.com/rust-lang/log/pull/620
 * Add links to `colog` crate by @chrivers in https://github.com/rust-lang/log/pull/621
 * adding line_number test + updating some testing infrastructure by @DIvkov575 in https://github.com/rust-lang/log/pull/619
@@ -64,7 +67,7 @@
 * Loosen orderings for logger initialization in https://github.com/rust-lang/log/pull/632. Originally by @pwoolcoc in https://github.com/rust-lang/log/pull/599
 * Use Location::caller() for file and line info in https://github.com/rust-lang/log/pull/633. Originally by @Cassy343 in https://github.com/rust-lang/log/pull/520
 
-## New Contributors
+### New Contributors
 * @chrivers made their first contribution in https://github.com/rust-lang/log/pull/621
 * @DIvkov575 made their first contribution in https://github.com/rust-lang/log/pull/619
 * @Catamantaloedis made their first contribution in https://github.com/rust-lang/log/pull/625
@@ -73,7 +76,7 @@
 
 ## [0.4.21] - 2024-02-27
 
-## What's Changed
+### What's Changed
 * Minor clippy nits by @nyurik in https://github.com/rust-lang/log/pull/578
 * Simplify Display impl by @nyurik in https://github.com/rust-lang/log/pull/579
 * Set all crates to 2021 edition by @nyurik in https://github.com/rust-lang/log/pull/580
@@ -93,7 +96,7 @@
 * Use `Acquire` ordering for initialization check by @AngelicosPhosphoros in https://github.com/rust-lang/log/pull/610
 * Get structured logging API ready for stabilization by @KodrAus in https://github.com/rust-lang/log/pull/613
 
-## New Contributors
+### New Contributors
 * @nyurik made their first contribution in https://github.com/rust-lang/log/pull/578
 * @dimo414 made their first contribution in https://github.com/rust-lang/log/pull/590
 * @peterjoel made their first contribution in https://github.com/rust-lang/log/pull/587
