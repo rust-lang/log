@@ -13,7 +13,7 @@ A lightweight logging facade for Rust
 categories = ["development-tools::debugging"]
 keywords = ["logging"]
 exclude = ["rfcs/**/*"]
-rust-version = "1.60.0"
+rust-version = "1.61.0"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -79,11 +79,3 @@ value-bag = { version = "1.7", features = ["test"] }
 # By defining the crate as direct dependency we can increase its minimal
 # version making the minimal (crate) version CI happy.
 proc-macro2 = { version = "1.0.63", default-features = false }
-
-# NOTE: log doesn't actually depend on these crates. However, to pass MSRV tests
-# we need to pin the version of the following crates whose newer versions
-# requires rustc 1.61.0 or newer.
-[target.'cfg(test_msrv)'.dev-dependencies]
-memchr = { version = "=2.6.2" }
-serde_derive = { version = "=1.0.210" }
-syn = { version = "=2.0.67" }
