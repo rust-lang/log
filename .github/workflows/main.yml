@@ -39,7 +39,7 @@ jobs:
       run: |
         rustup update ${{ matrix.rust }} --no-self-update
         rustup default ${{ matrix.rust }}
-        cargo install cargo-hack
+        cargo +stable install cargo-hack --locked
     - run: cargo hack test --feature-powerset --lib --exclude-features max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
@@ -53,7 +53,7 @@ jobs:
       run: |
         rustup update stable --no-self-update
         rustup default stable
-        rustup component add clippy,rustfmt
+        rustup component add clippy rustfmt
     - run: cargo fmt -- --check
     - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
     - run: cargo clippy --verbose
@@ -115,7 +115,7 @@ jobs:
         run: |
           rustup update 1.61.0 --no-self-update
           rustup default 1.61.0
-          cargo install cargo-hack
+          cargo +stable install cargo-hack --locked
       - run: cargo hack test --feature-powerset --lib --exclude-features max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
