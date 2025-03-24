@@ -7,7 +7,7 @@
 
 ## [0.4.27] - 2025-03-24
 
-## What's Changed
+### What's Changed
 * A few minor lint fixes by @nyurik in https://github.com/rust-lang/log/pull/671
 * Enable clippy support for format-like macros by @nyurik in https://github.com/rust-lang/log/pull/665
 * Add an optional logger param by @tisonkun in https://github.com/rust-lang/log/pull/664
