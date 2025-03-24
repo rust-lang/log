@@ -21,8 +21,9 @@ impl Log for Logger {
     }
     fn flush(&self) {}
 }
-#[cfg_attr(lib_build, test)]
-fn main() {
+
+#[test]
+fn test_integration() {
     // These tests don't really make sense when static
     // max level filtering is applied
     #[cfg(not(any(

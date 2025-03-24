@@ -19,16 +19,6 @@ edition = "2021"
 [package.metadata.docs.rs]
 features = ["std", "serde", "kv_std", "kv_sval", "kv_serde"]
 
-[[test]]
-name = "integration"
-path = "tests/integration.rs"
-harness = false
-
-[[test]]
-name = "macros"
-path = "tests/macros.rs"
-harness = true
-
 [features]
 max_level_off   = []
 max_level_error = []
