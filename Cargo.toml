@@ -79,3 +79,9 @@ value-bag = { version = "1.7", features = ["test"] }
 # By defining the crate as direct dependency we can increase its minimal
 # version making the minimal (crate) version CI happy.
 proc-macro2 = { version = "1.0.63", default-features = false }
+
+[patch.crates-io]
+sval = { git = "https://github.com/tisonkun/sval.git", rev = "06aa86b" }
+sval_buffer = { git = "https://github.com/tisonkun/sval.git", rev = "06aa86b" }
+sval_nested = { git = "https://github.com/tisonkun/sval.git", rev = "06aa86b" }
+sval_ref = { git = "https://github.com/tisonkun/sval.git", rev = "06aa86b" }
