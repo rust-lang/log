@@ -36,10 +36,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-    - uses: taiki-e/install-action@cargo-hack
+      run: |
+        rustup update ${{ matrix.rust }} --no-self-update
+        rustup default ${{ matrix.rust }}
+        cargo install cargo-hack
     - run: cargo hack test --feature-powerset --lib --exclude-features max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
     - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
@@ -49,9 +49,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy,rustfmt
+    - name: Install toolchain
+      run: |
+        rustup update stable --no-self-update
+        rustup default stable
+        rustup component add clippy,rustfmt
     - run: cargo fmt -- --check
     - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
     - run: cargo clippy --verbose
@@ -62,9 +64,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rust-docs
+    - name: Install toolchain
+      run: |
+        rustup update stable --no-self-update
+        rustup default stable
+        rustup component add rust-docs
     - name: Run rustdoc
       env:
         RUSTDOCFLAGS: "-D warnings"
@@ -75,7 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install toolchain
+        run: |
+          rustup update nightly --no-self-update
+          rustup default nightly
       - run: cargo build --verbose -Z avoid-dev-deps --features kv
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv std"
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_sval"
@@ -88,7 +95,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install toolchain
+        run: |
+          rustup update nightly --no-self-update
+          rustup default nightly
       - run: cargo build --verbose -Z minimal-versions --features kv
       - run: cargo build --verbose -Z minimal-versions --features "kv std"
       - run: cargo build --verbose -Z minimal-versions --features "kv kv_sval"
@@ -102,10 +112,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.61.0
-      - uses: taiki-e/install-action@cargo-hack
+        run: |
+          rustup update 1.61.0 --no-self-update
+          rustup default 1.61.0
+          cargo install cargo-hack
       - run: cargo hack test --feature-powerset --lib --exclude-features max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
@@ -115,7 +125,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
       - run: rustup target add thumbv6m-none-eabi riscv32imc-unknown-none-elf
       - run: cargo build --verbose --target=thumbv6m-none-eabi
       - run: cargo build --verbose --target=riscv32imc-unknown-none-elf
