@@ -102,7 +102,7 @@ jobs:
         with:
           toolchain: 1.60.0
       - uses: taiki-e/install-action@cargo-hack
-      - run: cargo hack test --feature-powerset --lib --exclude-features max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
+      - run: cargo hack test --feature-powerset --lib --exclude-features serde,kv_serde,kv_unstable_serde,max_level_off,max_level_error,max_level_warn,max_level_info,max_level_debug,max_level_trace,release_max_level_off,release_max_level_error,release_max_level_warn,release_max_level_info,release_max_level_debug,release_max_level_trace
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
 
