@@ -66,16 +66,24 @@ value-bag = { version = "1.7", optional = true, default-features = false, featur
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_test = "1.0"
+serde_json = { version = "1.0" }
+serde_test = { version = "1.0" }
 sval = { version = "2.1" }
 sval_derive = { version = "2.1" }
 value-bag = { version = "1.7", features = ["test"] }
 
-# NOTE: log doesn't actually depent on this crate. However, our dependencies,
+# NOTE: log doesn't actually depend on this crate. However, our dependencies,
 # serde and sval, dependent on version 1.0 of the crate, which has problem fixed
 # in 1.0.60, specifically in the following commit
 # https://github.com/dtolnay/proc-macro2/commit/e31d61910049e097afdd3d27c37786309082bdcb.
 # By defining the crate as direct dependency we can increase its minimal
 # version making the minimal (crate) version CI happy.
 proc-macro2 = { version = "1.0.63", default-features = false }
+
+# NOTE: log doesn't actually depend on these crates. However, to pass MSRV tests
+# we need to pin the version of the following crates whose newer versions
+# requires rustc 1.61.0 or newer.
+[target.'cfg(test_msrv)'.dev-dependencies]
+memchr = { version = "=2.6.2" }
+serde_derive = { version = "=1.0.210" }
+syn = { version = "=2.0.67" }
