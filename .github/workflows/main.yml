@@ -9,25 +9,25 @@ jobs:
       matrix:
         include:
           - build: stable
-            os: ubuntu-24.04
+            os: ubuntu-latest
             rust: stable
           - build: beta
-            os: ubuntu-24.04
+            os: ubuntu-latest
             rust: beta
           - build: nightly
-            os: ubuntu-24.04
+            os: ubuntu-latest
             rust: nightly
           - build: macos
-            os: macos-14
+            os: macos-latest
             rust: stable
           - build: win32
-            os: windows-2022
+            os: windows-latest
             rust: stable-i686-pc-windows-msvc
           - build: win64
-            os: windows-2022
+            os: windows-latest
             rust: stable-x86_64-pc-windows-msvc
           - build: mingw
-            os: windows-2022
+            os: windows-latest
             rust: stable-x86_64-pc-windows-gnu
     steps:
     - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
 
   check:
     name: Check Format and Clippy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
@@ -55,7 +55,7 @@ jobs:
 
   doc:
     name: Check Documentation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
@@ -68,7 +68,7 @@ jobs:
 
   features:
     name: Feature check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
@@ -81,7 +81,7 @@ jobs:
 
   minimalv:
     name: Minimal versions
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
@@ -94,7 +94,7 @@ jobs:
 
   msrv:
     name: MSRV
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
@@ -108,7 +108,7 @@ jobs:
 
   embedded:
     name: Embedded
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
