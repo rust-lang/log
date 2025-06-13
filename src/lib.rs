@@ -763,7 +763,7 @@ impl<'a> MaybeStaticStr<'a> {
 /// [`log!`]: macro.log.html
 /// [`level()`]: struct.Record.html#method.level
 /// [`target()`]: struct.Record.html#method.target
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Record<'a> {
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
@@ -779,7 +779,7 @@ pub struct Record<'a> {
 // provides a useful `Debug` implementation for
 // the underlying `Source`.
 #[cfg(feature = "kv")]
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 struct KeyValues<'a>(&'a dyn kv::Source);
 
 #[cfg(feature = "kv")]
@@ -1079,7 +1079,7 @@ impl Default for RecordBuilder<'_> {
 ///
 /// # fn main(){}
 /// ```
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Metadata<'a> {
     level: Level,
     target: &'a str,
