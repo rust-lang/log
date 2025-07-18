@@ -431,21 +431,6 @@ impl AtomicUsize {
     fn store(&self, val: usize, _order: Ordering) {
         self.v.set(val)
     }
-
-    #[cfg(target_has_atomic = "ptr")]
-    fn compare_exchange(
-        &self,
-        current: usize,
-        new: usize,
-        _success: Ordering,
-        _failure: Ordering,
-    ) -> Result<usize, usize> {
-        let prev = self.v.get();
-        if current == prev {
-            self.v.set(new);
-        }
-        Ok(prev)
-    }
 }
 
 // Any platform without atomics is unlikely to have multiple cores, so
