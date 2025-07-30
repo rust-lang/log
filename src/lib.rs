@@ -460,6 +460,9 @@ static SET_LOGGER_ERROR: &str = "attempted to set a logger after the logging sys
 static LEVEL_PARSE_ERROR: &str =
     "attempted to convert a string that doesn't match an existing log level";
 
+static LEVEL_USIZE_ERROR: &str = "attempted to convert a usize that was out of valid range for \
+                                  existing log levels";
+
 /// An enum representing the available verbosity levels of the logger.
 ///
 /// Typical usage includes: checking if a certain `Level` is enabled with
@@ -525,6 +528,14 @@ impl FromStr for Level {
 impl fmt::Display for Level {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(self.as_str())
+    }
+}
+
+impl TryFrom<usize> for Level {
+    type Error = UsizeLevelError;
+
+    fn try_from(value: usize) -> Result<Self, <Level as TryFrom<usize>>::Error> {
+        Self::from_usize(value).ok_or(UsizeLevelError(()))
     }
 }
 
@@ -631,6 +642,14 @@ impl FromStr for LevelFilter {
 impl fmt::Display for LevelFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.pad(self.as_str())
+    }
+}
+
+impl TryFrom<usize> for LevelFilter {
+    type Error = UsizeLevelError;
+
+    fn try_from(value: usize) -> Result<Self, <LevelFilter as TryFrom<usize>>::Error> {
+        Self::from_usize(value).ok_or(UsizeLevelError(()))
     }
 }
 
@@ -1485,6 +1504,23 @@ impl fmt::Display for ParseLevelError {
 #[cfg(feature = "std")]
 impl error::Error for ParseLevelError {}
 
+/// The type returned by [`try_from::<usize>`] when the usize doesn't match any of the log levels.
+///
+/// [`try_from`]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html#tymethod.try_from
+#[allow(missing_copy_implementations)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct UsizeLevelError(());
+
+impl fmt::Display for UsizeLevelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(LEVEL_USIZE_ERROR)
+    }
+}
+
+// The Error trait is not available in libcore
+#[cfg(feature = "std")]
+impl error::Error for UsizeLevelError {}
+
 /// Returns a reference to the logger.
 ///
 /// If a logger has not been set, a no-op implementation is returned.
@@ -1535,7 +1571,7 @@ pub const STATIC_MAX_LEVEL: LevelFilter = match cfg!(debug_assertions) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Level, LevelFilter, ParseLevelError, STATIC_MAX_LEVEL};
+    use super::{Level, LevelFilter, ParseLevelError, UsizeLevelError, STATIC_MAX_LEVEL};
 
     #[test]
     fn test_levelfilter_from_str() {
@@ -1646,6 +1682,32 @@ mod tests {
         for (input, expected) in tests {
             assert_eq!(*expected, input.as_str());
         }
+    }
+
+    #[test]
+    fn test_level_and_filter_from_usize() {
+        let max = LevelFilter::max() as usize;
+        for level_filter in 0..=max {
+            let l = LevelFilter::try_from(level_filter);
+            assert!(l.is_ok());
+        }
+
+        for bad_level_filter in (max + 1)..(max + max) {
+            let l: Result<LevelFilter, UsizeLevelError> = bad_level_filter.try_into();
+            assert!(l.is_err());
+        }
+
+        for level in 1..=max {
+            let l: Result<Level, UsizeLevelError> = level.try_into();
+            assert!(l.is_ok());
+        }
+
+        for bad_level in (max + 1)..(max + max) {
+            let l = Level::try_from(bad_level);
+            assert!(l.is_err());
+        }
+        let bad_level: Result<Level, UsizeLevelError> = 0usize.try_into();
+        assert!(bad_level.is_err());
     }
 
     #[test]
