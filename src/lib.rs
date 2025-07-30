@@ -1504,7 +1504,7 @@ impl fmt::Display for ParseLevelError {
 #[cfg(feature = "std")]
 impl error::Error for ParseLevelError {}
 
-/// The type returned by [`try_from::<usize>`] when the usize doesn't match any of the log levels.
+/// The type returned by [`try_from`] when the usize doesn't match any of the log levels.
 ///
 /// [`try_from`]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html#tymethod.try_from
 #[allow(missing_copy_implementations)]
