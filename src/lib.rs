@@ -576,6 +576,48 @@ impl Level {
     pub fn iter() -> impl Iterator<Item = Self> {
         (1..6).map(|i| Self::from_usize(i).unwrap())
     }
+
+    /// Get the next-highest `Level` from this one.
+    ///
+    /// If the current `Level` is at the highest level, the returned `Level` will be the same as the
+    /// current one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::Level;
+    ///
+    /// let level = Level::Info;
+    ///
+    /// assert_eq!(Level::Debug, level.up());
+    /// assert_eq!(Level::Trace, level.up().up());
+    /// assert_eq!(Level::Trace, level.up().up().up()); // max level
+    /// ```
+    pub fn up(&self) -> Self {
+        let current = *self as usize;
+        Self::from_usize(current + 1).unwrap_or(*self)
+    }
+
+    /// Get the next-lowest `Level` from this one.
+    ///
+    /// If the current `Level` is at the lowest level, the returned `Level` will be the same as the
+    /// current one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::Level;
+    ///
+    /// let level = Level::Info;
+    ///
+    /// assert_eq!(Level::Warn, level.down());
+    /// assert_eq!(Level::Error, level.down().down());
+    /// assert_eq!(Level::Error, level.down().down().down()); // min level
+    /// ```
+    pub fn down(&self) -> Self {
+        let current = *self as usize;
+        Self::from_usize(current.saturating_sub(1)).unwrap_or(*self)
+    }
 }
 
 /// An enum representing the available verbosity level filters of the logger.
@@ -684,6 +726,49 @@ impl LevelFilter {
     /// ```
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..6).map(|i| Self::from_usize(i).unwrap())
+    }
+
+    /// Get the next-highest `LevelFilter` from this one.
+    ///
+    /// If the current `LevelFilter` is at the highest level, the returned `LevelFilter` will be the
+    /// same as the current one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::LevelFilter;
+    ///
+    /// let level_filter = LevelFilter::Info;
+    ///
+    /// assert_eq!(LevelFilter::Debug, level_filter.up());
+    /// assert_eq!(LevelFilter::Trace, level_filter.up().up());
+    /// assert_eq!(LevelFilter::Trace, level_filter.up().up().up()); // max level
+    /// ```
+    pub fn up(&self) -> Self {
+        let current = *self as usize;
+        Self::from_usize(current + 1).unwrap_or(*self)
+    }
+
+    /// Get the next-lowest `LevelFilter` from this one.
+    ///
+    /// If the current `LevelFilter` is at the lowest level, the returned `LevelFilter` will be the
+    /// same as the current one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use log::LevelFilter;
+    ///
+    /// let level_filter = LevelFilter::Info;
+    ///
+    /// assert_eq!(LevelFilter::Warn, level_filter.down());
+    /// assert_eq!(LevelFilter::Error, level_filter.down().down());
+    /// assert_eq!(LevelFilter::Off, level_filter.down().down().down());
+    /// assert_eq!(LevelFilter::Off, level_filter.down().down().down().down()); // min level
+    /// ```
+    pub fn down(&self) -> Self {
+        let current = *self as usize;
+        Self::from_usize(current.saturating_sub(1)).unwrap_or(*self)
     }
 }
 
@@ -1646,6 +1731,55 @@ mod tests {
         for (input, expected) in tests {
             assert_eq!(*expected, input.as_str());
         }
+    }
+
+    #[test]
+    fn test_level_up() {
+        let info = Level::Info;
+        let up = info.up();
+        assert_eq!(up, Level::Debug);
+
+        let trace = Level::Trace;
+        let up = trace.up();
+        // trace is already highest level
+        assert_eq!(up, trace);
+    }
+
+    #[test]
+    fn test_level_filter_up() {
+        let info = LevelFilter::Info;
+        let up = info.up();
+        assert_eq!(up, LevelFilter::Debug);
+
+        let trace = LevelFilter::Trace;
+        let up = trace.up();
+        // trace is already highest level
+        assert_eq!(up, trace);
+    }
+
+    #[test]
+    fn test_level_down() {
+        let info = Level::Info;
+        let down = info.down();
+        assert_eq!(down, Level::Warn);
+
+        let error = Level::Error;
+        let down = error.down();
+        // error is already lowest level
+        assert_eq!(down, error);
+    }
+
+    #[test]
+    fn test_level_filter_down() {
+        let info = LevelFilter::Info;
+        let down = info.down();
+        assert_eq!(down, LevelFilter::Warn);
+
+        let error = LevelFilter::Error;
+        let down = error.down();
+        assert_eq!(down, LevelFilter::Off);
+        // Off is already the lowest
+        assert_eq!(down.down(), down);
     }
 
     #[test]
