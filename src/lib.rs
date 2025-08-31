@@ -589,11 +589,11 @@ impl Level {
     ///
     /// let level = Level::Info;
     ///
-    /// assert_eq!(Level::Debug, level.up());
-    /// assert_eq!(Level::Trace, level.up().up());
-    /// assert_eq!(Level::Trace, level.up().up().up()); // max level
+    /// assert_eq!(Level::Debug, level.increment_severity());
+    /// assert_eq!(Level::Trace, level.increment_severity().increment_severity());
+    /// assert_eq!(Level::Trace, level.increment_severity().increment_severity().increment_severity()); // max level
     /// ```
-    pub fn up(&self) -> Self {
+    pub fn increment_severity(&self) -> Self {
         let current = *self as usize;
         Self::from_usize(current + 1).unwrap_or(*self)
     }
@@ -610,11 +610,11 @@ impl Level {
     ///
     /// let level = Level::Info;
     ///
-    /// assert_eq!(Level::Warn, level.down());
-    /// assert_eq!(Level::Error, level.down().down());
-    /// assert_eq!(Level::Error, level.down().down().down()); // min level
+    /// assert_eq!(Level::Warn, level.decrement_severity());
+    /// assert_eq!(Level::Error, level.decrement_severity().decrement_severity());
+    /// assert_eq!(Level::Error, level.decrement_severity().decrement_severity().decrement_severity()); // min level
     /// ```
-    pub fn down(&self) -> Self {
+    pub fn decrement_severity(&self) -> Self {
         let current = *self as usize;
         Self::from_usize(current.saturating_sub(1)).unwrap_or(*self)
     }
@@ -740,11 +740,11 @@ impl LevelFilter {
     ///
     /// let level_filter = LevelFilter::Info;
     ///
-    /// assert_eq!(LevelFilter::Debug, level_filter.up());
-    /// assert_eq!(LevelFilter::Trace, level_filter.up().up());
-    /// assert_eq!(LevelFilter::Trace, level_filter.up().up().up()); // max level
+    /// assert_eq!(LevelFilter::Debug, level_filter.increment_severity());
+    /// assert_eq!(LevelFilter::Trace, level_filter.increment_severity().increment_severity());
+    /// assert_eq!(LevelFilter::Trace, level_filter.increment_severity().increment_severity().increment_severity()); // max level
     /// ```
-    pub fn up(&self) -> Self {
+    pub fn increment_severity(&self) -> Self {
         let current = *self as usize;
         Self::from_usize(current + 1).unwrap_or(*self)
     }
@@ -761,12 +761,12 @@ impl LevelFilter {
     ///
     /// let level_filter = LevelFilter::Info;
     ///
-    /// assert_eq!(LevelFilter::Warn, level_filter.down());
-    /// assert_eq!(LevelFilter::Error, level_filter.down().down());
-    /// assert_eq!(LevelFilter::Off, level_filter.down().down().down());
-    /// assert_eq!(LevelFilter::Off, level_filter.down().down().down().down()); // min level
+    /// assert_eq!(LevelFilter::Warn, level_filter.decrement_severity());
+    /// assert_eq!(LevelFilter::Error, level_filter.decrement_severity().decrement_severity());
+    /// assert_eq!(LevelFilter::Off, level_filter.decrement_severity().decrement_severity().decrement_severity());
+    /// assert_eq!(LevelFilter::Off, level_filter.decrement_severity().decrement_severity().decrement_severity().decrement_severity()); // min level
     /// ```
-    pub fn down(&self) -> Self {
+    pub fn decrement_severity(&self) -> Self {
         let current = *self as usize;
         Self::from_usize(current.saturating_sub(1)).unwrap_or(*self)
     }
@@ -1736,11 +1736,11 @@ mod tests {
     #[test]
     fn test_level_up() {
         let info = Level::Info;
-        let up = info.up();
+        let up = info.increment_severity();
         assert_eq!(up, Level::Debug);
 
         let trace = Level::Trace;
-        let up = trace.up();
+        let up = trace.increment_severity();
         // trace is already highest level
         assert_eq!(up, trace);
     }
@@ -1748,11 +1748,11 @@ mod tests {
     #[test]
     fn test_level_filter_up() {
         let info = LevelFilter::Info;
-        let up = info.up();
+        let up = info.increment_severity();
         assert_eq!(up, LevelFilter::Debug);
 
         let trace = LevelFilter::Trace;
-        let up = trace.up();
+        let up = trace.increment_severity();
         // trace is already highest level
         assert_eq!(up, trace);
     }
@@ -1760,11 +1760,11 @@ mod tests {
     #[test]
     fn test_level_down() {
         let info = Level::Info;
-        let down = info.down();
+        let down = info.decrement_severity();
         assert_eq!(down, Level::Warn);
 
         let error = Level::Error;
-        let down = error.down();
+        let down = error.decrement_severity();
         // error is already lowest level
         assert_eq!(down, error);
     }
@@ -1772,14 +1772,14 @@ mod tests {
     #[test]
     fn test_level_filter_down() {
         let info = LevelFilter::Info;
-        let down = info.down();
+        let down = info.decrement_severity();
         assert_eq!(down, LevelFilter::Warn);
 
         let error = LevelFilter::Error;
-        let down = error.down();
+        let down = error.decrement_severity();
         assert_eq!(down, LevelFilter::Off);
         // Off is already the lowest
-        assert_eq!(down.down(), down);
+        assert_eq!(down.decrement_severity(), down);
     }
 
     #[test]
