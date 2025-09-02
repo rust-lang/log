@@ -6,8 +6,6 @@
 
 ## What's Changed
 * ci: drop really old trick and ensure MSRV for all feature combo by @tisonkun in https://github.com/rust-lang/log/pull/676
-* chore: fix some typos in comment by @xixishidibei in https://github.com/rust-lang/log/pull/677
-* Unhide `#[derive(Debug)]` in example by @ZylosLumen in https://github.com/rust-lang/log/pull/688
 * Chore: delete compare_exchange method for AtomicUsize on platforms without atomics  by @HaoliangXu in https://github.com/rust-lang/log/pull/690
 * Add `increment_severity()` and `decrement_severity()` methods for `Level` and `LevelFilter` by @nebkor in https://github.com/rust-lang/log/pull/692
 
