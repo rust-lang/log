@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.4.28] - 2025-09-02
+
+## What's Changed
+* ci: drop really old trick and ensure MSRV for all feature combo by @tisonkun in https://github.com/rust-lang/log/pull/676
+* Chore: delete compare_exchange method for AtomicUsize on platforms without atomics  by @HaoliangXu in https://github.com/rust-lang/log/pull/690
+* Add `increment_severity()` and `decrement_severity()` methods for `Level` and `LevelFilter` by @nebkor in https://github.com/rust-lang/log/pull/692
+
+## New Contributors
+* @xixishidibei made their first contribution in https://github.com/rust-lang/log/pull/677
+* @ZylosLumen made their first contribution in https://github.com/rust-lang/log/pull/688
+* @HaoliangXu made their first contribution in https://github.com/rust-lang/log/pull/690
+* @nebkor made their first contribution in https://github.com/rust-lang/log/pull/692
+
+**Full Changelog**: https://github.com/rust-lang/log/compare/0.4.27...0.4.28
+
 ### Notable Changes
 * MSRV is bumped to 1.61.0 in https://github.com/rust-lang/log/pull/676
 
@@ -362,7 +377,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.27...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.28...HEAD
+[0.4.28]: https://github.com/rust-lang/log/compare/0.4.27...0.4.28
 [0.4.27]: https://github.com/rust-lang/log/compare/0.4.26...0.4.27
 [0.4.26]: https://github.com/rust-lang/log/compare/0.4.25...0.4.26
 [0.4.25]: https://github.com/rust-lang/log/compare/0.4.24...0.4.25
