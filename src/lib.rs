@@ -431,6 +431,22 @@ impl AtomicUsize {
     fn store(&self, val: usize, _order: Ordering) {
         self.v.set(val)
     }
+
+    fn compare_exchange(
+        &self,
+        current: usize,
+        new: usize,
+        _success: Ordering,
+        _failure: Ordering,
+    ) -> Result<usize, usize> {
+        let old = self.v.get();
+        if old == current {
+            self.v.set(new);
+            Ok(old)
+        } else {
+            Err(old)
+        }
+    }
 }
 
 // Any platform without atomics is unlikely to have multiple cores, so
@@ -1522,17 +1538,32 @@ where
 ///
 /// [`set_logger`]: fn.set_logger.html
 pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
-    match STATE.load(Ordering::Acquire) {
-        UNINITIALIZED => {
+    // Use compare_exchange to atomically check and update the state
+    match STATE.compare_exchange(
+        UNINITIALIZED,
+        INITIALIZING,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    ) {
+        Ok(_) => {
+            // Successfully transitioned from UNINITIALIZED to INITIALIZING
+            // Now we have exclusive access to set the logger
             LOGGER = logger;
+            // Atomically transition to INITIALIZED
             STATE.store(INITIALIZED, Ordering::Release);
             Ok(())
         }
-        INITIALIZING => {
-            // This is just plain UB, since we were racing another initialization function
-            unreachable!("set_logger_racy must not be used with other initialization functions")
+        Err(current_state) => {
+            match current_state {
+                INITIALIZING => {
+                    // This is just plain UB, since we were racing another initialization function
+                    unreachable!(
+                        "set_logger_racy must not be used with other initialization functions"
+                    )
+                }
+                _ => Err(SetLoggerError(())),
+            }
         }
-        _ => Err(SetLoggerError(())),
     }
 }
 
