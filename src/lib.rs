@@ -142,6 +142,7 @@
 //!     * [stderrlog]
 //!     * [flexi_logger]
 //!     * [call_logger]
+//!     * [std-logger]
 //!     * [structured-logger]
 //!     * [clang_log]
 //!     * [ftail]
@@ -166,6 +167,7 @@
 //! * Utilities:
 //!     * [log_err]
 //!     * [log-reload]
+//!     * [alterable_logger]
 //!
 //! # Implementing a Logger
 //!
@@ -322,6 +324,7 @@
 //! [stderrlog]: https://docs.rs/stderrlog/*/stderrlog/
 //! [flexi_logger]: https://docs.rs/flexi_logger/*/flexi_logger/
 //! [call_logger]: https://docs.rs/call_logger/*/call_logger/
+//! [std-logger]: https://docs.rs/std-logger/*/std_logger/
 //! [syslog]: https://docs.rs/syslog/*/syslog/
 //! [slog-stdlog]: https://docs.rs/slog-stdlog/*/slog_stdlog/
 //! [log4rs]: https://docs.rs/log4rs/*/log4rs/
@@ -338,6 +341,7 @@
 //! [logcontrol-log]: https://docs.rs/logcontrol-log/*/logcontrol_log/
 //! [log_err]: https://docs.rs/log_err/*/log_err/
 //! [log-reload]: https://docs.rs/log-reload/*/log_reload/
+//! [alterable_logger]: https://docs.rs/alterable_logger/*/alterable_logger
 //! [clang_log]: https://docs.rs/clang_log/latest/clang_log
 //! [ftail]: https://docs.rs/ftail/latest/ftail
 
