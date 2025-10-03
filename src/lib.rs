@@ -346,8 +346,8 @@
 //! [ftail]: https://docs.rs/ftail/latest/ftail
 
 #![doc(
-    html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
-    html_favicon_url = "https://www.rust-lang.org/favicon.ico",
+    html_logo_url = "https://prev.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
+    html_favicon_url = "https://prev.rust-lang.org/favicon.ico",
     html_root_url = "https://docs.rs/log/0.4.28"
 )]
 #![warn(missing_docs)]
