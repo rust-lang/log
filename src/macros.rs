@@ -534,7 +534,7 @@ macro_rules! __log_value_sval {
 #[cfg(not(feature = "kv_sval"))]
 macro_rules! __log_value_sval {
     ($args:expr) => {
-        compile_error!("capturing values as `sval::Value` requites the `kv_sval` feature of `log`")
+        compile_error!("capturing values as `sval::Value` requires the `kv_sval` feature of `log`")
     };
 }
 
@@ -553,7 +553,7 @@ macro_rules! __log_value_serde {
 macro_rules! __log_value_serde {
     ($args:expr) => {
         compile_error!(
-            "capturing values as `serde::Serialize` requites the `kv_serde` feature of `log`"
+            "capturing values as `serde::Serialize` requires the `kv_serde` feature of `log`"
         )
     };
 }
@@ -573,7 +573,7 @@ macro_rules! __log_value_error {
 macro_rules! __log_value_error {
     ($args:expr) => {
         compile_error!(
-            "capturing values as `std::error::Error` requites the `kv_std` feature of `log`"
+            "capturing values as `std::error::Error` requires the `kv_std` feature of `log`"
         )
     };
 }
