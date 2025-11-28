@@ -9,7 +9,7 @@ pub trait ToKey {
     fn to_key(&self) -> Key<'_>;
 }
 
-impl<'a, T> ToKey for &'a T
+impl<T> ToKey for &T
 where
     T: ToKey + ?Sized,
 {

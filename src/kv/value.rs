@@ -13,7 +13,7 @@ pub trait ToValue {
     fn to_value(&self) -> Value<'_>;
 }
 
-impl<'a, T> ToValue for &'a T
+impl<T> ToValue for &T
 where
     T: ToValue + ?Sized,
 {

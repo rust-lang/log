@@ -127,7 +127,7 @@ fn count_default(source: impl Source) -> usize {
     count.0
 }
 
-impl<'a, T> Source for &'a T
+impl<T> Source for &T
 where
     T: Source + ?Sized,
 {
