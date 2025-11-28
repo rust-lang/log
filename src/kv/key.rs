@@ -135,7 +135,7 @@ mod sval_support {
 mod serde_support {
     use super::*;
 
-    use serde::{Serialize, Serializer};
+    use serde_core::{Serialize, Serializer};
 
     impl<'a> Serialize for Key<'a> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

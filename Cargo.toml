@@ -39,7 +39,7 @@ std = []
 kv = []
 kv_sval = ["kv", "value-bag/sval", "sval", "sval_ref"]
 kv_std = ["std", "kv", "value-bag/error"]
-kv_serde = ["kv_std", "value-bag/serde", "serde"]
+kv_serde = ["kv_std", "value-bag/serde", "serde_core"]
 
 # Deprecated: use `kv_*` instead
 # These `*_unstable` features will be removed in a future release
@@ -49,7 +49,7 @@ kv_unstable_std = ["kv_std", "kv_unstable"]
 kv_unstable_serde = ["kv_serde", "kv_unstable_std"]
 
 [dependencies]
-serde = { version = "1.0", optional = true, default-features = false }
+serde_core = { version = "1.0", optional = true, default-features = false }
 sval = { version = "2.14.1", optional = true, default-features = false }
 sval_ref = { version = "2.1", optional = true, default-features = false }
 value-bag = { version = "1.7", optional = true, default-features = false, features = ["inline-i128"] }

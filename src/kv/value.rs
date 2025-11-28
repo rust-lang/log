@@ -153,7 +153,7 @@ impl<'v> Value<'v> {
     #[cfg(feature = "kv_serde")]
     pub fn from_serde<T>(value: &'v T) -> Self
     where
-        T: serde::Serialize,
+        T: serde_core::Serialize,
     {
         Value {
             inner: inner::Inner::from_serde1(value),
@@ -232,10 +232,10 @@ impl<'v> fmt::Display for Value<'v> {
 }
 
 #[cfg(feature = "kv_serde")]
-impl<'v> serde::Serialize for Value<'v> {
+impl<'v> serde_core::Serialize for Value<'v> {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: serde_core::Serializer,
     {
         self.inner.serialize(s)
     }
@@ -1083,7 +1083,7 @@ impl<'v> Value<'v> {
     #[deprecated(note = "use `from_serde` instead")]
     pub fn capture_serde<T>(value: &'v T) -> Self
     where
-        T: serde::Serialize + 'static,
+        T: serde_core::Serialize + 'static,
     {
         Value::from_serde(value)
     }
