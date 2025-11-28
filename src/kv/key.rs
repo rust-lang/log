@@ -6,26 +6,26 @@ use std::fmt;
 /// A type that can be converted into a [`Key`](struct.Key.html).
 pub trait ToKey {
     /// Perform the conversion.
-    fn to_key(&self) -> Key;
+    fn to_key(&self) -> Key<'_>;
 }
 
 impl<'a, T> ToKey for &'a T
 where
     T: ToKey + ?Sized,
 {
-    fn to_key(&self) -> Key {
+    fn to_key(&self) -> Key<'_> {
         (**self).to_key()
     }
 }
 
 impl<'k> ToKey for Key<'k> {
-    fn to_key(&self) -> Key {
+    fn to_key(&self) -> Key<'_> {
         Key { key: self.key }
     }
 }
 
 impl ToKey for str {
-    fn to_key(&self) -> Key {
+    fn to_key(&self) -> Key<'_> {
         Key::from_str(self)
     }
 }
@@ -96,13 +96,13 @@ mod std_support {
     use std::borrow::Cow;
 
     impl ToKey for String {
-        fn to_key(&self) -> Key {
+        fn to_key(&self) -> Key<'_> {
             Key::from_str(self)
         }
     }
 
     impl<'a> ToKey for Cow<'a, str> {
-        fn to_key(&self) -> Key {
+        fn to_key(&self) -> Key<'_> {
             Key::from_str(self)
         }
     }

@@ -10,20 +10,20 @@ pub use crate::kv::Error;
 /// A type that can be converted into a [`Value`](struct.Value.html).
 pub trait ToValue {
     /// Perform the conversion.
-    fn to_value(&self) -> Value;
+    fn to_value(&self) -> Value<'_>;
 }
 
 impl<'a, T> ToValue for &'a T
 where
     T: ToValue + ?Sized,
 {
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value<'_> {
         (**self).to_value()
     }
 }
 
 impl<'v> ToValue for Value<'v> {
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value<'_> {
         Value {
             inner: self.inner.clone(),
         }
@@ -256,7 +256,7 @@ impl<'v> sval_ref::ValueRef<'v> for Value<'v> {
 }
 
 impl ToValue for str {
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value<'_> {
         Value::from(self)
     }
 }
@@ -268,7 +268,7 @@ impl<'v> From<&'v str> for Value<'v> {
 }
 
 impl ToValue for () {
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value<'_> {
         Value::from_inner(())
     }
 }
@@ -277,7 +277,7 @@ impl<T> ToValue for Option<T>
 where
     T: ToValue,
 {
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value<'_> {
         match *self {
             Some(ref value) => value.to_value(),
             None => Value::from_inner(()),
@@ -289,7 +289,7 @@ macro_rules! impl_to_value_primitive {
     ($($into_ty:ty,)*) => {
         $(
             impl ToValue for $into_ty {
-                fn to_value(&self) -> Value {
+                fn to_value(&self) -> Value<'_> {
                     Value::from(*self)
                 }
             }
@@ -313,7 +313,7 @@ macro_rules! impl_to_value_nonzero_primitive {
     ($($into_ty:ident,)*) => {
         $(
             impl ToValue for std::num::$into_ty {
-                fn to_value(&self) -> Value {
+                fn to_value(&self) -> Value<'_> {
                     Value::from(self.get())
                 }
             }
@@ -398,7 +398,7 @@ mod std_support {
     where
         T: ToValue + ?Sized,
     {
-        fn to_value(&self) -> Value {
+        fn to_value(&self) -> Value<'_> {
             (**self).to_value()
         }
     }
@@ -407,7 +407,7 @@ mod std_support {
     where
         T: ToValue + ?Sized,
     {
-        fn to_value(&self) -> Value {
+        fn to_value(&self) -> Value<'_> {
             (**self).to_value()
         }
     }
@@ -416,19 +416,19 @@ mod std_support {
     where
         T: ToValue + ?Sized,
     {
-        fn to_value(&self) -> Value {
+        fn to_value(&self) -> Value<'_> {
             (**self).to_value()
         }
     }
 
     impl ToValue for String {
-        fn to_value(&self) -> Value {
+        fn to_value(&self) -> Value<'_> {
             Value::from(&**self)
         }
     }
 
     impl<'v> ToValue for Cow<'v, str> {
-        fn to_value(&self) -> Value {
+        fn to_value(&self) -> Value<'_> {
             Value::from(&**self)
         }
     }
