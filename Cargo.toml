@@ -41,6 +41,11 @@ kv_sval = ["kv", "value-bag/sval", "sval", "sval_ref"]
 kv_std = ["std", "kv", "value-bag/error"]
 kv_serde = ["kv_std", "value-bag/serde", "serde_core"]
 
+# This is here to not break backwards compatibility with the implicit feature
+# that enables support for serde based on the dependency name. Since we're now
+# using serde_core, the implicit feature was renamed, this adds back an alias.
+serde = ["serde_core"]
+
 # Deprecated: use `kv_*` instead
 # These `*_unstable` features will be removed in a future release
 kv_unstable = ["kv", "value-bag"]
