@@ -41,6 +41,7 @@ pub struct Key<'k> {
 
 impl<'k> Key<'k> {
     /// Get a key from a borrowed string.
+    #[allow(clippy::should_implement_trait)] // Part of the public API now.
     pub fn from_str(key: &'k str) -> Self {
         Key { key }
     }

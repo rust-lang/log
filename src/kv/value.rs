@@ -535,6 +535,7 @@ pub trait VisitValue<'v> {
     }
 }
 
+#[allow(clippy::needless_lifetimes)] // Not needless.
 impl<'a, 'v, T: ?Sized> VisitValue<'v> for &'a mut T
 where
     T: VisitValue<'v>,

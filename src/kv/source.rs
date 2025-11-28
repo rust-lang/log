@@ -237,6 +237,7 @@ pub trait VisitSource<'kvs> {
     fn visit_pair(&mut self, key: Key<'kvs>, value: Value<'kvs>) -> Result<(), Error>;
 }
 
+#[allow(clippy::needless_lifetimes)] // Not needless.
 impl<'a, 'kvs, T> VisitSource<'kvs> for &'a mut T
 where
     T: VisitSource<'kvs> + ?Sized,
