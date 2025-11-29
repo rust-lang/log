@@ -943,7 +943,7 @@ impl<'a> Record<'a> {
     /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
     #[cfg(feature = "kv")]
     #[inline]
-    pub fn to_builder(&self) -> RecordBuilder {
+    pub fn to_builder(&self) -> RecordBuilder<'_> {
         RecordBuilder {
             record: Record {
                 metadata: Metadata {
