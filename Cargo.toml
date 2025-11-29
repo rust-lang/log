@@ -39,7 +39,7 @@ std = []
 kv = []
 kv_sval = ["kv", "value-bag/sval", "sval", "sval_ref"]
 kv_std = ["std", "kv", "value-bag/error"]
-kv_serde = ["kv_std", "value-bag/serde", "serde_core"]
+kv_serde = ["kv_std", "value-bag/serde", "serde"]
 
 # This is here to not break backwards compatibility with the implicit feature
 # that enables support for serde based on the dependency name. Since we're now
