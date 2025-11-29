@@ -515,14 +515,13 @@ impl PartialOrd<LevelFilter> for Level {
 impl FromStr for Level {
     type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<Level, Self::Err> {
-        LOG_LEVEL_NAMES
-            .iter()
-            .position(|&name| name.eq_ignore_ascii_case(level))
-            .into_iter()
-            .filter(|&idx| idx != 0)
-            .map(|idx| Level::from_usize(idx).unwrap())
-            .next()
-            .ok_or(ParseLevelError(()))
+        // iterate from 1, excluding "OFF"
+        for idx in 1..LOG_LEVEL_NAMES.len() {
+            if LOG_LEVEL_NAMES[idx].eq_ignore_ascii_case(level) {
+                return Ok(Level::from_usize(idx).unwrap());
+            }
+        }
+        Err(ParseLevelError(()))
     }
 }
 
@@ -666,11 +665,13 @@ impl PartialOrd<Level> for LevelFilter {
 impl FromStr for LevelFilter {
     type Err = ParseLevelError;
     fn from_str(level: &str) -> Result<LevelFilter, Self::Err> {
-        LOG_LEVEL_NAMES
-            .iter()
-            .position(|&name| name.eq_ignore_ascii_case(level))
-            .map(|p| LevelFilter::from_usize(p).unwrap())
-            .ok_or(ParseLevelError(()))
+        // iterate from 0, including "OFF"
+        for idx in 0..LOG_LEVEL_NAMES.len() {
+            if LOG_LEVEL_NAMES[idx].eq_ignore_ascii_case(level) {
+                return Ok(LevelFilter::from_usize(idx).unwrap());
+            }
+        }
+        Err(ParseLevelError(()))
     }
 }
 
@@ -942,7 +943,7 @@ impl<'a> Record<'a> {
     /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
     #[cfg(feature = "kv")]
     #[inline]
-    pub fn to_builder(&self) -> RecordBuilder {
+    pub fn to_builder(&self) -> RecordBuilder<'_> {
         RecordBuilder {
             record: Record {
                 metadata: Metadata {
