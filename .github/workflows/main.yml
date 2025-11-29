@@ -72,7 +72,7 @@ jobs:
     - name: Run rustdoc
       env:
         RUSTDOCFLAGS: "-D warnings"
-      run: cargo doc --verbose --features std,serde,sval,sval_ref,value-bag,kv,kv_std,kv_sval,kv_serde
+      run: cargo doc --verbose --features std,kv,kv_std,kv_sval,kv_serde
 
   features:
     name: Feature check
