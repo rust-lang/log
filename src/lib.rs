@@ -1529,7 +1529,8 @@ where
 pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
     match STATE.load(Ordering::Acquire) {
         UNINITIALIZED => {
-            LOGGER = logger;
+            // SAFETY: Access to `LOGGER` is synchronized through `STATE`
+            unsafe { LOGGER = logger };
             STATE.store(INITIALIZED, Ordering::Release);
             Ok(())
         }
