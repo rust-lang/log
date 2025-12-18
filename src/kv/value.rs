@@ -4,6 +4,7 @@
 //! capturing and serializing them.
 
 use std::fmt;
+use core::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 
 pub use crate::kv::Error;
 
@@ -373,6 +374,34 @@ impl_value_to_primitive![
     to_bool -> bool,
 ];
 
+macro_rules! impl_to_value_from_display {
+    ($($into_ty:ty,)*) => {
+        $(
+            impl ToValue for $into_ty {
+                fn to_value(&self) -> Value<'_> {
+                    Value::from_display(self)
+                }
+            }
+
+            impl From<$into_ty> for Value<'_> {
+                fn from(value: $into_ty) -> Self {
+                    Value::from_inner(value)
+                }
+            }
+
+            impl<'v> From<&'v $into_ty> for Value<'v> {
+                fn from(value: &'v $into_ty) -> Self {
+                    Value::from_display(value)
+                }
+            }
+        )*
+    };
+}
+
+impl_to_value_from_display![
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
+];
+
 impl<'v> Value<'v> {
     /// Try to convert this value into an error.
     #[cfg(feature = "kv_std")]
@@ -517,6 +546,16 @@ pub trait VisitValue<'v> {
     fn visit_char(&mut self, value: char) -> Result<(), Error> {
         let mut b = [0; 4];
         self.visit_str(&*value.encode_utf8(&mut b))
+    }
+
+    /// Visit an IP Address
+    fn visit_ip_addr(&mut self, value: IpAddr) -> Result<(), Error> {
+        self.visit_any(value.into())
+    }
+
+    /// Visit a socket address
+    fn visit_socket_addr(&mut self, value: SocketAddr) -> Result<(), Error> {
+        self.visit_any(value.into())
     }
 
     /// Visit an error.
@@ -745,6 +784,8 @@ pub(in crate::kv) mod inner {
         F64(f64),
         I128(i128),
         U128(u128),
+        IpAddr(IpAddr),
+        SocketAddr(SocketAddr),
         Debug(&'v dyn fmt::Debug),
         Display(&'v dyn fmt::Display),
     }
@@ -857,6 +898,42 @@ pub(in crate::kv) mod inner {
         }
     }
 
+    impl<'v> From<Ipv4Addr> for Inner<'v> {
+        fn from(v: Ipv4Addr) -> Self {
+            Inner::IpAddr(IpAddr::V4(v))
+        }
+    }
+
+    impl<'v> From<Ipv6Addr> for Inner<'v> {
+        fn from(v: Ipv6Addr) -> Self {
+            Inner::IpAddr(IpAddr::V6(v))
+        }
+    }
+
+    impl<'v> From<IpAddr> for Inner<'v> {
+        fn from(v: IpAddr) -> Self {
+            Inner::IpAddr(v)
+        }
+    }
+
+    impl<'v> From<SocketAddrV4> for Inner<'v> {
+        fn from(v: SocketAddrV4) -> Self {
+            Inner::SocketAddr(SocketAddr::V4(v))
+        }
+    }
+
+    impl<'v> From<SocketAddrV6> for Inner<'v> {
+        fn from(v: SocketAddrV6) -> Self {
+            Inner::SocketAddr(SocketAddr::V6(v))
+        }
+    }
+
+    impl<'v> From<SocketAddr> for Inner<'v> {
+        fn from(v: SocketAddr) -> Self {
+            Inner::SocketAddr(v)
+        }
+    }
+
     impl<'v> fmt::Debug for Inner<'v> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
@@ -869,6 +946,8 @@ pub(in crate::kv) mod inner {
                 Inner::F64(v) => fmt::Debug::fmt(v, f),
                 Inner::I128(v) => fmt::Debug::fmt(v, f),
                 Inner::U128(v) => fmt::Debug::fmt(v, f),
+                Inner::IpAddr(v) => fmt::Debug::fmt(v, f),
+                Inner::SocketAddr(v) => fmt::Debug::fmt(v, f),
                 Inner::Debug(v) => fmt::Debug::fmt(v, f),
                 Inner::Display(v) => fmt::Display::fmt(v, f),
             }
@@ -887,6 +966,8 @@ pub(in crate::kv) mod inner {
                 Inner::F64(v) => fmt::Display::fmt(v, f),
                 Inner::I128(v) => fmt::Display::fmt(v, f),
                 Inner::U128(v) => fmt::Display::fmt(v, f),
+                Inner::IpAddr(v) => fmt::Debug::fmt(v, f),
+                Inner::SocketAddr(v) => fmt::Debug::fmt(v, f),
                 Inner::Debug(v) => fmt::Debug::fmt(v, f),
                 Inner::Display(v) => fmt::Display::fmt(v, f),
             }
@@ -1010,6 +1091,8 @@ pub(in crate::kv) mod inner {
                 Inner::F64(v) => Token::F64(*v),
                 Inner::I128(_) => unimplemented!(),
                 Inner::U128(_) => unimplemented!(),
+                Inner::IpAddr(_) => unimplemented!(),
+                Inner::SocketAddr(_) => unimplemented!(),
                 Inner::Debug(_) => unimplemented!(),
                 Inner::Display(_) => unimplemented!(),
             }
@@ -1042,6 +1125,8 @@ pub(in crate::kv) mod inner {
             Inner::F64(v) => visitor.visit_f64(*v),
             Inner::I128(v) => visitor.visit_i128(*v),
             Inner::U128(v) => visitor.visit_u128(*v),
+            Inner::IpAddr(v) => visitor.visit_ip_addr(*v),
+            Inner::SocketAddr(v) => visitor.visit_socket_addr(*v),
             Inner::Debug(v) => visitor.visit_any(Value::from_dyn_debug(*v)),
             Inner::Display(v) => visitor.visit_any(Value::from_dyn_display(*v)),
         }
@@ -1174,6 +1259,8 @@ macro_rules! as_sval {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     impl<'v> Value<'v> {
@@ -1230,6 +1317,52 @@ pub(crate) mod tests {
         vec![Value::from('a'), Value::from('⛰')].into_iter()
     }
 
+    fn ipv4() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv4Addr::new(127, 0, 0, 1);
+        let ip2 = Ipv4Addr::new(192, 168, 10, 100);
+        vec![Value::from(ip1), Value::from(ip2)].into_iter()
+    }
+
+    fn ipv6() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv6Addr::from_str("::1").unwrap();
+        let ip2 = Ipv6Addr::from_str("f33c::1").unwrap();
+        vec![Value::from(ip1), Value::from(ip2)].into_iter()
+    }
+
+    fn ip() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv4Addr::new(192, 168, 10, 100);
+        let ip2 = Ipv6Addr::from_str("f33c::1").unwrap();
+        let ip1 = IpAddr::V4(ip1);
+        let ip2 = IpAddr::V6(ip2);
+        vec![Value::from(ip1), Value::from(ip2)].into_iter()
+    }
+
+    fn sockv4() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv4Addr::new(127, 0, 0, 1);
+        let ip2 = Ipv4Addr::new(192, 168, 10, 100);
+        let sock1 = SocketAddrV4::new(ip1, 12345);
+        let sock2 = SocketAddrV4::new(ip2, 555);
+        vec![Value::from(sock1), Value::from(sock2)].into_iter()
+    }
+
+    fn sockv6() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv6Addr::from_str("::1").unwrap();
+        let ip2 = Ipv6Addr::from_str("f33c::1").unwrap();
+        let sock1 = SocketAddrV6::new(ip1, 12345, 0, 0);
+        let sock2 = SocketAddrV6::new(ip2, 555, 0, 0);
+        vec![Value::from(sock1), Value::from(sock2)].into_iter()
+    }
+
+    fn sock() -> impl Iterator<Item = Value<'static>> {
+        let ip1 = Ipv4Addr::new(192, 168, 10, 100);
+        let ip2 = Ipv6Addr::from_str("f33c::1").unwrap();
+        let sock1 = SocketAddrV4::new(ip1, 12345);
+        let sock2 = SocketAddrV6::new(ip2, 555, 0, 0);
+        let sock1 = SocketAddr::V4(sock1);
+        let sock2 = SocketAddr::V6(sock2);
+        vec![Value::from(sock1), Value::from(sock2)].into_iter()
+    }
+
     #[test]
     fn test_to_value_display() {
         assert_eq!(42u64.to_value().to_string(), "42");
@@ -1241,6 +1374,14 @@ pub(crate) mod tests {
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
         assert_eq!(None::<bool>.to_value().to_string(), "None");
+        assert_eq!(Ipv4Addr::new(192, 168, 10, 100).to_value().to_string(), "192.168.10.100");
+        assert_eq!(Ipv6Addr::from_str("f33c::1").unwrap().to_value().to_string(), "f33c::1");
+        assert_eq!(IpAddr::V4(Ipv4Addr::new(192, 168, 10, 100)).to_value().to_string(), "192.168.10.100");
+        assert_eq!(IpAddr::V6(Ipv6Addr::from_str("f33c::1").unwrap()).to_value().to_string(), "f33c::1");
+        assert_eq!(SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345).to_value().to_string(), "192.168.10.100:12345");
+        assert_eq!(SocketAddrV6::new(Ipv6Addr::from_str("f33c::1").unwrap(), 12345, 0, 0).to_value().to_string(), "[f33c::1]:12345");
+        assert_eq!(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345)).to_value().to_string(), "192.168.10.100:12345");
+        assert_eq!(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from_str("f33c::1").unwrap(), 12345, 0, 0)).to_value().to_string(), "[f33c::1]:12345");
     }
 
     #[test]
@@ -1327,6 +1468,12 @@ pub(crate) mod tests {
             .chain(float())
             .chain(str())
             .chain(char())
+            .chain(ip())
+            .chain(ipv4())
+            .chain(ipv6())
+            .chain(sock())
+            .chain(sockv4())
+            .chain(sockv6())
         {
             assert!(v.to_bool().is_none());
         }
@@ -1343,6 +1490,12 @@ pub(crate) mod tests {
             .chain(float())
             .chain(str())
             .chain(bool())
+            .chain(ip())
+            .chain(ipv4())
+            .chain(ipv6())
+            .chain(sock())
+            .chain(sockv4())
+            .chain(sockv6())
         {
             assert!(v.to_char().is_none());
         }
