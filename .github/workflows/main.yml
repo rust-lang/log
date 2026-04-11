@@ -34,7 +34,7 @@ jobs:
             os: windows-latest
             rust: stable-x86_64-pc-windows-gnu
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
@@ -47,7 +47,7 @@ jobs:
     name: Check Format and Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy
@@ -60,7 +60,7 @@ jobs:
     name: Check Documentation
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - uses: dtolnay/rust-toolchain@stable
     - name: Run rustdoc
       env:
@@ -71,7 +71,7 @@ jobs:
     name: Feature check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo build --verbose -Z avoid-dev-deps --features kv
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv std"
@@ -84,7 +84,7 @@ jobs:
     name: Minimal versions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo build --verbose -Z minimal-versions --features kv
       - run: cargo build --verbose -Z minimal-versions --features "kv std"
@@ -97,8 +97,8 @@ jobs:
     name: MSRV
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.68.0
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: dtolnay/rust-toolchain@ae07f54001936ffa837af4d2b910727ec57b2084 # 1.68.0
         with:
           components: clippy
       - uses: taiki-e/install-action@cargo-hack
@@ -110,7 +110,7 @@ jobs:
     name: Embedded
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: dtolnay/rust-toolchain@stable
       - run: rustup target add thumbv6m-none-eabi riscv32imc-unknown-none-elf
       - run: cargo build --verbose --target=thumbv6m-none-eabi
