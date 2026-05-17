@@ -415,7 +415,7 @@ fn logger_expr() {
     }, "hello");
 }
 
-#[cfg(feature = "kv")]
+#[cfg(all(feature = "std", feature = "kv"))]
 #[test]
 fn kv_net() {
     use std::{
