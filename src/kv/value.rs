@@ -3,8 +3,8 @@
 //! This module defines the [`Value`] type and supporting APIs for
 //! capturing and serializing them.
 
-use std::fmt;
 use core::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::fmt;
 
 pub use crate::kv::Error;
 
@@ -393,7 +393,12 @@ macro_rules! impl_to_value_from_display {
 }
 
 impl_to_value_from_display![
-    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
+    IpAddr,
+    Ipv4Addr,
+    Ipv6Addr,
+    SocketAddr,
+    SocketAddrV4,
+    SocketAddrV6,
 ];
 
 impl<'v> Value<'v> {
@@ -1269,14 +1274,58 @@ pub(crate) mod tests {
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
         assert_eq!(None::<bool>.to_value().to_string(), "None");
-        assert_eq!(Ipv4Addr::new(192, 168, 10, 100).to_value().to_string(), "192.168.10.100");
-        assert_eq!(Ipv6Addr::from_str("f33c::1").unwrap().to_value().to_string(), "f33c::1");
-        assert_eq!(IpAddr::V4(Ipv4Addr::new(192, 168, 10, 100)).to_value().to_string(), "192.168.10.100");
-        assert_eq!(IpAddr::V6(Ipv6Addr::from_str("f33c::1").unwrap()).to_value().to_string(), "f33c::1");
-        assert_eq!(SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345).to_value().to_string(), "192.168.10.100:12345");
-        assert_eq!(SocketAddrV6::new(Ipv6Addr::from_str("f33c::1").unwrap(), 12345, 0, 0).to_value().to_string(), "[f33c::1]:12345");
-        assert_eq!(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345)).to_value().to_string(), "192.168.10.100:12345");
-        assert_eq!(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from_str("f33c::1").unwrap(), 12345, 0, 0)).to_value().to_string(), "[f33c::1]:12345");
+        assert_eq!(
+            Ipv4Addr::new(192, 168, 10, 100).to_value().to_string(),
+            "192.168.10.100"
+        );
+        assert_eq!(
+            Ipv6Addr::from_str("f33c::1")
+                .unwrap()
+                .to_value()
+                .to_string(),
+            "f33c::1"
+        );
+        assert_eq!(
+            IpAddr::V4(Ipv4Addr::new(192, 168, 10, 100))
+                .to_value()
+                .to_string(),
+            "192.168.10.100"
+        );
+        assert_eq!(
+            IpAddr::V6(Ipv6Addr::from_str("f33c::1").unwrap())
+                .to_value()
+                .to_string(),
+            "f33c::1"
+        );
+        assert_eq!(
+            SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345)
+                .to_value()
+                .to_string(),
+            "192.168.10.100:12345"
+        );
+        assert_eq!(
+            SocketAddrV6::new(Ipv6Addr::from_str("f33c::1").unwrap(), 12345, 0, 0)
+                .to_value()
+                .to_string(),
+            "[f33c::1]:12345"
+        );
+        assert_eq!(
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 10, 100), 12345))
+                .to_value()
+                .to_string(),
+            "192.168.10.100:12345"
+        );
+        assert_eq!(
+            SocketAddr::V6(SocketAddrV6::new(
+                Ipv6Addr::from_str("f33c::1").unwrap(),
+                12345,
+                0,
+                0
+            ))
+            .to_value()
+            .to_string(),
+            "[f33c::1]:12345"
+        );
     }
 
     #[test]

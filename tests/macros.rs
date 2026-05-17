@@ -419,9 +419,7 @@ fn logger_expr() {
 #[test]
 fn kv_net() {
     use std::{
-        net::{
-            IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
-        },
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         str::FromStr,
     };
 
