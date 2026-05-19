@@ -373,6 +373,7 @@ impl_value_to_primitive![
     to_bool -> bool,
 ];
 
+#[cfg(feature = "std")]
 macro_rules! impl_to_value_from_display {
     ($($into_ty:ty,)*) => {
         $(
@@ -1203,14 +1204,13 @@ macro_rules! as_sval {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::str::FromStr;
-
     use super::*;
 
     // For new `ToValue` implementations, also add a test to the `tests/macros` file
 
     impl<'v> Value<'v> {
-        pub(crate) fn to_token(&self) -> inner::Token<'_> {
+        #[allow(mismatched_lifetime_syntaxes)]
+        pub(crate) fn to_token(&self) -> inner::Token {
             self.inner.to_test_token()
         }
     }
@@ -1274,6 +1274,13 @@ pub(crate) mod tests {
         assert_eq!(Some(true).to_value().to_string(), "true");
         assert_eq!(().to_value().to_string(), "None");
         assert_eq!(None::<bool>.to_value().to_string(), "None");
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_net_to_value_display() {
+        use std::str::FromStr;
+
         assert_eq!(
             std::net::Ipv4Addr::new(192, 168, 10, 100)
                 .to_value()
