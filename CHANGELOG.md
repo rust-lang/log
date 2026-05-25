@@ -13,6 +13,9 @@
 
 **Full Changelog**: https://github.com/rust-lang/log/compare/0.4.29...0.4.30
 
+### Notable Changes
+* MSRV is bumped to 1.71.0 in https://github.com/rust-lang/log/pull/723
+
 ## [0.4.29] - 2025-12-02
 
 ### What's Changed
