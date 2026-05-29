@@ -18,7 +18,7 @@ mod sealed {
 
 // Types for the `kv` argument.
 
-impl<'a> KVs<'a> for &'a [(&'a str, Value<'a>)] {
+impl<'a, const N: usize> KVs<'a> for &'a [(&'a str, Value<'a>); N] {
     #[inline]
     fn into_kvs(self) -> Option<&'a [(&'a str, Value<'a>)]> {
         Some(self)
