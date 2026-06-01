@@ -49,7 +49,7 @@ impl<'k> Key<'k> {
     }
 
     /// Get a key from a static str.
-    pub fn from_static_str(key: &'static str) -> Self {
+    pub fn from_str_static(key: &'static str) -> Self {
         Key {
             key: MaybeStaticStr::Static(key),
         }

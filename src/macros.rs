@@ -445,7 +445,7 @@ macro_rules! __log_logger {
 macro_rules! __log_key {
     // key1 = 42
     ($($args:ident)*) => {
-        $crate::__private_api::Key::from_static_str($crate::__private_api::stringify!($($args)*))
+        $crate::__private_api::Key::from_str_static($crate::__private_api::stringify!($($args)*))
     };
     // "key1" = 42
     ($($args:expr)*) => {
