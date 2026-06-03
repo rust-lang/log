@@ -415,7 +415,7 @@ impl<'v> Value<'v> {
     }
 }
 
-#[cfg(all(feature = "kv", feature = "std"))]
+#[cfg(feature = "std")]
 mod std_support {
     use std::borrow::Cow;
     use std::rc::Rc;
