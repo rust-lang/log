@@ -777,7 +777,7 @@ impl LevelFilter {
     }
 }
 
-#[derive(Copy, Clone, Hash, Debug)]
+#[derive(Copy, Clone, Debug)]
 enum MaybeStaticStr<'a> {
     Static(&'static str),
     Borrowed(&'a str),
@@ -810,6 +810,12 @@ impl Ord for MaybeStaticStr<'_> {
 impl PartialOrd for MaybeStaticStr<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl std::hash::Hash for MaybeStaticStr<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.get().hash(state);
     }
 }
 
