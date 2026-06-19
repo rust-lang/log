@@ -34,7 +34,7 @@ impl ToKey for str {
 /// A key in a key-value.
 // These impls must only be based on the as_str() representation of the key
 // If a new field (such as an optional index) is added to the key they must not affect comparison
-#[derive(Clone, Debug, Eq, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Key<'k> {
     key: MaybeStaticStr<'k>,
 }
@@ -104,18 +104,6 @@ impl<'k> Borrow<str> for Key<'k> {
 impl<'k> From<&'k str> for Key<'k> {
     fn from(s: &'k str) -> Self {
         Key::from_str(s)
-    }
-}
-
-impl PartialEq for Key<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.key.get() == other.key.get()
-    }
-}
-
-impl PartialOrd for Key<'_> {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.key.get().cmp(other.key.get()))
     }
 }
 
@@ -198,8 +186,9 @@ mod tests {
 
     #[test]
     fn key_borrowed_eq() {
-        let k1 = String::from("a key");
-        let k2 = String::from("a key");
+        const KEY: &str = "a key";
+        let k1 = String::from(KEY);
+        let k2 = String::from(KEY);
         assert_eq!(Key::from_str(&k1), Key::from_str(&k2));
     }
 
@@ -207,7 +196,7 @@ mod tests {
     fn key_borrowed_and_static_eq() {
         const KEY: &str = "a key";
         let static_key = Key::from_str_static(KEY);
-        let borrowed_key = Key::from_str("a key");
+        let borrowed_key = Key::from_str(KEY);
         assert_eq!(static_key, borrowed_key);
     }
 }

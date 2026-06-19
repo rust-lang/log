@@ -777,7 +777,7 @@ impl LevelFilter {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, Ord, Hash, Debug)]
 enum MaybeStaticStr<'a> {
     Static(&'static str),
     Borrowed(&'a str),
@@ -790,6 +790,18 @@ impl<'a> MaybeStaticStr<'a> {
             MaybeStaticStr::Static(s) => s,
             MaybeStaticStr::Borrowed(s) => s,
         }
+    }
+}
+
+impl PartialEq for MaybeStaticStr<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get() == other.get()
+    }
+}
+
+impl PartialOrd for MaybeStaticStr<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.get().cmp(other.get()))
     }
 }
 
