@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.4.33] - 2026-06-20
+
+## What's Changed
+* Fixed key comparison by @matteo-zeggiotti-ok in https://github.com/rust-lang/log/pull/732
+
+## New Contributors
+* @matteo-zeggiotti-ok made their first contribution in https://github.com/rust-lang/log/pull/732
+
+**Full Changelog**: https://github.com/rust-lang/log/compare/0.4.32...0.4.33
+
 ## [0.4.32] - 2026-06-04
 
 ### What's Changed
@@ -418,7 +428,8 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.32...HEAD
+[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.33...HEAD
+[0.4.32]: https://github.com/rust-lang/log/compare/0.4.32...0.4.33
 [0.4.32]: https://github.com/rust-lang/log/compare/0.4.31...0.4.32
 [0.4.31]: https://github.com/rust-lang/log/compare/0.4.30...0.4.31
 [0.4.30]: https://github.com/rust-lang/log/compare/0.4.29...0.4.30
