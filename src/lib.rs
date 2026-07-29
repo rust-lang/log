@@ -471,7 +471,7 @@ static LEVEL_PARSE_ERROR: &str =
 /// [`log!`](macro.log.html), and comparing a `Level` directly to a
 /// [`LevelFilter`](enum.LevelFilter.html).
 #[repr(usize)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub enum Level {
     /// The "error" level.
     ///
@@ -487,6 +487,7 @@ pub enum Level {
     /// The "info" level.
     ///
     /// Designates useful information.
+    #[default]
     Info,
     /// The "debug" level.
     ///
@@ -632,7 +633,7 @@ impl Level {
 /// [`max_level()`]: fn.max_level.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[repr(usize)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
@@ -641,6 +642,7 @@ pub enum LevelFilter {
     /// Corresponds to the `Warn` log level.
     Warn,
     /// Corresponds to the `Info` log level.
+    #[default]
     Info,
     /// Corresponds to the `Debug` log level.
     Debug,
