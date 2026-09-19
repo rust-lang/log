@@ -453,7 +453,7 @@ unsafe impl Sync for AtomicUsize {}
 
 // The LOGGER static holds a pointer to the global logger. It is protected by
 // the STATE static which determines whether LOGGER has been initialized yet.
-static mut LOGGER: &dyn Log = &NopLogger;
+static mut LOGGER: &dyn LogAny = &NopLogger;
 
 static STATE: AtomicUsize = AtomicUsize::new(0);
 
@@ -1314,6 +1314,11 @@ pub trait Log: Sync + Send {
     fn flush(&self);
 }
 
+/// Helper trait for downcasting a `dyn Log` into a concrete type through [`std::any::Any`]
+pub trait LogAny: Log + std::any::Any {}
+
+impl<T> LogAny for T where T: Log + std::any::Any {}
+
 /// A dummy initial value for LOGGER.
 struct NopLogger;
 
@@ -1452,7 +1457,7 @@ pub fn max_level() -> LevelFilter {
 ///
 /// [`set_logger`]: fn.set_logger.html
 #[cfg(all(feature = "alloc", target_has_atomic = "ptr"))]
-pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
+pub fn set_boxed_logger(logger: Box<dyn LogAny>) -> Result<(), SetLoggerError> {
     set_logger_inner(|| Box::leak(logger))
 }
 
@@ -1510,14 +1515,14 @@ pub fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), SetLoggerError> {
 ///
 /// [`set_logger_racy`]: fn.set_logger_racy.html
 #[cfg(target_has_atomic = "ptr")]
-pub fn set_logger(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+pub fn set_logger(logger: &'static dyn LogAny) -> Result<(), SetLoggerError> {
     set_logger_inner(|| logger)
 }
 
 #[cfg(target_has_atomic = "ptr")]
 fn set_logger_inner<F>(make_logger: F) -> Result<(), SetLoggerError>
 where
-    F: FnOnce() -> &'static dyn Log,
+    F: FnOnce() -> &'static dyn LogAny,
 {
     match STATE.compare_exchange(
         UNINITIALIZED,
@@ -1561,7 +1566,7 @@ where
 /// (including all logging macros).
 ///
 /// [`set_logger`]: fn.set_logger.html
-pub unsafe fn set_logger_racy(logger: &'static dyn Log) -> Result<(), SetLoggerError> {
+pub unsafe fn set_logger_racy(logger: &'static dyn LogAny) -> Result<(), SetLoggerError> {
     match STATE.load(Ordering::Acquire) {
         UNINITIALIZED => {
             LOGGER = logger;
@@ -1613,7 +1618,7 @@ impl error::Error for ParseLevelError {}
 /// Returns a reference to the logger.
 ///
 /// If a logger has not been set, a no-op implementation is returned.
-pub fn logger() -> &'static dyn Log {
+pub fn logger() -> &'static dyn LogAny {
     // Acquire memory ordering guarantees that current thread would see any
     // memory writes that happened before store of the value
     // into `STATE` with memory ordering `Release` or stronger.

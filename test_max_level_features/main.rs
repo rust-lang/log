@@ -1,10 +1,10 @@
-use log::{debug, error, info, trace, warn, Level, LevelFilter, Log, Metadata, Record};
+use log::{debug, error, info, trace, warn, Level, LevelFilter, Log, LogAny, Metadata, Record};
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "std")]
 use log::set_boxed_logger;
 #[cfg(not(feature = "std"))]
-fn set_boxed_logger(logger: Box<dyn Log>) -> Result<(), log::SetLoggerError> {
+fn set_boxed_logger(logger: Box<dyn LogAny>) -> Result<(), log::SetLoggerError> {
     log::set_logger(Box::leak(logger))
 }
 
