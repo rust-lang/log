@@ -34,9 +34,9 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
-    - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-      with:
-        toolchain: ${{ matrix.rust }}
+    - run: rustup toolchain add ${TOOLCHAIN} && rustup default ${TOOLCHAIN}
+      env:
+        TOOLCHAIN: ${{ matrix.rust }}
     - uses: taiki-e/install-action@0abfcd587b70a713fdaa7fb502c885e2112acb15 # v2.75.7
       with:
         tool: cargo-hack
@@ -51,10 +51,7 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
-    - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-      with:
-        toolchain: stable
-        components: clippy
+    - run: rustup toolchain add stable --component clippy && rustup default stable
     - run: cargo fmt -- --check
     - run: cargo fmt --manifest-path test_max_level_features/Cargo.toml -- --check
     - run: cargo clippy --verbose
@@ -67,9 +64,7 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
-    - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-      with:
-        toolchain: stable
+    - run: rustup toolchain add stable && rustup default stable
     - name: Run rustdoc
       env:
         RUSTDOCFLAGS: "-D warnings"
@@ -82,9 +77,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: nightly
+      - run: rustup toolchain add nightly && rustup default nightly
       - run: cargo build --verbose -Z avoid-dev-deps --features kv
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv std"
       - run: cargo build --verbose -Z avoid-dev-deps --features "kv kv_sval"
@@ -99,9 +92,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: nightly
+      - run: rustup toolchain add nightly && rustup default nightly
       - run: cargo build --verbose -Z minimal-versions --features kv
       - run: cargo build --verbose -Z minimal-versions --features "kv std"
       - run: cargo build --verbose -Z minimal-versions --features "kv kv_sval"
@@ -116,9 +107,9 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: "1.71"
+      - run: rustup toolchain add ${TOOLCHAIN} && rustup default ${TOOLCHAIN}
+        env:
+          TOOLCHAIN: 1.71
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml
       - run: cargo run --verbose --manifest-path test_max_level_features/Cargo.toml --release
 
@@ -129,9 +120,9 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: "1.81"
+      - run: rustup toolchain add ${TOOLCHAIN} && rustup default ${TOOLCHAIN}
+        env:
+          TOOLCHAIN: 1.81
       - uses: taiki-e/install-action@0abfcd587b70a713fdaa7fb502c885e2112acb15 # v2.75.7
         with:
           tool: cargo-hack
@@ -144,9 +135,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: stable
+      - run: rustup toolchain add stable && rustup default stable
       - run: rustup target add thumbv6m-none-eabi riscv32imc-unknown-none-elf
       - run: cargo build --verbose --target=thumbv6m-none-eabi
       - run: cargo build --verbose --target=riscv32imc-unknown-none-elf
