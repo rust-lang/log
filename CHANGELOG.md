@@ -9,22 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.35](https://github.com/rust-lang/log/compare/v0.4.34...v0.4.35) - 2026-10-30
 
+This release doesn't include source changes. It verifies `log`'s new CI/CD processes.
+
 ### Other
 
-- run fmt
-- simplify some crate release tasks for easier automation
-- Disable release-plz semver check
-- Fix Zizmor lints
-- Setup trusted publishing
-- Change default branch name to `main`
-- Add simple concurrency limits
-- Bump `actions/checkout` to 7.0.1 hash
-- Replace `dtolnay/rust-toolchain` with `rustup`
-- Fix pin hash for `actions/checkout` 6.0.2
-- clean up workflow jobs
-- remove win32 build target
-- split MSRV used to build from MSRV used to test
-# Change Log
+- rework CI/CD to align with Rust project standards
 
 ## [0.4.34] - 2026-08-22
 
