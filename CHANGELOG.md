@@ -1,3 +1,29 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.4.35](https://github.com/rust-lang/log/compare/v0.4.34...v0.4.35) - 2026-10-30
+
+### Other
+
+- run fmt
+- simplify some crate release tasks for easier automation
+- Disable release-plz semver check
+- Fix Zizmor lints
+- Setup trusted publishing
+- Change default branch name to `main`
+- Add simple concurrency limits
+- Bump `actions/checkout` to 7.0.1 hash
+- Replace `dtolnay/rust-toolchain` with `rustup`
+- Fix pin hash for `actions/checkout` 6.0.2
+- clean up workflow jobs
+- remove win32 build target
+- split MSRV used to build from MSRV used to test
 # Change Log
 
 ## [0.4.34] - 2026-08-22
