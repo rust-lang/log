@@ -440,7 +440,6 @@ version using log 0.4.x to avoid losing module and file information.
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/rust-lang-nursery/log/compare/0.4.34...HEAD
 [0.4.34]: https://github.com/rust-lang/log/compare/0.4.33...0.4.34
 [0.4.33]: https://github.com/rust-lang/log/compare/0.4.32...0.4.33
 [0.4.32]: https://github.com/rust-lang/log/compare/0.4.31...0.4.32
