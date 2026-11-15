@@ -54,7 +54,9 @@ impl Log for GlobalLogger {
     }
 }
 
-// Split from `log` to reduce generics and code size
+// Split from `log` to reduce generics and code size.
+// Being generic over the logger, it gets inlined into callsites without the attribute
+#[inline(never)]
 fn log_impl<L: Log>(
     logger: L,
     args: Arguments,
