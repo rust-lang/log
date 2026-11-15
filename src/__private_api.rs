@@ -61,7 +61,8 @@ fn log_impl<L: Log>(
     logger: L,
     args: Arguments,
     level: Level,
-    &(target, module_path, loc): &(&str, &'static str, &'static Location),
+    &(target, module_path): &(&str, &'static str),
+    loc: &'static Location,
     kvs: Option<&[(Key, Value)]>,
 ) {
     #[cfg(not(feature = "kv"))]
@@ -89,7 +90,8 @@ pub fn log<'a, K, L>(
     logger: L,
     args: Arguments,
     level: Level,
-    target_module_path_and_loc: &(&str, &'static str, &'static Location),
+    target_and_module_path: &(&str, &'static str),
+    loc: &'static Location,
     kvs: K,
 ) where
     K: KVs<'a>,
@@ -99,7 +101,8 @@ pub fn log<'a, K, L>(
         logger,
         args,
         level,
-        target_module_path_and_loc,
+        target_and_module_path,
+        loc,
         kvs.into_kvs(),
     )
 }
