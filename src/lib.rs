@@ -975,7 +975,6 @@ impl<'a> Record<'a> {
     }
 
     /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
-    #[cfg(feature = "kv")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder<'_> {
         RecordBuilder {
@@ -988,6 +987,7 @@ impl<'a> Record<'a> {
                 module_path: self.module_path,
                 file: self.file,
                 line: self.line,
+                #[cfg(feature = "kv")]
                 key_values: self.key_values.clone(),
             },
         }
@@ -1959,6 +1959,24 @@ mod tests {
         assert_eq!(record_test.module_path(), Some("foo"));
         assert_eq!(record_test.file(), Some("bar"));
         assert_eq!(record_test.line(), Some(30));
+    }
+
+    #[test]
+    fn test_record_to_builder() {
+        use super::{Level, Record};
+        let record = Record::builder()
+            .module_path(Some("foo"))
+            .file(Some("bar"))
+            .line(Some(30))
+            .target("myApp")
+            .level(Level::Error)
+            .build();
+        let copy = record.to_builder().target("other").build();
+        assert_eq!(copy.target(), "other");
+        assert_eq!(copy.level(), Level::Error);
+        assert_eq!(copy.module_path(), Some("foo"));
+        assert_eq!(copy.file(), Some("bar"));
+        assert_eq!(copy.line(), Some(30));
     }
 
     #[test]
