@@ -477,7 +477,7 @@ static LEVEL_PARSE_ERROR: &str =
 /// Typical usage includes: checking if a certain `Level` is enabled with
 /// [`log_enabled!`](macro.log_enabled.html), specifying the `Level` of
 /// [`log!`](macro.log.html), and comparing a `Level` directly to a
-/// [`LevelFilter`](enum.LevelFilter.html).
+/// [`LevelFilter`].
 #[repr(usize)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Level {
@@ -974,7 +974,7 @@ impl<'a> Record<'a> {
         self.key_values.0
     }
 
-    /// Create a new [`RecordBuilder`](struct.RecordBuilder.html) based on this record.
+    /// Create a new [`RecordBuilder`] based on this record.
     #[cfg(feature = "kv")]
     #[inline]
     pub fn to_builder(&self) -> RecordBuilder<'_> {
@@ -994,7 +994,7 @@ impl<'a> Record<'a> {
     }
 }
 
-/// Builder for [`Record`](struct.Record.html).
+/// Builder for [`Record`].
 ///
 /// Typically should only be used by log library creators or for testing and "shim loggers".
 /// The `RecordBuilder` can set the different parameters of `Record` object, and returns
@@ -1015,7 +1015,7 @@ impl<'a> Record<'a> {
 ///                 .build();
 /// ```
 ///
-/// Alternatively, use [`MetadataBuilder`](struct.MetadataBuilder.html):
+/// Alternatively, use [`MetadataBuilder`]:
 ///
 /// ```
 /// use log::{Record, Level, MetadataBuilder};
@@ -1073,7 +1073,7 @@ impl<'a> RecordBuilder<'a> {
         self
     }
 
-    /// Set [`metadata`](struct.Record.html#method.metadata). Construct a `Metadata` object with [`MetadataBuilder`](struct.MetadataBuilder.html).
+    /// Set [`metadata`](struct.Record.html#method.metadata). Construct a `Metadata` object with [`MetadataBuilder`].
     #[inline]
     pub fn metadata(&mut self, metadata: Metadata<'a>) -> &mut RecordBuilder<'a> {
         self.record.metadata = metadata;
@@ -1214,7 +1214,7 @@ impl<'a> Metadata<'a> {
     }
 }
 
-/// Builder for [`Metadata`](struct.Metadata.html).
+/// Builder for [`Metadata`].
 ///
 /// Typically should only be used by log library creators or for testing and "shim loggers".
 /// The `MetadataBuilder` can set the different parameters of a `Metadata` object, and returns
