@@ -46,8 +46,9 @@ impl<'de> Deserialize<'de> for Level {
             where
                 E: Error,
             {
-                let variant = LOG_LEVEL_NAMES[1..]
-                    .get(v as usize)
+                let variant = usize::try_from(v)
+                    .ok()
+                    .and_then(|v| LOG_LEVEL_NAMES[1..].get(v))
                     .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
 
                 self.visit_str(variant)
@@ -141,8 +142,9 @@ impl<'de> Deserialize<'de> for LevelFilter {
             where
                 E: Error,
             {
-                let variant = LOG_LEVEL_NAMES
-                    .get(v as usize)
+                let variant = usize::try_from(v)
+                    .ok()
+                    .and_then(|v| LOG_LEVEL_NAMES.get(v))
                     .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))?;
 
                 self.visit_str(variant)
@@ -318,6 +320,14 @@ mod tests {
     }
 
     #[test]
+    fn test_level_de_variant_index_out_of_range() {
+        // Truncated to a 32-bit `usize` this would be index 0
+        let index = u64::from(u32::MAX) + 1;
+        let msg = "invalid value: integer `4294967296`, expected log level";
+        assert_de_tokens_error::<Level>(&[Token::Enum { name: "Level" }, Token::U64(index)], msg);
+    }
+
+    #[test]
     fn test_level_de_error() {
         let msg = "unknown variant `errorx`, expected one of \
                    `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`";
@@ -386,6 +396,22 @@ mod tests {
         for (value, tokens) in cases {
             assert_de_tokens(value, tokens);
         }
+    }
+
+    #[test]
+    fn test_level_filter_de_variant_index_out_of_range() {
+        // Truncated to a 32-bit `usize` this would be index 0
+        let index = u64::from(u32::MAX) + 1;
+        let msg = "invalid value: integer `4294967296`, expected log level filter";
+        assert_de_tokens_error::<LevelFilter>(
+            &[
+                Token::Enum {
+                    name: "LevelFilter",
+                },
+                Token::U64(index),
+            ],
+            msg,
+        );
     }
 
     #[test]
